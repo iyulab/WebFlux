@@ -8,6 +8,7 @@ using WebFlux.Core.Interfaces;
 using WebFlux.Core.Models;
 using WebFlux.Services;
 using WebFlux.Services.ChunkingStrategies;
+using WebFlux.Services.Crawlers;
 using WebFlux.Services.AI;
 using WebFlux.Services.Progress;
 
@@ -130,12 +131,20 @@ public static class ServiceCollectionExtensions
         services.TryAddTransient<BreadthFirstCrawler>();
         services.TryAddTransient<DepthFirstCrawler>();
         services.TryAddTransient<SitemapCrawler>();
+        services.TryAddTransient<IntelligentCrawler>();
 
         // 크롤러 팩토리 등록
         services.TryAddSingleton<ICrawlerFactory, CrawlerFactory>();
 
         // Robots.txt 서비스 등록
         services.TryAddScoped<IRobotsTxtService, RobotsTxtService>();
+        services.TryAddScoped<IRobotsTxtParser, RobotsTxtParser>();
+
+        // llms.txt 파서 서비스 등록
+        services.TryAddScoped<ILlmsParser, LlmsParser>();
+
+        // 사이트맵 분석 서비스 등록
+        services.TryAddScoped<ISitemapAnalyzer, SitemapAnalyzer>();
 
         return services;
     }

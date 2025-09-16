@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using WebFlux.Core.Interfaces;
 using WebFlux.Core.Options;
 using WebFlux.Services.ChunkingStrategies;
+using WebFlux.Services.Crawlers;
 
 namespace WebFlux.Services;
 
@@ -84,6 +85,7 @@ public class ServiceFactory : IServiceFactory
             CrawlStrategy.DepthFirst => CreateService<DepthFirstCrawler>(),
             CrawlStrategy.Sitemap => CreateService<SitemapCrawler>(),
             CrawlStrategy.Priority => CreateService<BreadthFirstCrawler>(), // 기본값으로 BreadthFirst 사용
+            CrawlStrategy.Intelligent => CreateService<IntelligentCrawler>(),
             _ => throw new NotSupportedException($"Crawl strategy '{strategy}' is not supported.")
         };
     }

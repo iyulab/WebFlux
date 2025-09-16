@@ -21,6 +21,11 @@ public class CrawlOptions
     public int DelayBetweenRequestsMs { get; set; } = 1000;
 
     /// <summary>
+    /// 요청 간 지연 시간 (TimeSpan, llms.txt 최적화용)
+    /// </summary>
+    public TimeSpan? DelayBetweenRequests { get; set; }
+
+    /// <summary>
     /// 동시 요청 수 (기본값: 3)
     /// </summary>
     public int ConcurrentRequests { get; set; } = 3;
@@ -91,6 +96,41 @@ public class CrawlOptions
     public CrawlStrategy Strategy { get; set; } = CrawlStrategy.BreadthFirst;
 
     /// <summary>
+    /// 외부 링크 따라가기 여부 (기본값: false)
+    /// </summary>
+    public bool FollowExternalLinks { get; set; } = false;
+
+    /// <summary>
+    /// 요청 타임아웃 (TimeSpan)
+    /// </summary>
+    public TimeSpan Timeout { get; set; } = TimeSpan.FromSeconds(30);
+
+    /// <summary>
+    /// 추가 헤더
+    /// </summary>
+    public Dictionary<string, string> Headers { get; set; } = new();
+
+    /// <summary>
+    /// 제외 패턴 (정규식)
+    /// </summary>
+    public List<string> ExcludePatterns { get; set; } = new();
+
+    /// <summary>
+    /// 포함 패턴 (정규식)
+    /// </summary>
+    public List<string> IncludePatterns { get; set; } = new();
+
+    /// <summary>
+    /// 최대 동시 연결 수 (llms.txt 최적화용)
+    /// </summary>
+    public int MaxConcurrency { get; set; } = 3;
+
+    /// <summary>
+    /// 우선순위 URL 목록
+    /// </summary>
+    public List<string> PriorityUrls { get; set; } = new();
+
+    /// <summary>
     /// 이미지 다운로드 여부 (기본값: false)
     /// </summary>
     public bool DownloadImages { get; set; } = false;
@@ -133,5 +173,7 @@ public enum CrawlStrategy
     /// <summary>Sitemap 기반</summary>
     Sitemap,
     /// <summary>우선순위 기반</summary>
-    Priority
+    Priority,
+    /// <summary>llms.txt 메타데이터 기반 지능형 크롤링</summary>
+    Intelligent
 }

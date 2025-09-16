@@ -77,31 +77,74 @@
 - **🚧 3.5** 청킹 전략 성능 비교 및 벤치마킹 **[개발 예정]**
 - **🚧 3.6** 다중 청킹(Poly-Chunking) 지원 **[개발 예정]**
 
-### Phase 4: Performance & Optimization (성능 최적화) - 6주
-> 엔터프라이즈급 성능 달성
+### Phase 4: Web Intelligence Engine (웹 인텔리전스 엔진) - 8주
+> 15가지 웹 메타데이터 표준 활용으로 RAG 품질 혁신
 
-**목표**: 100페이지/분 크롤링 성능 달성
+**목표**: 포괄적 웹 메타데이터 활용으로 크롤링 품질 60% 향상, 컨텍스트 정확도 70% 향상, 100페이지/분 성능 달성
 
-#### 주요 태스크
-- **4.1** 병렬 처리 엔진 구현 (CPU 코어별 동적 스케일링)
-- **4.2** 스트리밍 최적화 (AsyncEnumerable)
-- **4.3** 지능형 LRU 캐시 시스템
-- **4.4** 메모리 백프레셔 제어
-- **4.5** 성능 모니터링 및 메트릭
-- **4.6** 부하 테스트 및 성능 검증
+#### Phase 4A: Core Metadata Discovery (핵심 메타데이터 발견) - 2주
+**목표**: 크롤링 품질 30% → 50% 향상
+- **✅ 4A.1** llms.txt 파서 구현 **[완료]** (AI 친화적 웹 크롤링)
+- **✅ 4A.2** IntelligentCrawler 구현 **[완료]** (메타데이터 기반 우선순위)
+- **🔧 4A.3** RobotsTxtParser 고도화 (현재 단순화 → 완전한 파서)
+- **🔧 4A.4** SitemapAnalyzer 구현 (우선순위, 빈도, lastmod 활용)
+- **🆕 4A.5** MetadataDiscoveryService 통합 엔진 구현
+- **🆕 4A.6** 메타데이터 융합 알고리즘 (robots.txt + sitemap + llms.txt)
 
-### Phase 5: Multimodal & Advanced Features (멀티모달 및 고급 기능) - 8주
-> 차세대 RAG 기능 구현
+#### Phase 4B: AI-Friendly Standards Integration (AI 친화 표준 통합) - 2주
+**목표**: 컨텍스트 정확도 70% 향상
+- **🆕 4B.1** AIStandardsParser 구현 (ai.txt, humans.txt, security.txt)
+- **🆕 4B.2** ManifestAnalyzer 구현 (PWA manifest.json 파싱)
+- **🆕 4B.3** StructuredDataExtractor 구현 (Schema.org, JSON-LD)
+- **🆕 4B.4** ContentCategorizer 구현 (자동 카테고리 분류)
+- **🆕 4B.5** SemanticContextBuilder (메타데이터 기반 컨텍스트 구축)
+- **🆕 4B.6** 신뢰성 평가 시스템 (security.txt, humans.txt 활용)
 
-**목표**: 이미지-텍스트 통합 처리 및 평가 프레임워크 완성
+#### Phase 4C: Structural Intelligence Engine (구조 인텔리전스 엔진) - 2주
+**목표**: 사이트 구조 파악 90% 정확도
+- **🆕 4C.1** SiteArchitectureAnalyzer (_config.yml, config.toml 파싱)
+- **🆕 4C.2** APIDocumentationExtractor (OpenAPI, Swagger JSON 처리)
+- **🆕 4C.3** NavigationStructureBuilder (메뉴, 카테고리 자동 감지)
+- **🆕 4C.4** ContentRelationshipMapper (페이지 간 관계 파악)
+- **🆕 4C.5** TechnicalDocumentationOptimizer (API docs 특화 청킹)
+- **🆕 4C.6** StaticSiteGenerator 통합 (Jekyll, Hugo, Next.js 지원)
+
+#### Phase 4D: Advanced Optimization & Performance (고급 최적화) - 2주
+**목표**: 100페이지/분 + 메타데이터 활용 최적화
+- **🆕 4D.1** 병렬 메타데이터 발견 엔진 (15개 파일 동시 스캔)
+- **🔧 4D.2** 지능형 크롤링 경로 최적화 (메타데이터 기반)
+- **🔧 4D.3** Auto 청킹 전략 구현 (메타데이터 컨텍스트 활용)
+- **🔧 4D.4** 병렬 처리 엔진 구현 (CPU 코어별 동적 스케일링)
+- **🔧 4D.5** 지능형 LRU 캐시 시스템 (메타데이터별 캐시 전략)
+- **🔧 4D.6** 성능 모니터링 대시보드 (메타데이터 활용률 포함)
+
+### Phase 5: Multimodal & Enterprise Features (멀티모달 및 엔터프라이즈 기능) - 8주
+> 차세대 RAG 기능 및 엔터프라이즈급 확장성 구현
+
+**목표**: 이미지-텍스트 통합 처리, 평가 프레임워크 완성, 엔터프라이즈급 안정성 달성
 
 #### 주요 태스크
 - **5.1** 이미지-텍스트 변환 (텍스트 기반화)
-- **5.2** 표 데이터 선형화 처리
-- **5.3** 고급 콘텐츠 추출기 (JSON, XML, RSS)
-- **5.4** 평가 프레임워크 구현
-- **5.5** 맥락적 검색 최적화
-- **5.6** 프로덕션 준비 (문서, 예제, NuGet 패키징)
+- **5.2** 표 데이터 선형화 처리 (CSV, Excel 통합)
+- **5.3** 고급 콘텐츠 추출기 (RSS, Atom, PDF 지원)
+- **5.4** 평가 프레임워크 구현 (품질 측정 자동화)
+- **5.5** 맥락적 검색 최적화 (의미적 관련성 강화)
+- **5.6** 엔터프라이즈 모니터링 시스템
+- **5.7** 스케일링 및 부하 분산
+- **5.8** 프로덕션 준비 (문서, 예제, NuGet 패키징)
+
+### Phase 6: Production Readiness & Ecosystem (프로덕션 준비 및 생태계) - 4주
+> 대규모 배포 및 개발자 경험 최적화
+
+**목표**: 프로덕션 환경 완전 대응, 개발자 생태계 구축, 지속적 모니터링 체계 완성
+
+#### 주요 태스크
+- **6.1** 대규모 배포 최적화 (Kubernetes, Docker 지원)
+- **6.2** 관찰성 시스템 (OpenTelemetry, Prometheus 통합)
+- **6.3** 포괄적 문서화 (API 문서, 튜토리얼, 모범 사례)
+- **6.4** 개발자 도구 (CLI, Visual Studio 확장)
+- **6.5** 커뮤니티 플랫폼 (GitHub 템플릿, 샘플 프로젝트)
+- **6.6** NuGet 패키지 최적화 및 배포 자동화
 
 ## 📋 상세 태스크 분석
 
@@ -331,7 +374,40 @@
 
 ### Phase 4 상세 태스크
 
-#### 4.1 병렬 처리 엔진 구현
+#### 4.1 llms.txt 표준 지원 구현 (AI 친화적 웹 크롤링)
+**목표**: AI 친화적 웹 표준을 통한 크롤링 품질 혁신
+- [ ] `ILlmsParser` 인터페이스 정의
+- [ ] llms.txt 파일 감지 및 파싱 엔진
+- [ ] 사이트 구조 메타데이터 추출 (섹션, 중요도, 관련성)
+- [ ] 컨텍스트 기반 크롤링 우선순위 설정
+- [ ] llms.txt 메타데이터를 활용한 청킹 품질 개선
+- [ ] 표준 호환성 검증 및 폴백 메커니즘
+
+**완료 기준**: llms.txt 지원 사이트에서 크롤링 품질 30% 향상, 처리 효율성 25% 개선
+
+#### 4.2 지능형 크롤링 전략 최적화 (컨텍스트 기반)
+**목표**: llms.txt 컨텍스트를 활용한 스마트 크롤링
+- [ ] `IntelligentCrawler` 구현체 개발
+- [ ] 사이트 구조 분석 기반 크롤링 경로 최적화
+- [ ] 중요도 기반 페이지 우선순위 알고리즘
+- [ ] 관련 페이지 그룹핑 및 배치 처리
+- [ ] 동적 크롤링 깊이 조정 (콘텐츠 품질 기반)
+- [ ] 노이즈 페이지 자동 필터링
+
+**완료 기준**: 기존 크롤러 대비 관련성 높은 콘텐츠 수집률 40% 향상
+
+#### 4.3 Auto 청킹 전략 구현 (컨텐츠별 최적 전략 자동 선택)
+**목표**: 콘텐츠 특성에 따른 최적 청킹 전략 자동 선택
+- [ ] `AutoChunkingStrategy` 구현
+- [ ] 콘텐츠 타입 분석기 (구조적 vs 의미적 콘텐츠)
+- [ ] 전략 성능 벤치마킹 프레임워크
+- [ ] 머신러닝 기반 전략 선택 모델 (경량화)
+- [ ] A/B 테스트 프레임워크 구축
+- [ ] 자동 성능 튜닝 메커니즘
+
+**완료 기준**: 자동 선택 정확도 85% 이상, 평균 청킹 품질 15% 향상
+
+#### 4.4 병렬 처리 엔진 구현
 **목표**: 연구에서 제시한 성능 목표 달성
 - [ ] Threading.Channels 기반 작업 큐
 - [ ] CPU 코어별 동적 워커 스케일링
