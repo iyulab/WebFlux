@@ -1,0 +1,55 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+
+    <!-- NuGet 패키지 정보 -->
+    <PackageId>WebFlux</PackageId>
+    <Version>1.0.0-alpha</Version>
+    <Authors>WebFlux Team</Authors>
+    <Company>WebFlux</Company>
+    <Product>WebFlux SDK</Product>
+    <Description>고성능 RAG 전처리 SDK - 웹 콘텐츠를 RAG 시스템에 최적화된 구조화된 청크로 변환</Description>
+    <PackageTags>RAG;chunking;web-scraping;AI;preprocessing;dotnet9</PackageTags>
+    <PackageProjectUrl>https://github.com/webflux/webflux</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/webflux/webflux</RepositoryUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+
+    <!-- 빌드 설정 -->
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <WarningsAsErrors />
+    <WarningsNotAsErrors>CS1591</WarningsNotAsErrors>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- HTTP 클라이언트 -->
+    <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.0" />
+
+    <!-- 의존성 주입 -->
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.0" />
+
+    <!-- 로깅 -->
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.0" />
+
+    <!-- 구성 -->
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="9.0.0" />
+
+    <!-- 병렬 처리 -->
+    <PackageReference Include="System.Threading.Channels" Version="9.0.0" />
+
+    <!-- HTML 파싱 -->
+    <PackageReference Include="HtmlAgilityPack" Version="1.11.70" />
+
+    <!-- JSON 처리 -->
+    <PackageReference Include="System.Text.Json" Version="9.0.0" />
+  </ItemGroup>
+
+</Project>
