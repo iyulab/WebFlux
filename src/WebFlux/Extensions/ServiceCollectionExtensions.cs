@@ -2,10 +2,14 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
+using Microsoft.Playwright;
 using WebFlux.Configuration;
 using WebFlux.Core.Interfaces;
 using WebFlux.Core.Models;
 using WebFlux.Services;
+using WebFlux.Services.ChunkingStrategies;
+using WebFlux.Services.AI;
+using WebFlux.Services.Progress;
 
 namespace WebFlux.Extensions;
 
@@ -62,6 +66,12 @@ public static class ServiceCollectionExtensions
 
         // 청킹 서비스 등록
         services.AddWebFluxChunking();
+
+        // Playwright 서비스 등록
+        services.AddWebFluxPlaywright();
+
+        // 진행률 리포팅 서비스 등록
+        services.AddWebFluxProgressReporting();
 
         // 로깅 구성
         services.AddLogging();
@@ -138,7 +148,7 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddWebFluxContentExtraction(this IServiceCollection services)
     {
         // 콘텐츠 추출기들 등록 (Transient)
-        services.TryAddTransient<HtmlContentExtractor>();
+        services.TryAddTransient<PlaywrightContentExtractor>(); // Playwright 기반 동적 크롤링
         services.TryAddTransient<MarkdownContentExtractor>();
         services.TryAddTransient<JsonContentExtractor>();
         services.TryAddTransient<XmlContentExtractor>();
@@ -163,6 +173,8 @@ public static class ServiceCollectionExtensions
         // 청킹 전략들 등록 (Transient)
         services.TryAddTransient<FixedSizeChunkingStrategy>();
         services.TryAddTransient<ParagraphChunkingStrategy>();
+        services.TryAddTransient<SmartChunkingStrategy>();
+        services.TryAddTransient<SemanticChunkingStrategy>();
 
         // 청킹 전략 팩토리 등록
         services.TryAddSingleton<IChunkingStrategyFactory, ChunkingStrategyFactory>();
@@ -178,6 +190,27 @@ public static class ServiceCollectionExtensions
 
     /// <summary>
     /// AI 서비스 구현체를 등록합니다. (소비자가 호출)
+    /// </summary>
+    /// <typeparam name="TTextCompletion">텍스트 완성 서비스 구현체</typeparam>
+    /// <typeparam name="TImageToText">이미지-텍스트 변환 서비스 구현체</typeparam>
+    /// <typeparam name="TTextEmbedding">텍스트 임베딩 서비스 구현체</typeparam>
+    /// <param name="services">서비스 컬렉션</param>
+    /// <returns>서비스 컬렉션</returns>
+    public static IServiceCollection AddWebFluxAIServices<TTextCompletion, TImageToText, TTextEmbedding>(
+        this IServiceCollection services)
+        where TTextCompletion : class, ITextCompletionService
+        where TImageToText : class, IImageToTextService
+        where TTextEmbedding : class, ITextEmbeddingService
+    {
+        services.TryAddScoped<ITextCompletionService, TTextCompletion>();
+        services.TryAddScoped<IImageToTextService, TImageToText>();
+        services.TryAddScoped<ITextEmbeddingService, TTextEmbedding>();
+
+        return services;
+    }
+
+    /// <summary>
+    /// AI 서비스 구현체를 등록합니다. (임베딩 없는 버전, 하위 호환성)
     /// </summary>
     /// <typeparam name="TTextCompletion">텍스트 완성 서비스 구현체</typeparam>
     /// <typeparam name="TImageToText">이미지-텍스트 변환 서비스 구현체</typeparam>
@@ -201,7 +234,17 @@ public static class ServiceCollectionExtensions
     /// <returns>서비스 컬렉션</returns>
     public static IServiceCollection AddWebFluxMockAIServices(this IServiceCollection services)
     {
-        return services.AddWebFluxAIServices<MockTextCompletionService, MockImageToTextService>();
+        return services.AddWebFluxAIServices<MockTextCompletionService, MockImageToTextService, MockTextEmbeddingService>();
+    }
+
+    /// <summary>
+    /// OpenAI AI 서비스를 등록합니다. (프로덕션용)
+    /// </summary>
+    /// <param name="services">서비스 컬렉션</param>
+    /// <returns>서비스 컬렉션</returns>
+    public static IServiceCollection AddWebFluxOpenAIServices(this IServiceCollection services)
+    {
+        return services.AddWebFluxAIServices<OpenAITextCompletionService, OpenAIImageToTextService, OpenAITextEmbeddingService>();
     }
 
     /// <summary>
@@ -226,6 +269,35 @@ public static class ServiceCollectionExtensions
     {
         services.TryAddSingleton<IPerformanceMonitor, PerformanceMonitor>();
         services.TryAddScoped<IMetricsCollector, MetricsCollector>();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Playwright 관련 서비스를 등록합니다.
+    /// </summary>
+    /// <param name="services">서비스 컬렉션</param>
+    /// <returns>서비스 컬렉션</returns>
+    public static IServiceCollection AddWebFluxPlaywright(this IServiceCollection services)
+    {
+        // Playwright 인스턴스를 Singleton으로 등록 (애플리케이션당 하나)
+        services.TryAddSingleton<IPlaywright>(serviceProvider =>
+        {
+            // Playwright.CreateAsync()를 동기적으로 호출하기 위한 헬퍼
+            return Microsoft.Playwright.Playwright.CreateAsync().GetAwaiter().GetResult();
+        });
+
+        return services;
+    }
+
+    /// <summary>
+    /// 진행률 리포팅 서비스를 등록합니다.
+    /// </summary>
+    /// <param name="services">서비스 컬렉션</param>
+    /// <returns>서비스 컬렉션</returns>
+    public static IServiceCollection AddWebFluxProgressReporting(this IServiceCollection services)
+    {
+        services.TryAddSingleton<IProgressReporter, InMemoryProgressReporter>();
 
         return services;
     }

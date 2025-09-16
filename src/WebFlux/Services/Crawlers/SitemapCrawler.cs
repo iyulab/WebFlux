@@ -471,6 +471,7 @@ public class SitemapCrawler : BaseCrawler
 /// </summary>
 public class SitemapDiscoveryEvent : ProcessingEvent
 {
+    public override string EventType => "SitemapDiscovery";
     public int DomainsProcessed { get; set; }
     public int SitemapsFound { get; set; }
     public int TotalUrls { get; set; }

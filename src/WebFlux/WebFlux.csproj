@@ -45,8 +45,8 @@
     <!-- 병렬 처리 -->
     <PackageReference Include="System.Threading.Channels" Version="9.0.0" />
 
-    <!-- HTML 파싱 -->
-    <PackageReference Include="HtmlAgilityPack" Version="1.11.70" />
+    <!-- 웹 브라우저 자동화 (동적 콘텐츠 크롤링) -->
+    <PackageReference Include="Microsoft.Playwright" Version="1.48.0" />
 
     <!-- JSON 처리 -->
     <PackageReference Include="System.Text.Json" Version="9.0.0" />

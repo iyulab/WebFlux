@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using WebFlux.Core.Interfaces;
 using WebFlux.Core.Options;
+using WebFlux.Services.ChunkingStrategies;
 
 namespace WebFlux.Services;
 
@@ -120,11 +121,12 @@ public class ServiceFactory : IServiceFactory
         {
             "fixedsize" or "fixed" => CreateService<FixedSizeChunkingStrategy>(),
             "paragraph" or "para" => CreateService<ParagraphChunkingStrategy>(),
+            "smart" or "structure" or "structural" => CreateService<SmartChunkingStrategy>(),
+            "semantic" or "embedding" or "similarity" => CreateService<SemanticChunkingStrategy>(),
             // 향후 추가될 전략들
-            // "smart" => CreateService<SmartChunkingStrategy>(),
-            // "semantic" => CreateService<SemanticChunkingStrategy>(),
             // "intelligent" => CreateService<IntelligentChunkingStrategy>(),
             // "memoryoptimized" => CreateService<MemoryOptimizedChunkingStrategy>(),
+            // "auto" => CreateService<AutoChunkingStrategy>(),
             _ => CreateService<FixedSizeChunkingStrategy>() // 기본값
         };
     }
@@ -220,8 +222,10 @@ public class ChunkingStrategyFactory : IChunkingStrategyFactory
     private static readonly IReadOnlyList<string> AvailableStrategies = new[]
     {
         "FixedSize",
-        "Paragraph"
-        // 향후 추가: "Smart", "Semantic", "Intelligent", "MemoryOptimized", "Auto"
+        "Paragraph",
+        "Smart",
+        "Semantic"
+        // 향후 추가: "Intelligent", "MemoryOptimized", "Auto"
     };
 
     public ChunkingStrategyFactory(IServiceFactory serviceFactory)

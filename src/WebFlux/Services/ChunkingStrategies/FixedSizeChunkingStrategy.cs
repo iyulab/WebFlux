@@ -302,6 +302,7 @@ public class FixedSizeChunkingStrategy : BaseChunkingStrategy
 /// </summary>
 public class ChunkingSizeAnalysisEvent : ProcessingEvent
 {
+    public override string EventType => "ChunkingSizeAnalysis";
     public string Url { get; set; } = string.Empty;
     public int ChunkCount { get; set; }
     public int AverageSize { get; set; }

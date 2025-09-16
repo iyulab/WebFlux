@@ -327,34 +327,3 @@ public abstract class BaseChunkingStrategy : IChunkingStrategy
     }
 }
 
-/// <summary>
-/// 청킹 시작 이벤트
-/// </summary>
-public class ChunkingStartedEvent : ProcessingEvent
-{
-    public string Url { get; set; } = string.Empty;
-    public int TextLength { get; set; }
-    public string Strategy { get; set; } = string.Empty;
-}
-
-/// <summary>
-/// 청킹 완료 이벤트
-/// </summary>
-public class ChunkingCompletedEvent : ProcessingEvent
-{
-    public string Url { get; set; } = string.Empty;
-    public int ChunkCount { get; set; }
-    public int AverageChunkSize { get; set; }
-    public int ProcessingTimeMs { get; set; }
-    public string Strategy { get; set; } = string.Empty;
-}
-
-/// <summary>
-/// 청킹 실패 이벤트
-/// </summary>
-public class ChunkingFailedEvent : ProcessingEvent
-{
-    public string Url { get; set; } = string.Empty;
-    public string Error { get; set; } = string.Empty;
-    public string Strategy { get; set; } = string.Empty;
-}

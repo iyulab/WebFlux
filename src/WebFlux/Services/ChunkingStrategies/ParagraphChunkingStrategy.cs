@@ -485,6 +485,7 @@ public enum ParagraphType
 /// </summary>
 public class ChunkingCoherenceAnalysisEvent : ProcessingEvent
 {
+    public override string EventType => "ChunkingCoherenceAnalysis";
     public string Url { get; set; } = string.Empty;
     public int ChunkCount { get; set; }
     public double AverageCoherence { get; set; }

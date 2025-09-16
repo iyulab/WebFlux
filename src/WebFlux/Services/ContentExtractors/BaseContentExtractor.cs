@@ -335,6 +335,7 @@ public abstract class BaseContentExtractor : IContentExtractor
 /// </summary>
 public class ContentExtractionStartedEvent : ProcessingEvent
 {
+    public override string EventType => "ContentExtractionStarted";
     public string Url { get; set; } = string.Empty;
     public string ContentType { get; set; } = string.Empty;
     public int ContentLength { get; set; }
@@ -345,6 +346,7 @@ public class ContentExtractionStartedEvent : ProcessingEvent
 /// </summary>
 public class ContentExtractionCompletedEvent : ProcessingEvent
 {
+    public override string EventType => "ContentExtractionCompleted";
     public string Url { get; set; } = string.Empty;
     public int ExtractedTextLength { get; set; }
     public int ProcessingTimeMs { get; set; }
@@ -356,6 +358,7 @@ public class ContentExtractionCompletedEvent : ProcessingEvent
 /// </summary>
 public class ContentExtractionFailedEvent : ProcessingEvent
 {
+    public override string EventType => "ContentExtractionFailed";
     public string Url { get; set; } = string.Empty;
     public string Error { get; set; } = string.Empty;
 }
