@@ -146,6 +146,12 @@ public static class ServiceCollectionExtensions
         // 사이트맵 분석 서비스 등록
         services.TryAddScoped<ISitemapAnalyzer, SitemapAnalyzer>();
 
+        // ai.txt 파서 서비스 등록
+        services.TryAddScoped<IAiTxtParser, AiTxtParser>();
+
+        // manifest.json 파서 서비스 등록
+        services.TryAddScoped<IManifestParser, ManifestParser>();
+
         return services;
     }
 
