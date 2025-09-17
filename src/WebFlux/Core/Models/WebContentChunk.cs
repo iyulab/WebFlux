@@ -34,7 +34,12 @@ public class WebContentChunk
     /// <summary>
     /// 청크의 메타데이터
     /// </summary>
-    public WebContentMetadata Metadata { get; init; } = new();
+    public WebContentMetadata Metadata { get; set; } = new();
+
+    /// <summary>
+    /// 추가 메타데이터 (동적으로 추가 가능)
+    /// </summary>
+    public Dictionary<string, object> AdditionalMetadata { get; set; } = new();
 
     /// <summary>
     /// 청크 내 순서 (문서 내에서의 위치)

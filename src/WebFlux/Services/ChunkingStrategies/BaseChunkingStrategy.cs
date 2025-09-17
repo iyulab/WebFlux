@@ -1,6 +1,9 @@
+using System.Runtime.CompilerServices;
+using System.Text.RegularExpressions;
 using WebFlux.Core.Interfaces;
 using WebFlux.Core.Models;
-using System.Text.RegularExpressions;
+using WebFlux.Core.Options;
+using ChunkingOptions = WebFlux.Core.Options.ChunkingOptions;
 
 namespace WebFlux.Services.ChunkingStrategies;
 
@@ -317,6 +320,188 @@ public abstract class BaseChunkingStrategy : IChunkingStrategy
     /// </summary>
     /// <returns>전략 이름</returns>
     protected abstract string GetStrategyName();
+
+    /// <summary>
+    /// 전략 이름
+    /// </summary>
+    public abstract string Name { get; }
+
+    /// <summary>
+    /// 전략 설명
+    /// </summary>
+    public abstract string Description { get; }
+
+    /// <summary>
+    /// 추출된 콘텐츠를 청크로 분할 (인터페이스 구현)
+    /// </summary>
+    /// <param name="content">추출된 콘텐츠</param>
+    /// <param name="options">청킹 옵션</param>
+    /// <param name="cancellationToken">취소 토큰</param>
+    /// <returns>청크 목록</returns>
+    public async Task<IReadOnlyList<WebContentChunk>> ChunkAsync(
+        ExtractedContent content,
+        ChunkingOptions? options = null,
+        CancellationToken cancellationToken = default)
+    {
+        var configuration = ConvertOptionsToConfiguration(options);
+        var chunks = await ChunkAsync(content, configuration, cancellationToken);
+        return chunks.ToList().AsReadOnly();
+    }
+
+    /// <summary>
+    /// 청크 스트림 생성
+    /// </summary>
+    /// <param name="content">추출된 콘텐츠</param>
+    /// <param name="options">청킹 옵션</param>
+    /// <param name="cancellationToken">취소 토큰</param>
+    /// <returns>청크 스트림</returns>
+    public virtual async IAsyncEnumerable<WebContentChunk> ChunkStreamAsync(
+        ExtractedContent content,
+        ChunkingOptions? options = null,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        var chunks = await ChunkAsync(content, options, cancellationToken);
+        foreach (var chunk in chunks)
+        {
+            yield return chunk;
+        }
+    }
+
+    /// <summary>
+    /// 적합성 평가
+    /// </summary>
+    /// <param name="content">콘텐츠</param>
+    /// <param name="options">옵션</param>
+    /// <returns>적합성 점수 (0.0-1.0)</returns>
+    public virtual Task<double> EvaluateSuitabilityAsync(
+        ExtractedContent content,
+        ChunkingOptions? options = null)
+    {
+        // 기본 적합성 점수 (파생 클래스에서 재정의 가능)
+        var score = 0.5;
+
+        // 콘텐츠 길이에 따른 조정
+        if (content.MainContent?.Length > 0)
+        {
+            var length = content.MainContent.Length;
+            if (length > 1000 && length < 50000)
+                score += 0.2;
+        }
+
+        return Task.FromResult(Math.Min(1.0, score));
+    }
+
+    /// <summary>
+    /// 성능 정보 반환
+    /// </summary>
+    /// <returns>성능 정보</returns>
+    public virtual PerformanceInfo GetPerformanceInfo()
+    {
+        return new PerformanceInfo
+        {
+            AverageProcessingTime = TimeSpan.FromMilliseconds(100),
+            MemoryUsage = "Medium",
+            CPUIntensity = "Medium",
+            Scalability = "Good"
+        };
+    }
+
+    /// <summary>
+    /// 구성 옵션 반환
+    /// </summary>
+    /// <returns>구성 옵션 목록</returns>
+    public virtual List<ConfigurationOption> GetConfigurationOptions()
+    {
+        return new List<ConfigurationOption>
+        {
+            new ConfigurationOption
+            {
+                Name = "MinChunkSize",
+                Type = "int",
+                DefaultValue = "100",
+                Description = "최소 청크 크기"
+            },
+            new ConfigurationOption
+            {
+                Name = "MaxChunkSize",
+                Type = "int",
+                DefaultValue = "2000",
+                Description = "최대 청크 크기"
+            },
+            new ConfigurationOption
+            {
+                Name = "OverlapSize",
+                Type = "int",
+                DefaultValue = "200",
+                Description = "청크 간 겹침 크기"
+            }
+        };
+    }
+
+    /// <summary>
+    /// 청크 품질 평가
+    /// </summary>
+    /// <param name="chunk">청크</param>
+    /// <param name="context">평가 컨텍스트</param>
+    /// <returns>품질 점수</returns>
+    public virtual Task<double> EvaluateChunkQualityAsync(
+        WebContentChunk chunk,
+        ChunkEvaluationContext? context = null)
+    {
+        var score = 0.0;
+
+        // 길이 기반 평가
+        if (chunk.Content.Length >= 50 && chunk.Content.Length <= 2000)
+            score += 0.3;
+
+        // 완전성 평가 (문장 끝남 확인)
+        if (chunk.Content.TrimEnd().EndsWith(".") ||
+            chunk.Content.TrimEnd().EndsWith("!") ||
+            chunk.Content.TrimEnd().EndsWith("?"))
+            score += 0.2;
+
+        // 최소 단어 수 확인
+        var wordCount = CountWords(chunk.Content);
+        if (wordCount >= 10)
+            score += 0.3;
+
+        // 중복 공백 및 형식 확인
+        if (!Regex.IsMatch(chunk.Content, @"\s{3,}"))
+            score += 0.2;
+
+        return Task.FromResult(Math.Min(1.0, score));
+    }
+
+    /// <summary>
+    /// 통계 정보 반환
+    /// </summary>
+    /// <returns>통계 정보</returns>
+    public virtual ChunkingStatistics GetStatistics()
+    {
+        return new ChunkingStatistics
+        {
+            TotalChunksCreated = 0,
+            AverageChunkSize = 0,
+            AverageProcessingTime = TimeSpan.FromMilliseconds(100),
+            QualityScore = 0.8
+        };
+    }
+
+    /// <summary>
+    /// 옵션을 구성으로 변환
+    /// </summary>
+    /// <param name="options">청킹 옵션</param>
+    /// <returns>청킹 구성</returns>
+    protected virtual ChunkingConfiguration ConvertOptionsToConfiguration(ChunkingOptions? options)
+    {
+        return new ChunkingConfiguration
+        {
+            MinChunkSize = options?.MinChunkSize ?? 100,
+            MaxChunkSize = options?.MaxChunkSize ?? 2000,
+            OverlapSize = options?.OverlapSize ?? 200,
+            NormalizeWhitespace = options?.NormalizeWhitespace ?? true
+        };
+    }
 
     /// <summary>
     /// 리소스 정리

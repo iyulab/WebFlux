@@ -322,6 +322,130 @@ public abstract class BaseContentExtractor : IContentExtractor
     }
 
     /// <summary>
+    /// HTML 콘텐츠에서 텍스트와 메타데이터를 추출합니다.
+    /// </summary>
+    /// <param name="htmlContent">HTML 콘텐츠</param>
+    /// <param name="sourceUrl">원본 URL</param>
+    /// <param name="cancellationToken">취소 토큰</param>
+    /// <returns>추출된 콘텐츠</returns>
+    public abstract Task<ExtractedContent> ExtractFromHtmlAsync(
+        string htmlContent,
+        string sourceUrl,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 마크다운 콘텐츠에서 텍스트와 메타데이터를 추출합니다.
+    /// </summary>
+    /// <param name="markdownContent">마크다운 콘텐츠</param>
+    /// <param name="sourceUrl">원본 URL</param>
+    /// <param name="cancellationToken">취소 토큰</param>
+    /// <returns>추출된 콘텐츠</returns>
+    public abstract Task<ExtractedContent> ExtractFromMarkdownAsync(
+        string markdownContent,
+        string sourceUrl,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// JSON 콘텐츠에서 텍스트와 메타데이터를 추출합니다.
+    /// </summary>
+    /// <param name="jsonContent">JSON 콘텐츠</param>
+    /// <param name="sourceUrl">원본 URL</param>
+    /// <param name="cancellationToken">취소 토큰</param>
+    /// <returns>추출된 콘텐츠</returns>
+    public abstract Task<ExtractedContent> ExtractFromJsonAsync(
+        string jsonContent,
+        string sourceUrl,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// XML 콘텐츠에서 텍스트와 메타데이터를 추출합니다.
+    /// </summary>
+    /// <param name="xmlContent">XML 콘텐츠</param>
+    /// <param name="sourceUrl">원본 URL</param>
+    /// <param name="cancellationToken">취소 토큰</param>
+    /// <returns>추출된 콘텐츠</returns>
+    public abstract Task<ExtractedContent> ExtractFromXmlAsync(
+        string xmlContent,
+        string sourceUrl,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 일반 텍스트 콘텐츠를 처리합니다.
+    /// </summary>
+    /// <param name="textContent">텍스트 콘텐츠</param>
+    /// <param name="sourceUrl">원본 URL</param>
+    /// <param name="cancellationToken">취소 토큰</param>
+    /// <returns>추출된 콘텐츠</returns>
+    public abstract Task<ExtractedContent> ExtractFromTextAsync(
+        string textContent,
+        string sourceUrl,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 콘텐츠 유형을 자동으로 감지하여 추출합니다.
+    /// </summary>
+    /// <param name="content">콘텐츠</param>
+    /// <param name="sourceUrl">원본 URL</param>
+    /// <param name="contentType">콘텐츠 타입 힌트</param>
+    /// <param name="cancellationToken">취소 토큰</param>
+    /// <returns>추출된 콘텐츠</returns>
+    public virtual async Task<ExtractedContent> ExtractAutoAsync(
+        string content,
+        string sourceUrl,
+        string? contentType = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(content))
+            throw new ArgumentException("Content cannot be null or empty", nameof(content));
+
+        if (string.IsNullOrWhiteSpace(sourceUrl))
+            throw new ArgumentException("Source URL cannot be null or empty", nameof(sourceUrl));
+
+        // 콘텐츠 타입에 따른 자동 추출
+        return contentType?.ToLowerInvariant() switch
+        {
+            var ct when ct.Contains("html") => await ExtractFromHtmlAsync(content, sourceUrl, cancellationToken),
+            var ct when ct.Contains("json") => await ExtractFromJsonAsync(content, sourceUrl, cancellationToken),
+            var ct when ct.Contains("xml") => await ExtractFromXmlAsync(content, sourceUrl, cancellationToken),
+            var ct when ct.Contains("markdown") || ct.Contains("md") => await ExtractFromMarkdownAsync(content, sourceUrl, cancellationToken),
+            _ => await ExtractFromTextAsync(content, sourceUrl, cancellationToken)
+        };
+    }
+
+    /// <summary>
+    /// 지원하는 콘텐츠 타입 목록을 반환합니다.
+    /// </summary>
+    /// <returns>지원하는 MIME 타입 목록</returns>
+    public virtual IReadOnlyList<string> GetSupportedContentTypes()
+    {
+        return new List<string>
+        {
+            "text/html",
+            "text/plain",
+            "text/markdown",
+            "application/json",
+            "text/xml",
+            "application/xml"
+        }.AsReadOnly();
+    }
+
+    /// <summary>
+    /// 추출 통계를 반환합니다.
+    /// </summary>
+    /// <returns>추출 통계 정보</returns>
+    public virtual ExtractionStatistics GetStatistics()
+    {
+        return new ExtractionStatistics
+        {
+            TotalExtractions = 0,
+            SuccessfulExtractions = 0,
+            FailedExtractions = 0,
+            AverageProcessingTimeMs = 0,
+            SupportedContentTypes = GetSupportedContentTypes().Count
+        };
+    }
+
+    /// <summary>
     /// 리소스 정리
     /// </summary>
     public virtual void Dispose()

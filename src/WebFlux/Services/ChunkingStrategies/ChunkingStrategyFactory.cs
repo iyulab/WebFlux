@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using WebFlux.Core.Interfaces;
 using WebFlux.Core.Models;
+using ChunkingOptions = WebFlux.Core.Options.ChunkingOptions;
 
 namespace WebFlux.Services.ChunkingStrategies;
 
@@ -56,9 +57,14 @@ public class ChunkingStrategyFactory : IChunkingStrategyFactory
         }
     }
 
-    public IEnumerable<string> GetAvailableStrategies()
+    public IReadOnlyList<string> GetAvailableStrategies()
     {
-        return _strategyCreators.Keys.ToList();
+        return _strategyCreators.Keys.ToList().AsReadOnly();
+    }
+
+    public async Task<IChunkingStrategy> CreateStrategy(string strategyName)
+    {
+        return await CreateStrategyAsync(strategyName);
     }
 
     public async Task<StrategyInfo> GetStrategyInfoAsync(string strategyName)

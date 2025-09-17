@@ -263,13 +263,23 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddWebFluxMockAIServices(this IServiceCollection services)
     {
 #if DEBUG
-        // DEBUG 모드: 전체 Mock 서비스 등록
+        // DEBUG 모드: 전체 Mock 서비스 등록 (풍부한 테스트 데이터 포함)
         return services.AddWebFluxAIServices<MockTextCompletionService, MockImageToTextService, MockTextEmbeddingService>();
 #else
-        // RELEASE 모드: 경고 로그와 함께 제한적 등록
+        // RELEASE 모드: Mock 서비스 배제, 더미 서비스만 제공
+        // 프로덕션 환경에서는 실제 AI 서비스 사용을 강력히 권장
         var logger = services.BuildServiceProvider().GetService<ILogger<ServiceCollectionExtensions>>();
-        logger?.LogWarning("Mock AI services are registered in Release mode. Consider using production AI services for better performance.");
-        return services.AddWebFluxAIServices<MockTextCompletionService, MockImageToTextService, MockTextEmbeddingService>();
+        logger?.LogCritical("Mock AI services are NOT available in Release mode. Use AddWebFluxOpenAIServices() or provide production AI service implementations.");
+
+        // RELEASE에서는 Mock 서비스 대신 빈 구현체 등록 (오류 방지용)
+        services.TryAddScoped<ITextCompletionService>(provider =>
+            throw new InvalidOperationException("Mock AI services are not available in Release mode. Configure production AI services."));
+        services.TryAddScoped<IImageToTextService>(provider =>
+            throw new InvalidOperationException("Mock AI services are not available in Release mode. Configure production AI services."));
+        services.TryAddScoped<ITextEmbeddingService>(provider =>
+            throw new InvalidOperationException("Mock AI services are not available in Release mode. Configure production AI services."));
+
+        return services;
 #endif
     }
 

@@ -2,6 +2,10 @@ using Microsoft.Extensions.Logging;
 using WebFlux.Core.Interfaces;
 using WebFlux.Core.Models;
 using System.Text.Json;
+using System.Runtime.CompilerServices;
+using ChunkingOptions = WebFlux.Core.Options.ChunkingOptions;
+using ChunkEvaluationContext = WebFlux.Core.Interfaces.ChunkEvaluationContext;
+using ChunkingStatistics = WebFlux.Core.Interfaces.ChunkingStatistics;
 
 namespace WebFlux.Services.ChunkingStrategies;
 
@@ -9,7 +13,7 @@ namespace WebFlux.Services.ChunkingStrategies;
 /// Auto 청킹 전략 - 메타데이터 컨텍스트를 활용한 지능형 전략 자동 선택
 /// Phase 4D: 웹 메타데이터를 기반으로 콘텐츠 특성에 최적화된 청킹 전략 선택
 /// </summary>
-public class AutoChunkingStrategy : BaseChunkingStrategy
+public class AutoChunkingStrategy : IChunkingStrategy
 {
     private readonly IChunkingStrategyFactory _strategyFactory;
     private readonly IMetadataDiscoveryService _metadataService;
@@ -17,8 +21,8 @@ public class AutoChunkingStrategy : BaseChunkingStrategy
     private readonly Dictionary<string, IChunkingStrategy> _cachedStrategies;
     private readonly AutoChunkingConfiguration _config;
 
-    public override string Name => "Auto";
-    public override string Description => "지능형 자동 전략 선택 - 메타데이터 기반 최적화";
+    public string Name => "Auto";
+    public string Description => "지능형 자동 전략 선택 - 메타데이터 기반 최적화";
 
     public AutoChunkingStrategy(
         IChunkingStrategyFactory strategyFactory,
@@ -32,7 +36,7 @@ public class AutoChunkingStrategy : BaseChunkingStrategy
         _config = new AutoChunkingConfiguration();
     }
 
-    public override async Task<ChunkResult> ChunkAsync(
+    public async Task<IReadOnlyList<WebContentChunk>> ChunkAsync(
         ExtractedContent content,
         ChunkingOptions? options = null,
         CancellationToken cancellationToken = default)
@@ -46,14 +50,17 @@ public class AutoChunkingStrategy : BaseChunkingStrategy
                 selectedStrategy.Name, content.Url);
 
             // 2. 선택된 전략으로 청킹 수행
-            var result = await selectedStrategy.ChunkAsync(content, options, cancellationToken);
+            var chunks = await selectedStrategy.ChunkAsync(content, options, cancellationToken);
 
             // 3. Auto 전략 메타데이터 추가
-            result.Metadata["AutoSelectedStrategy"] = selectedStrategy.Name;
-            result.Metadata["AutoSelectionReason"] = await GetSelectionReasonAsync(content, selectedStrategy.Name);
-            result.Metadata["AutoSelectionConfidence"] = await CalculateConfidenceScoreAsync(content, selectedStrategy.Name);
+            foreach (var chunk in chunks)
+            {
+                chunk.AdditionalMetadata["AutoSelectedStrategy"] = selectedStrategy.Name;
+                chunk.AdditionalMetadata["AutoSelectionReason"] = await GetSelectionReasonAsync(content, selectedStrategy.Name);
+                chunk.AdditionalMetadata["AutoSelectionConfidence"] = await CalculateConfidenceScoreAsync(content, selectedStrategy.Name);
+            }
 
-            return result;
+            return chunks;
         }
         catch (Exception ex)
         {
@@ -65,10 +72,10 @@ public class AutoChunkingStrategy : BaseChunkingStrategy
         }
     }
 
-    public override async IAsyncEnumerable<WebContentChunk> ChunkStreamAsync(
+    public async IAsyncEnumerable<WebContentChunk> ChunkStreamAsync(
         ExtractedContent content,
         ChunkingOptions? options = null,
-        CancellationToken cancellationToken = default)
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         var selectedStrategy = await SelectOptimalStrategyAsync(content, options, cancellationToken);
 
@@ -78,7 +85,7 @@ public class AutoChunkingStrategy : BaseChunkingStrategy
         await foreach (var chunk in selectedStrategy.ChunkStreamAsync(content, options, cancellationToken))
         {
             // 각 청크에 Auto 전략 메타데이터 추가
-            chunk.Metadata["AutoSelectedStrategy"] = selectedStrategy.Name;
+            chunk.AdditionalMetadata["AutoSelectedStrategy"] = selectedStrategy.Name;
             yield return chunk;
         }
     }
@@ -426,7 +433,7 @@ public class AutoChunkingStrategy : BaseChunkingStrategy
             (text.Length - text.Replace(pattern, "").Length) / pattern.Length);
     }
 
-    public override async Task<double> EvaluateSuitabilityAsync(
+    public async Task<double> EvaluateSuitabilityAsync(
         ExtractedContent content,
         ChunkingOptions? options = null)
     {
@@ -434,34 +441,67 @@ public class AutoChunkingStrategy : BaseChunkingStrategy
         return 1.0; // Auto 전략은 항상 최고 적합도
     }
 
-    public override PerformanceInfo GetPerformanceInfo()
+    public StrategyPerformanceInfo GetPerformanceInfo()
     {
-        return new PerformanceInfo
+        return new StrategyPerformanceInfo
         {
-            AverageProcessingTime = TimeSpan.FromMilliseconds(200), // 전략 선택 오버헤드 포함
-            MemoryUsage = "Variable",
-            CPUIntensity = "Medium",
-            Scalability = "High"
+            AverageProcessingTimePerMb = 200.0, // 전략 선택 오버헤드 포함
+            MemoryUsageMultiplier = 1.2,
+            QualityScoreRange = (0.7, 0.95, 0.85),
+            Scalability = ScalabilityLevel.High,
+            Complexity = ComplexityLevel.Moderate,
+            RecommendedUseCases = new[] { "다양한 콘텐츠 유형", "메타데이터 활용", "자동 최적화" },
+            Limitations = new[] { "전략 선택 오버헤드", "메타데이터 의존성" },
+            MinContentLength = 100,
+            MaxContentLength = null,
+            SupportedLanguages = new[] { "ko", "en", "ja", "zh" },
+            Dependencies = new[] { "IMetadataDiscoveryService", "IChunkingStrategyFactory" }
         };
     }
 
-    public override List<ConfigurationOption> GetConfigurationOptions()
+    public IReadOnlyList<StrategyOption> GetConfigurationOptions()
     {
-        return new List<ConfigurationOption>
+        return new List<StrategyOption>
         {
-            new() { Key = "LargeDocumentThreshold", DefaultValue = "50000", Description = "대용량 문서 임계값 (문자 수)" },
-            new() { Key = "HighComplexityThreshold", DefaultValue = "0.7", Description = "고복잡도 임계값" },
-            new() { Key = "EnableMetadataHints", DefaultValue = "true", Description = "메타데이터 힌트 사용 여부" },
-            new() { Key = "CacheStrategies", DefaultValue = "true", Description = "전략 인스턴스 캐싱 여부" }
+            new() {
+                Key = "LargeDocumentThreshold",
+                Name = "대용량 문서 임계값",
+                Description = "대용량 문서로 판단하는 문자 수 임계값",
+                OptionType = typeof(int),
+                DefaultValue = 50000,
+                ValueRange = (1000, 1000000)
+            },
+            new() {
+                Key = "HighComplexityThreshold",
+                Name = "고복잡도 임계값",
+                Description = "구조적 복잡도 판단 임계값",
+                OptionType = typeof(double),
+                DefaultValue = 0.7,
+                ValueRange = (0.0, 1.0)
+            },
+            new() {
+                Key = "EnableMetadataHints",
+                Name = "메타데이터 힌트 활성화",
+                Description = "ai.txt 등 메타데이터 힌트 사용 여부",
+                OptionType = typeof(bool),
+                DefaultValue = true
+            },
+            new() {
+                Key = "CacheStrategies",
+                Name = "전략 캐싱 활성화",
+                Description = "전략 인스턴스 캐싱으로 성능 향상",
+                OptionType = typeof(bool),
+                DefaultValue = true
+            }
         };
     }
 
-    public override async Task<double> EvaluateChunkQualityAsync(
+    public async Task<double> EvaluateChunkQualityAsync(
         WebContentChunk chunk,
         ChunkEvaluationContext? context = null)
     {
         // 선택된 전략의 품질 평가 위임
-        if (chunk.Metadata.TryGetValue("AutoSelectedStrategy", out var strategyName))
+        if (chunk.AdditionalMetadata.TryGetValue("AutoSelectedStrategy", out var strategyName))
         {
             var strategy = await GetCachedStrategyAsync(strategyName.ToString() ?? "Paragraph");
             return await strategy.EvaluateChunkQualityAsync(chunk, context);
@@ -470,17 +510,20 @@ public class AutoChunkingStrategy : BaseChunkingStrategy
         return 0.8; // 기본 품질 점수
     }
 
-    public override ChunkingStatistics GetStatistics()
+    public ChunkingStatistics GetStatistics()
     {
         return new ChunkingStatistics
         {
-            TotalChunksProcessed = 0, // 실제 처리는 선택된 전략이 수행
+            TotalProcessedContents = 0, // 실제 처리는 선택된 전략이 수행
+            TotalGeneratedChunks = 0,
             AverageChunkSize = 0,
-            AverageProcessingTime = TimeSpan.FromMilliseconds(200),
-            SuccessRate = 0.95,
-            QualityScore = 0.85
+            AverageProcessingTimeMs = 200,
+            AverageQualityScore = 0.85,
+            StatsPeriodStart = DateTimeOffset.UtcNow.AddHours(-1),
+            StatsPeriodEnd = DateTimeOffset.UtcNow
         };
     }
+
 }
 
 /// <summary>

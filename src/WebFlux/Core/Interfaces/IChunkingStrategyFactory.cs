@@ -1,4 +1,5 @@
 using WebFlux.Core.Models;
+using ChunkingOptions = WebFlux.Core.Options.ChunkingOptions;
 
 namespace WebFlux.Core.Interfaces;
 
