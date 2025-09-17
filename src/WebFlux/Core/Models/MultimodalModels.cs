@@ -146,3 +146,16 @@ public class ProcessedImageInfo
     /// <summary>처리 시간 (밀리초)</summary>
     public int ProcessingTimeMs { get; set; }
 }
+
+/// <summary>
+/// 멀티모달 처리 통계
+/// </summary>
+public class MultimodalStatistics
+{
+    public int TotalProcessed { get; set; }
+    public int ImagesProcessed { get; set; }
+    public int SuccessfulConversions { get; set; }
+    public int ErrorCount { get; set; }
+    public double AverageQualityScore { get; set; }
+    public TimeSpan TotalProcessingTime { get; set; }
+}

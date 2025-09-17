@@ -21,6 +21,15 @@ public class CrawlOptions
     public int DelayBetweenRequestsMs { get; set; } = 1000;
 
     /// <summary>
+    /// 요청 간 지연 시간 (밀리초, DelayBetweenRequestsMs의 별칭)
+    /// </summary>
+    public int DelayMs
+    {
+        get => DelayBetweenRequestsMs;
+        set => DelayBetweenRequestsMs = value;
+    }
+
+    /// <summary>
     /// 요청 간 지연 시간 (TimeSpan, llms.txt 최적화용)
     /// </summary>
     public TimeSpan? DelayBetweenRequests { get; set; }

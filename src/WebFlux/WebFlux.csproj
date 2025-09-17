@@ -1,30 +1,21 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-
-    <!-- NuGet 패키지 정보 -->
+    <!-- 📦 Package Configuration (inherits from Directory.Build.props) -->
     <PackageId>WebFlux</PackageId>
-    <Version>1.0.0-alpha</Version>
-    <Authors>WebFlux Team</Authors>
-    <Company>WebFlux</Company>
-    <Product>WebFlux SDK</Product>
-    <Description>고성능 RAG 전처리 SDK - 웹 콘텐츠를 RAG 시스템에 최적화된 구조화된 청크로 변환</Description>
-    <PackageTags>RAG;chunking;web-scraping;AI;preprocessing;dotnet9</PackageTags>
-    <PackageProjectUrl>https://github.com/webflux/webflux</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/webflux/webflux</RepositoryUrl>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <IsPackable>true</IsPackable>
 
-    <!-- 빌드 설정 -->
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- 🔧 Project-specific Build Settings -->
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
     <WarningsAsErrors />
     <WarningsNotAsErrors>CS1591</WarningsNotAsErrors>
   </PropertyGroup>
+
+  <!-- 🎯 Conditional Package References for .NET Compatibility -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net6.0' OR '$(TargetFramework)' == 'net7.0'">
+    <!-- Additional packages for older .NET versions if needed -->
+  </ItemGroup>
 
   <ItemGroup>
     <!-- HTTP 클라이언트 -->
@@ -42,6 +33,10 @@
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.9" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="9.0.9" />
 
+    <!-- 캐싱 -->
+    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="9.0.9" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Abstractions" Version="9.0.9" />
+
     <!-- 병렬 처리 -->
     <PackageReference Include="System.Threading.Channels" Version="9.0.9" />
 
@@ -50,6 +45,19 @@
 
     <!-- JSON 처리 -->
     <PackageReference Include="System.Text.Json" Version="9.0.9" />
+
+    <!-- HTML DOM 분석 (15개 메타데이터 표준 추출) -->
+    <PackageReference Include="HtmlAgilityPack" Version="1.11.61" />
+
+    <!-- 마크다운 문서 처리 -->
+    <PackageReference Include="Markdig" Version="0.37.0" />
+
+    <!-- YAML 설정 파일 분석 -->
+    <PackageReference Include="YamlDotNet" Version="16.2.1" />
+
+    <!-- HTTP 재시도 및 회로차단기 -->
+    <PackageReference Include="Polly" Version="8.4.2" />
+    <PackageReference Include="Polly.Extensions.Http" Version="3.0.0" />
   </ItemGroup>
 
 </Project>

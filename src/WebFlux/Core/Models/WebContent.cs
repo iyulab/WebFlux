@@ -11,14 +11,23 @@ public class WebContent
     /// <summary>콘텐츠 내용</summary>
     public string Content { get; set; } = string.Empty;
 
+    /// <summary>추출된 텍스트 내용</summary>
+    public string? Text { get; set; }
+
     /// <summary>콘텐츠 타입</summary>
     public string ContentType { get; set; } = "text/html";
+
+    /// <summary>이미지 정보 목록</summary>
+    public List<ImageInfo>? Images { get; set; }
 
     /// <summary>메타데이터</summary>
     public WebContentMetadata? Metadata { get; set; }
 
     /// <summary>크롤링 시간</summary>
     public DateTimeOffset CrawledAt { get; set; } = DateTimeOffset.UtcNow;
+
+    /// <summary>HTTP 상태 코드</summary>
+    public int StatusCode { get; set; } = 200;
 }
 
 /// <summary>
@@ -28,6 +37,21 @@ public class ExtractedContent
 {
     /// <summary>추출된 텍스트</summary>
     public string Text { get; set; } = string.Empty;
+
+    /// <summary>주요 콘텐츠</summary>
+    public string MainContent { get; set; } = string.Empty;
+
+    /// <summary>소스 URL</summary>
+    public string Url { get; set; } = string.Empty;
+
+    /// <summary>제목</summary>
+    public string Title { get; set; } = string.Empty;
+
+    /// <summary>헤딩 구조</summary>
+    public List<string> Headings { get; set; } = new();
+
+    /// <summary>이미지 URL 목록</summary>
+    public List<string> ImageUrls { get; set; } = new();
 
     /// <summary>추출된 메타데이터</summary>
     public ExtractedMetadata? Metadata { get; set; }
@@ -64,6 +88,9 @@ public class ExtractedMetadata
 
     /// <summary>언어</summary>
     public string Language { get; set; } = "unknown";
+
+    /// <summary>콘텐츠 타입</summary>
+    public string ContentType { get; set; } = string.Empty;
 
     /// <summary>단어 수</summary>
     public int WordCount { get; set; }
@@ -198,7 +225,10 @@ public class StructuredElement
 public class ImageInfo
 {
     /// <summary>이미지 URL</summary>
-    public required string Url { get; init; }
+    public string? Url { get; init; }
+
+    /// <summary>이미지 데이터 (바이트 배열)</summary>
+    public byte[]? Data { get; init; }
 
     /// <summary>대체 텍스트</summary>
     public string? AltText { get; init; }
@@ -273,9 +303,9 @@ public enum ElementType
 }
 
 /// <summary>
-/// 콘텐츠 유형 열거형
+/// 콘텐츠 포맷 열거형
 /// </summary>
-public enum ContentType
+public enum ContentFormat
 {
     /// <summary>HTML</summary>
     Html,
@@ -290,5 +320,6 @@ public enum ContentType
     /// <summary>알 수 없음</summary>
     Unknown
 }
+
 
 

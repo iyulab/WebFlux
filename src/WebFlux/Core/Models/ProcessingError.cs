@@ -312,3 +312,18 @@ public enum ErrorCategory
     /// <summary>외부 서비스</summary>
     ExternalService
 }
+
+/// <summary>
+/// 오류 심각도 열거형
+/// </summary>
+public enum ErrorSeverity
+{
+    /// <summary>정보</summary>
+    Info,
+    /// <summary>경고</summary>
+    Warning,
+    /// <summary>오류</summary>
+    Error,
+    /// <summary>치명적 오류</summary>
+    Critical
+}

@@ -101,6 +101,11 @@ public class WebContentMetadata
     /// </summary>
     public IReadOnlyDictionary<string, object> CustomProperties { get; init; } =
         new Dictionary<string, object>();
+
+    /// <summary>
+    /// 추가 데이터 (호환성을 위한 속성)
+    /// </summary>
+    public IReadOnlyDictionary<string, object> AdditionalData => CustomProperties;
 }
 
 /// <summary>

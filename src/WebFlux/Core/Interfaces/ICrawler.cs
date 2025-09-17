@@ -89,13 +89,27 @@ public class CrawlResult
     public required string Url { get; init; }
 
     /// <summary>실제 응답 URL (리디렉션 포함)</summary>
-    public required string FinalUrl { get; init; }
+    public string FinalUrl { get; init; } = string.Empty;
 
     /// <summary>HTTP 상태 코드</summary>
     public int StatusCode { get; init; }
 
     /// <summary>성공 여부</summary>
     public bool IsSuccess { get; init; }
+
+    /// <summary>성공 여부 (IsSuccess의 별칭)</summary>
+    public bool IsSuccessful
+    {
+        get => IsSuccess;
+        init => IsSuccess = value;
+    }
+
+    /// <summary>콘텐츠 내용 (HtmlContent의 별칭)</summary>
+    public string? Content
+    {
+        get => HtmlContent;
+        init => HtmlContent = value;
+    }
 
     /// <summary>HTML 콘텐츠</summary>
     public string? HtmlContent { get; init; }
@@ -140,6 +154,9 @@ public class CrawlResult
     /// <summary>추가 메타데이터</summary>
     public IReadOnlyDictionary<string, object> Metadata { get; init; } =
         new Dictionary<string, object>();
+
+    /// <summary>웹 콘텐츠 메타데이터</summary>
+    public WebContentMetadata? WebMetadata { get; init; }
 }
 
 /// <summary>

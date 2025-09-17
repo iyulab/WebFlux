@@ -118,7 +118,7 @@ public class JobProgress
     {
         get
         {
-            if (CurrentProgress?.OverallProgress <= 0) return null;
+            if (CurrentProgress?.OverallProgress <= 0 || CurrentProgress == null) return null;
             if (CurrentProgress.OverallProgress >= 100) return TimeSpan.Zero;
 
             var elapsed = ElapsedTime;

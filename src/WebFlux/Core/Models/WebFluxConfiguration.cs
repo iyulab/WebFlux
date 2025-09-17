@@ -1,3 +1,5 @@
+using WebFlux.Core.Options;
+
 namespace WebFlux.Core.Models;
 
 /// <summary>
@@ -14,6 +16,11 @@ public class WebFluxConfiguration
     /// 청킹 기본 설정
     /// </summary>
     public ChunkingConfiguration Chunking { get; set; } = new();
+
+    /// <summary>
+    /// 콘텐츠 추출 설정
+    /// </summary>
+    public ExtractionConfiguration Extraction { get; set; } = new();
 
     /// <summary>
     /// 성능 및 리소스 설정
@@ -56,6 +63,16 @@ public class WebFluxConfiguration
 /// </summary>
 public class CrawlingConfiguration
 {
+    /// <summary>
+    /// 시작 URL 목록
+    /// </summary>
+    public List<string> StartUrls { get; set; } = new();
+
+    /// <summary>
+    /// 크롤링 전략 (BreadthFirst, DepthFirst, Sitemap)
+    /// </summary>
+    public string Strategy { get; set; } = "BreadthFirst";
+
     /// <summary>
     /// 기본 User-Agent
     /// </summary>
@@ -147,6 +164,37 @@ public class ChunkingConfiguration
     /// 전략별 기본 설정
     /// </summary>
     public IDictionary<string, object> StrategyDefaults { get; set; } = new Dictionary<string, object>();
+
+    // BaseChunkingStrategy에서 사용되는 속성들 추가
+    /// <summary>
+    /// 최소 청크 크기
+    /// </summary>
+    public int MinChunkSize { get; set; } = 100;
+
+    /// <summary>
+    /// 최대 청크 크기
+    /// </summary>
+    public int MaxChunkSize { get; set; } = 2000;
+
+    /// <summary>
+    /// 겹침 크기
+    /// </summary>
+    public int OverlapSize { get; set; } = 200;
+
+    /// <summary>
+    /// 공백 정규화 여부
+    /// </summary>
+    public bool NormalizeWhitespace { get; set; } = true;
+
+    /// <summary>
+    /// 멀티모달 처리 활성화 여부 (Phase 5A.3)
+    /// </summary>
+    public bool EnableMultimodalProcessing { get; set; } = false;
+
+    /// <summary>
+    /// 멀티모달 처리 옵션
+    /// </summary>
+    public MultimodalProcessingOptions? MultimodalOptions { get; set; }
 
     /// <summary>
     /// 언어별 설정

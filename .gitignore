@@ -364,3 +364,4 @@ FodyWeavers.xsd
 
 .env.local
 CLAUDE.local.md
+.playwright-mcp/

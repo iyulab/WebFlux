@@ -186,35 +186,5 @@ public class ConfigurationOption
     public double? MaxValue { get; set; }
 }
 
-/// <summary>
-/// 청크 평가 컨텍스트
-/// </summary>
-public class ChunkEvaluationContext
-{
-    /// <summary>
-    /// 원본 문서 정보
-    /// </summary>
-    public ExtractedContent? OriginalContent { get; set; }
-
-    /// <summary>
-    /// 인접 청크들
-    /// </summary>
-    public List<WebContentChunk> AdjacentChunks { get; set; } = new();
-
-    /// <summary>
-    /// 평가 기준
-    /// </summary>
-    public List<string> EvaluationCriteria { get; set; } = new();
-
-    /// <summary>
-    /// 목표 품질 점수
-    /// </summary>
-    public double TargetQualityScore { get; set; } = 0.8;
-
-    /// <summary>
-    /// 평가 메타데이터
-    /// </summary>
-    public Dictionary<string, object> Metadata { get; set; } = new();
-}
 
 

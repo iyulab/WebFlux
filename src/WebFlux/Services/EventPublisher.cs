@@ -164,21 +164,11 @@ public class EventPublisher : IEventPublisher
 
         var subscriptions = new List<IDisposable>();
 
-        // 현재 알려진 모든 이벤트 타입에 대한 구독
+        // Interface Provider 패턴: 기본 이벤트 타입만 등록
+        // 소비자가 필요한 추가 이벤트 타입은 구독 시 자동 등록됨
         var knownEventTypes = new[]
         {
-            typeof(ProcessingEvent),
-            typeof(CrawlStartedEvent),
-            typeof(UrlProcessingStartedEvent),
-            typeof(UrlProcessedEvent),
-            typeof(UrlProcessingFailedEvent),
-            typeof(CrawlCompletedEvent),
-            typeof(ContentExtractionStartedEvent),
-            typeof(ContentExtractionCompletedEvent),
-            typeof(ContentExtractionFailedEvent),
-            typeof(ChunkingStartedEvent),
-            typeof(ChunkingCompletedEvent),
-            typeof(ChunkingFailedEvent)
+            typeof(ProcessingEvent)
         };
 
         foreach (var eventType in knownEventTypes)
@@ -337,5 +327,4 @@ public class CrawlErrorEvent : ProcessingEvent
 public class CrawlWarningEvent : ProcessingEvent
 {
     public override string EventType => "CrawlWarning";
-    public string Message { get; set; } = string.Empty;
 }

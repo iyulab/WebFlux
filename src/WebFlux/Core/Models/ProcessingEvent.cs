@@ -33,7 +33,7 @@ public abstract class ProcessingEvent
     /// <summary>
     /// 이벤트 메시지
     /// </summary>
-    public required string Message { get; init; }
+    public string Message { get; init; } = string.Empty;
 
     /// <summary>
     /// 추가 이벤트 데이터

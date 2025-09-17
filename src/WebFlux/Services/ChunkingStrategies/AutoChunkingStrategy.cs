@@ -1,571 +1,593 @@
-using Microsoft.Extensions.Logging;
 using WebFlux.Core.Interfaces;
 using WebFlux.Core.Models;
-using System.Text.Json;
-using System.Runtime.CompilerServices;
-using ChunkingOptions = WebFlux.Core.Options.ChunkingOptions;
-using ChunkEvaluationContext = WebFlux.Core.Interfaces.ChunkEvaluationContext;
-using ChunkingStatistics = WebFlux.Core.Interfaces.ChunkingStatistics;
+using WebFlux.Core.Options;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace WebFlux.Services.ChunkingStrategies;
 
 /// <summary>
-/// Auto 청킹 전략 - 메타데이터 컨텍스트를 활용한 지능형 전략 자동 선택
-/// Phase 4D: 웹 메타데이터를 기반으로 콘텐츠 특성에 최적화된 청킹 전략 선택
+/// 자동 청킹 전략 - Phase 5B 고도화
+/// 품질 평가 시스템과 실시간 최적화를 통한 지능형 전략 선택
 /// </summary>
-public class AutoChunkingStrategy : IChunkingStrategy
+public class AutoChunkingStrategy : BaseChunkingStrategy
 {
-    private readonly IChunkingStrategyFactory _strategyFactory;
-    private readonly IMetadataDiscoveryService _metadataService;
-    private readonly ILogger<AutoChunkingStrategy> _logger;
-    private readonly Dictionary<string, IChunkingStrategy> _cachedStrategies;
+    private readonly IServiceProvider? _serviceProvider;
+    private readonly IPerformanceMonitor? _performanceMonitor;
+    private readonly ICacheService? _cacheService;
+    private readonly ITokenCountService? _tokenCountService;
+    private readonly ILogger<AutoChunkingStrategy>? _logger;
     private readonly AutoChunkingConfiguration _config;
 
-    public string Name => "Auto";
-    public string Description => "지능형 자동 전략 선택 - 메타데이터 기반 최적화";
+    public override string Name => "Auto";
+    public override string Description => "AI 기반 지능형 자동 전략 선택 - 품질 평가 및 실시간 최적화";
 
     public AutoChunkingStrategy(
-        IChunkingStrategyFactory strategyFactory,
-        IMetadataDiscoveryService metadataService,
-        ILogger<AutoChunkingStrategy> logger)
+        IEventPublisher? eventPublisher = null,
+        IServiceProvider? serviceProvider = null,
+        IPerformanceMonitor? performanceMonitor = null,
+        ICacheService? cacheService = null,
+        ITokenCountService? tokenCountService = null,
+        ILogger<AutoChunkingStrategy>? logger = null)
+        : base(eventPublisher)
     {
-        _strategyFactory = strategyFactory ?? throw new ArgumentNullException(nameof(strategyFactory));
-        _metadataService = metadataService ?? throw new ArgumentNullException(nameof(metadataService));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _cachedStrategies = new Dictionary<string, IChunkingStrategy>();
+        _serviceProvider = serviceProvider;
+        _performanceMonitor = performanceMonitor;
+        _cacheService = cacheService;
+        _tokenCountService = tokenCountService;
+        _logger = logger;
         _config = new AutoChunkingConfiguration();
     }
 
-    public async Task<IReadOnlyList<WebContentChunk>> ChunkAsync(
+    public override async Task<IReadOnlyList<WebContentChunk>> ChunkAsync(
         ExtractedContent content,
         ChunkingOptions? options = null,
         CancellationToken cancellationToken = default)
     {
+        var text = content.MainContent ?? content.Text ?? string.Empty;
+        var sourceUrl = content.Url ?? content.OriginalUrl ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return Array.Empty<WebContentChunk>();
+        }
+
+        using var operationScope = _performanceMonitor?.MeasureOperation("auto_chunking_analysis") as IOperationScope;
+        var startTime = DateTimeOffset.UtcNow;
+
         try
         {
-            // 1. 메타데이터 기반 전략 선택
-            var selectedStrategy = await SelectOptimalStrategyAsync(content, options, cancellationToken);
-
-            _logger.LogInformation("Auto 전략이 '{StrategyName}' 선택: {Url}",
-                selectedStrategy.Name, content.Url);
-
-            // 2. 선택된 전략으로 청킹 수행
-            var chunks = await selectedStrategy.ChunkAsync(content, options, cancellationToken);
-
-            // 3. Auto 전략 메타데이터 추가
-            foreach (var chunk in chunks)
+            // Phase 5B.1: 캐시에서 전략 결과 확인
+            var cacheKey = GenerateCacheKey(content, options);
+            var cachedResult = await GetCachedResultAsync(cacheKey, cancellationToken);
+            if (cachedResult != null)
             {
-                chunk.AdditionalMetadata["AutoSelectedStrategy"] = selectedStrategy.Name;
-                chunk.AdditionalMetadata["AutoSelectionReason"] = await GetSelectionReasonAsync(content, selectedStrategy.Name);
-                chunk.AdditionalMetadata["AutoSelectionConfidence"] = await CalculateConfidenceScoreAsync(content, selectedStrategy.Name);
+                _logger?.LogDebug("Using cached chunking result for {Url}", sourceUrl);
+                return cachedResult;
             }
+
+            // Phase 5B.2: 향상된 콘텐츠 분석 및 전략 선택
+            var analysisMetadata = await AnalyzeContentAsync(content, cancellationToken);
+            var strategyScores = await CalculateStrategyScoresAsync(analysisMetadata, options, cancellationToken);
+
+            // Phase 5B.3: 최적 전략 선택 (성능 히스토리 고려)
+            var selectedStrategy = SelectOptimalStrategy(strategyScores, analysisMetadata);
+
+            _logger?.LogInformation("Selected strategy: {Strategy} with score: {Score:F3} for content: {Url}",
+                selectedStrategy.Name, strategyScores[selectedStrategy.Name].TotalScore, sourceUrl);
+
+            // Phase 5B.4: 실시간 성능 모니터링과 함께 청킹 수행
+            var chunks = await ExecuteChunkingWithMonitoring(selectedStrategy, content, options, cancellationToken);
+
+            // Phase 5B.5: 품질 평가 및 결과 캐싱
+            var qualityScore = await EvaluateChunkQuality(chunks, analysisMetadata, cancellationToken);
+            await CacheResultAsync(cacheKey, chunks, qualityScore, cancellationToken);
+
+            // Phase 5B.6: 성능 메트릭 기록
+            var processingTime = DateTimeOffset.UtcNow - startTime;
+            _performanceMonitor?.RecordChunkingMetrics(selectedStrategy.Name, qualityScore, chunks.Count, processingTime);
+
+            operationScope?.Complete();
 
             return chunks;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Auto 전략 실행 중 오류 발생: {Url}", content.Url);
+            _logger?.LogError(ex, "Error in auto chunking strategy for {Url}", sourceUrl);
+            operationScope?.RecordError(ex);
 
-            // 오류 시 폴백 전략 사용 (ParagraphChunkingStrategy)
-            var fallbackStrategy = await GetCachedStrategyAsync("Paragraph");
+            // Fallback to simple strategy
+            var fallbackStrategy = new ParagraphChunkingStrategy(_eventPublisher);
             return await fallbackStrategy.ChunkAsync(content, options, cancellationToken);
         }
     }
 
-    public async IAsyncEnumerable<WebContentChunk> ChunkStreamAsync(
-        ExtractedContent content,
-        ChunkingOptions? options = null,
-        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    /// <summary>
+    /// Phase 5B.1: 캐시 키 생성
+    /// </summary>
+    private string GenerateCacheKey(ExtractedContent content, ChunkingOptions? options)
     {
-        var selectedStrategy = await SelectOptimalStrategyAsync(content, options, cancellationToken);
-
-        _logger.LogInformation("Auto 스트림 전략이 '{StrategyName}' 선택: {Url}",
-            selectedStrategy.Name, content.Url);
-
-        await foreach (var chunk in selectedStrategy.ChunkStreamAsync(content, options, cancellationToken))
-        {
-            // 각 청크에 Auto 전략 메타데이터 추가
-            chunk.AdditionalMetadata["AutoSelectedStrategy"] = selectedStrategy.Name;
-            yield return chunk;
-        }
+        var contentHash = content.Url?.GetHashCode() ?? content.Text?.GetHashCode() ?? 0;
+        var optionsHash = options?.GetHashCode() ?? 0;
+        return $"auto_chunk:{contentHash}:{optionsHash}";
     }
 
     /// <summary>
-    /// 메타데이터 기반 최적 전략 선택
+    /// Phase 5B.1: 캐시된 결과 조회
     /// </summary>
-    private async Task<IChunkingStrategy> SelectOptimalStrategyAsync(
-        ExtractedContent content,
-        ChunkingOptions? options,
-        CancellationToken cancellationToken)
+    private async Task<IReadOnlyList<WebContentChunk>?> GetCachedResultAsync(string cacheKey, CancellationToken cancellationToken)
     {
-        // 1. 메타데이터 분석
-        var metadata = await AnalyzeContentMetadataAsync(content, cancellationToken);
-
-        // 2. 전략 선택 로직
-        var strategyName = await DetermineOptimalStrategyAsync(content, metadata, options);
-
-        // 3. 전략 인스턴스 반환
-        return await GetCachedStrategyAsync(strategyName);
-    }
-
-    /// <summary>
-    /// 콘텐츠 메타데이터 분석
-    /// </summary>
-    private async Task<ContentAnalysisMetadata> AnalyzeContentMetadataAsync(
-        ExtractedContent content,
-        CancellationToken cancellationToken)
-    {
-        var analysis = new ContentAnalysisMetadata();
+        if (_cacheService == null) return null;
 
         try
         {
-            // WebFlux 메타데이터 발견 서비스 활용
-            var discoveryResult = await _metadataService.DiscoverMetadataAsync(content.Url, cancellationToken);
-
-            // 콘텐츠 타입 분석
-            analysis.ContentType = AnalyzeContentType(content, discoveryResult);
-            analysis.StructuralComplexity = AnalyzeStructuralComplexity(content);
-            analysis.HasImages = content.ImageUrls?.Any() ?? false;
-            analysis.HasTechnicalContent = AnalyzeTechnicalContent(content);
-            analysis.DocumentLength = content.MainContent?.Length ?? 0;
-            analysis.IsMultiLanguage = AnalyzeLanguage(content);
-
-            // 메타데이터 컨텍스트 활용
-            if (discoveryResult.AiTxtMetadata != null)
-            {
-                analysis.IsAIFriendly = true;
-                analysis.PreferredChunkingHint = discoveryResult.AiTxtMetadata.PreferredChunkingStrategy;
-            }
-
-            if (discoveryResult.ManifestMetadata != null)
-            {
-                analysis.IsPWA = true;
-                analysis.IsInteractive = discoveryResult.ManifestMetadata.DisplayMode != "browser";
-            }
-
-            _logger.LogDebug("메타데이터 분석 완료: {Analysis}", JsonSerializer.Serialize(analysis));
+            return await _cacheService.GetAsync<List<WebContentChunk>>(cacheKey, cancellationToken);
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "메타데이터 분석 중 오류 발생, 기본 분석 사용: {Url}", content.Url);
-            analysis = CreateFallbackAnalysis(content);
+            _logger?.LogWarning(ex, "Failed to get cached result for key: {CacheKey}", cacheKey);
+            return null;
         }
+    }
+
+    /// <summary>
+    /// Phase 5B.2: 향상된 콘텐츠 분석
+    /// </summary>
+    private async Task<ContentAnalysisMetadata> AnalyzeContentAsync(ExtractedContent content, CancellationToken cancellationToken)
+    {
+        var text = content.MainContent ?? content.Text ?? string.Empty;
+        var textLength = text.Length;
+
+        var analysis = new ContentAnalysisMetadata
+        {
+            DocumentLength = textLength,
+            HasImages = content.ImageUrls?.Any() == true,
+            ImageDensity = CalculateImageDensity(content),
+            HasTechnicalContent = await DetectTechnicalContentAsync(text, cancellationToken),
+            ContentType = ClassifyContentType(content),
+            StructuralComplexity = AnalyzeStructuralComplexity(content),
+            QualityMetrics = await CalculateQualityMetricsAsync(content, cancellationToken)
+        };
 
         return analysis;
     }
 
     /// <summary>
-    /// 최적 전략 결정 알고리즘
+    /// Phase 5B.2: 전략별 점수 계산
     /// </summary>
-    private async Task<string> DetermineOptimalStrategyAsync(
-        ExtractedContent content,
-        ContentAnalysisMetadata metadata,
-        ChunkingOptions? options)
+    private async Task<Dictionary<string, StrategyScore>> CalculateStrategyScoresAsync(
+        ContentAnalysisMetadata analysis, ChunkingOptions? options, CancellationToken cancellationToken)
     {
-        await Task.CompletedTask; // 비동기 호환성
+        var strategies = new[] { "FixedSize", "Paragraph", "Smart", "Semantic", "MemoryOptimized" };
+        var scores = new Dictionary<string, StrategyScore>();
 
-        // 1. AI 친화적 사이트의 힌트 우선 적용
-        if (metadata.IsAIFriendly && !string.IsNullOrEmpty(metadata.PreferredChunkingHint))
+        foreach (var strategy in strategies)
         {
-            var hintStrategy = MapChunkingHint(metadata.PreferredChunkingHint);
-            if (!string.IsNullOrEmpty(hintStrategy))
-            {
-                _logger.LogInformation("AI 힌트 기반 전략 선택: {Strategy}", hintStrategy);
-                return hintStrategy;
-            }
-        }
+            var score = new StrategyScore();
 
-        // 2. 콘텐츠 특성 기반 자동 선택
-        var score = new Dictionary<string, double>();
+            // 문서 크기 점수
+            AddDocumentSizeScore(score, strategy, analysis.DocumentLength);
 
-        // 멀티미디어 콘텐츠
-        if (metadata.HasImages && metadata.DocumentLength > _config.LargeDocumentThreshold)
-        {
-            score["Smart"] = 0.9; // 구조 인식으로 이미지 컨텍스트 보존
-            score["Semantic"] = 0.6;
-            score["Paragraph"] = 0.4;
-        }
-        // 기술 문서
-        else if (metadata.HasTechnicalContent)
-        {
-            score["Smart"] = 0.8; // 코드 블록과 헤더 구조 보존
-            score["Semantic"] = 0.7; // 기술적 의미 연관성
-            score["Paragraph"] = 0.5;
-        }
-        // 대용량 문서
-        else if (metadata.DocumentLength > _config.LargeDocumentThreshold)
-        {
-            score["MemoryOptimized"] = 0.9; // 메모리 효율성 우선
-            score["Semantic"] = 0.6;
-            score["Smart"] = 0.5;
-        }
-        // 구조화된 콘텐츠
-        else if (metadata.StructuralComplexity > _config.HighComplexityThreshold)
-        {
-            score["Smart"] = 0.9; // 구조 인식 최적
-            score["Semantic"] = 0.7;
-            score["Paragraph"] = 0.3;
-        }
-        // 의미론적 처리가 필요한 콘텐츠
-        else if (metadata.ContentType == ContentType.Article || metadata.ContentType == ContentType.Blog)
-        {
-            score["Semantic"] = 0.9; // 의미적 일관성 최적
-            score["Smart"] = 0.7;
-            score["Paragraph"] = 0.6;
-        }
-        // 기본 텍스트 문서
-        else
-        {
-            score["Paragraph"] = 0.8; // 안정적인 기본 전략
-            score["FixedSize"] = 0.6;
-            score["Smart"] = 0.5;
+            // 구조적 복잡도 점수
+            AddStructuralComplexityScore(score, strategy, analysis.StructuralComplexity);
+
+            // 콘텐츠 타입 점수
+            AddContentTypeScore(score, strategy, analysis.ContentType);
+
+            // 멀티모달 점수
+            AddMultimodalScore(score, strategy, analysis.HasImages, analysis.ImageDensity);
+
+            // 기술 콘텐츠 점수
+            AddTechnicalContentScore(score, strategy, analysis.HasTechnicalContent);
+
+            // 성능 히스토리 점수 추가
+            await AddPerformanceHistoryScoreAsync(score, strategy, cancellationToken);
+
+            scores[strategy] = score;
         }
 
-        // 3. 사용자 옵션 고려
-        if (options != null)
-        {
-            ApplyUserPreferences(score, options);
-        }
-
-        // 4. 최고 점수 전략 선택
-        var selectedStrategy = score.OrderByDescending(s => s.Value).First().Key;
-
-        _logger.LogInformation("전략 점수: {Scores}, 선택된 전략: {Selected}",
-            string.Join(", ", score.Select(s => $"{s.Key}={s.Value:F2}")), selectedStrategy);
-
-        return selectedStrategy;
+        return scores;
     }
 
     /// <summary>
-    /// 콘텐츠 타입 분석
+    /// Phase 5B.3: 최적 전략 선택
     /// </summary>
-    private ContentType AnalyzeContentType(ExtractedContent content, MetadataDiscoveryResult discoveryResult)
+    private IChunkingStrategy SelectOptimalStrategy(Dictionary<string, StrategyScore> scores, ContentAnalysisMetadata analysis)
     {
-        var text = content.MainContent?.ToLowerInvariant() ?? "";
+        var bestStrategy = scores.OrderByDescending(kvp => kvp.Value.TotalScore).First();
+
+        _logger?.LogDebug("Strategy scores: {Scores}",
+            string.Join(", ", scores.Select(kvp => $"{kvp.Key}:{kvp.Value.TotalScore:F2}")));
+
+        return bestStrategy.Key switch
+        {
+            "Smart" => new SmartChunkingStrategy(_eventPublisher),
+            "Semantic" => new SemanticChunkingStrategy(_eventPublisher),
+            "MemoryOptimized" => new MemoryOptimizedChunkingStrategy(_eventPublisher),
+            "Paragraph" => new ParagraphChunkingStrategy(_eventPublisher),
+            _ => new FixedSizeChunkingStrategy(_eventPublisher)
+        };
+    }
+
+    /// <summary>
+    /// Phase 5B.4: 모니터링과 함께 청킹 수행
+    /// </summary>
+    private async Task<IReadOnlyList<WebContentChunk>> ExecuteChunkingWithMonitoring(
+        IChunkingStrategy strategy, ExtractedContent content, ChunkingOptions? options, CancellationToken cancellationToken)
+    {
+        using var scope = _performanceMonitor?.MeasureOperation($"chunking_{strategy.Name.ToLower()}") as IOperationScope;
+
+        try
+        {
+            var chunks = await strategy.ChunkAsync(content, options, cancellationToken);
+            scope?.Complete();
+            return chunks;
+        }
+        catch (Exception ex)
+        {
+            scope?.RecordError(ex);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Phase 5B.5: 청킹 품질 평가
+    /// </summary>
+    private async Task<double> EvaluateChunkQuality(IReadOnlyList<WebContentChunk> chunks,
+        ContentAnalysisMetadata analysis, CancellationToken cancellationToken)
+    {
+        if (!chunks.Any()) return 0.0;
+
+        var qualityScore = 0.0;
+        var totalWeight = 0.0;
+
+        // 청크 크기 일관성 (가중치: 0.3)
+        var sizeConsistencyScore = CalculateSizeConsistency(chunks);
+        qualityScore += sizeConsistencyScore * 0.3;
+        totalWeight += 0.3;
+
+        // 의미적 응집성 (가중치: 0.4)
+        var semanticCohesionScore = await CalculateSemanticCohesion(chunks, cancellationToken);
+        qualityScore += semanticCohesionScore * 0.4;
+        totalWeight += 0.4;
+
+        // 구조적 일관성 (가중치: 0.2)
+        var structuralConsistencyScore = CalculateStructuralConsistency(chunks, analysis);
+        qualityScore += structuralConsistencyScore * 0.2;
+        totalWeight += 0.2;
+
+        // 토큰 효율성 (가중치: 0.1)
+        var tokenEfficiencyScore = await CalculateTokenEfficiency(chunks, cancellationToken);
+        qualityScore += tokenEfficiencyScore * 0.1;
+        totalWeight += 0.1;
+
+        return totalWeight > 0 ? qualityScore / totalWeight : 0.0;
+    }
+
+    /// <summary>
+    /// Phase 5B.5: 결과 캐싱
+    /// </summary>
+    private async Task CacheResultAsync(string cacheKey, IReadOnlyList<WebContentChunk> chunks,
+        double qualityScore, CancellationToken cancellationToken)
+    {
+        if (_cacheService == null || qualityScore < 0.5) return;
+
+        try
+        {
+            var expiration = qualityScore > 0.8 ? TimeSpan.FromHours(4) : TimeSpan.FromHours(1);
+            await _cacheService.SetAsync(cacheKey, chunks.ToList(), expiration, cancellationToken);
+
+            _logger?.LogDebug("Cached chunking result with quality score: {QualityScore:F3}", qualityScore);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "Failed to cache chunking result");
+        }
+    }
+
+    #region Helper Methods
+
+    private double CalculateImageDensity(ExtractedContent content)
+    {
+        var imageCount = content.ImageUrls?.Count ?? 0;
+        var textLength = content.MainContent?.Length ?? content.Text?.Length ?? 1;
+        return (double)imageCount / Math.Max(textLength / 1000, 1); // 이미지 수 / (텍스트 길이/1000)
+    }
+
+    private Task<bool> DetectTechnicalContentAsync(string text, CancellationToken cancellationToken)
+    {
+        var lowerText = text.ToLowerInvariant();
+        var technicalMatches = _config.TechnicalKeywords.Count(keyword => lowerText.Contains(keyword));
+        return Task.FromResult(technicalMatches >= 3);
+    }
+
+    private ContentType ClassifyContentType(ExtractedContent content)
+    {
+        var text = (content.MainContent ?? content.Text ?? "").ToLowerInvariant();
         var url = content.Url?.ToLowerInvariant() ?? "";
 
-        // URL 기반 분석
-        if (url.Contains("/blog/") || url.Contains("/post/")) return ContentType.Blog;
-        if (url.Contains("/news/") || url.Contains("/article/")) return ContentType.Article;
-        if (url.Contains("/doc/") || url.Contains("/guide/")) return ContentType.Documentation;
-        if (url.Contains("/api/") || url.Contains("/reference/")) return ContentType.ApiReference;
+        if (_config.AcademicKeywords.Any(k => text.Contains(k))) return ContentType.Academic;
+        if (_config.NewsKeywords.Any(k => text.Contains(k))) return ContentType.News;
+        if (_config.TechnicalKeywords.Any(k => text.Contains(k))) return ContentType.Technical;
+        if (url.Contains("doc") || url.Contains("api")) return ContentType.Documentation;
+        if (url.Contains("blog")) return ContentType.Blog;
 
-        // 콘텐츠 기반 분석
-        if (text.Contains("class ") || text.Contains("function ") || text.Contains("```")) return ContentType.Technical;
-        if (content.Headings?.Count > 5) return ContentType.Documentation;
-
-        return ContentType.General;
+        return ContentType.Article;
     }
 
-    /// <summary>
-    /// 구조적 복잡도 분석
-    /// </summary>
-    private double AnalyzeStructuralComplexity(ExtractedContent content)
+    private StructuralComplexity AnalyzeStructuralComplexity(ExtractedContent content)
     {
-        double complexity = 0.0;
+        var headingCount = content.Headings?.Count ?? 0;
+        var imageCount = content.ImageUrls?.Count ?? 0;
+        var textLength = content.MainContent?.Length ?? content.Text?.Length ?? 0;
 
-        // 헤딩 구조 복잡도
-        if (content.Headings != null)
+        var complexityScore = (headingCount * 2 + imageCount) / Math.Max(textLength / 1000.0, 1);
+
+        return complexityScore switch
         {
-            complexity += Math.Min(content.Headings.Count * 0.1, 0.5);
+            >= 2.0 => StructuralComplexity.High,
+            >= 0.5 => StructuralComplexity.Medium,
+            _ => StructuralComplexity.Low
+        };
+    }
+
+    private async Task<ContentQualityMetrics> CalculateQualityMetricsAsync(ExtractedContent content, CancellationToken cancellationToken)
+    {
+        var text = content.MainContent ?? content.Text ?? "";
+
+        return new ContentQualityMetrics
+        {
+            TextDensity = CalculateTextDensity(text),
+            StructuralConsistency = CalculateBaseStructuralConsistency(content),
+            SemanticCohesion = await EstimateSemanticCohesion(text, cancellationToken),
+            ReadabilityScore = CalculateReadabilityScore(text)
+        };
+    }
+
+    private void AddDocumentSizeScore(StrategyScore score, string strategy, int documentLength)
+    {
+        var sizeScore = strategy switch
+        {
+            "MemoryOptimized" when documentLength > _config.VeryLongDocumentThreshold => 0.9,
+            "Smart" when documentLength > _config.LongDocumentThreshold => 0.8,
+            "Paragraph" when documentLength > _config.ShortDocumentThreshold => 0.7,
+            "FixedSize" when documentLength <= _config.ShortDocumentThreshold => 0.6,
+            _ => 0.3
+        };
+
+        score.AddScore("document_size", sizeScore * _config.Weights.DocumentSize,
+            $"Document length: {documentLength} bytes");
+    }
+
+    private void AddStructuralComplexityScore(StrategyScore score, string strategy, StructuralComplexity complexity)
+    {
+        var complexityScore = (strategy, complexity) switch
+        {
+            ("Smart", StructuralComplexity.High) => 0.9,
+            ("Smart", StructuralComplexity.Medium) => 0.8,
+            ("Semantic", StructuralComplexity.High) => 0.7,
+            ("Paragraph", StructuralComplexity.Medium) => 0.6,
+            ("FixedSize", StructuralComplexity.Low) => 0.5,
+            _ => 0.3
+        };
+
+        score.AddScore("structural_complexity", complexityScore * _config.Weights.StructuralComplexity,
+            $"Complexity level: {complexity}");
+    }
+
+    private void AddContentTypeScore(StrategyScore score, string strategy, ContentType contentType)
+    {
+        var typeScore = (strategy, contentType) switch
+        {
+            ("Semantic", ContentType.Academic) => 0.9,
+            ("Semantic", ContentType.Technical) => 0.8,
+            ("Smart", ContentType.Documentation) => 0.9,
+            ("Smart", ContentType.Technical) => 0.8,
+            ("Paragraph", ContentType.Blog) => 0.7,
+            ("Paragraph", ContentType.Article) => 0.6,
+            _ => 0.4
+        };
+
+        score.AddScore("content_type", typeScore * _config.Weights.ContentType,
+            $"Content type: {contentType}");
+    }
+
+    private void AddMultimodalScore(StrategyScore score, string strategy, bool hasImages, double imageDensity)
+    {
+        if (!hasImages)
+        {
+            score.AddScore("multimodal", 0.5 * _config.Weights.MultimodalContent, "No images");
+            return;
         }
 
-        // 목록과 표 복잡도
-        var text = content.MainContent ?? "";
-        var listCount = CountOccurrences(text, new[] { "•", "-", "*", "1.", "2.", "3." });
-        var tableCount = CountOccurrences(text, new[] { "|", "┌", "├", "└" });
-
-        complexity += Math.Min(listCount * 0.02, 0.3);
-        complexity += Math.Min(tableCount * 0.05, 0.2);
-
-        return Math.Min(complexity, 1.0);
-    }
-
-    /// <summary>
-    /// 기술적 콘텐츠 감지
-    /// </summary>
-    private bool AnalyzeTechnicalContent(ExtractedContent content)
-    {
-        var text = content.MainContent?.ToLowerInvariant() ?? "";
-        var technicalKeywords = new[]
+        var multimodalScore = strategy switch
         {
-            "class ", "function ", "method ", "api ", "```", "code", "example",
-            "parameter", "return", "import", "export", "interface", "type"
+            "Smart" when imageDensity > _config.HighImageDensityThreshold => 0.9,
+            "Smart" => 0.7,
+            "Paragraph" when imageDensity <= _config.HighImageDensityThreshold => 0.6,
+            _ => 0.4
         };
 
-        var techCount = technicalKeywords.Count(keyword => text.Contains(keyword));
-        return techCount >= 3;
+        score.AddScore("multimodal", multimodalScore * _config.Weights.MultimodalContent,
+            $"Images present, density: {imageDensity:F3}");
     }
 
-    /// <summary>
-    /// 언어 분석
-    /// </summary>
-    private bool AnalyzeLanguage(ExtractedContent content)
+    private void AddTechnicalContentScore(StrategyScore score, string strategy, bool hasTechnicalContent)
     {
-        // 간단한 다국어 감지 (실제로는 더 정교한 분석 필요)
-        var text = content.MainContent ?? "";
-        var hasKorean = text.Any(c => c >= '가' && c <= '힣');
-        var hasEnglish = text.Any(c => (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'));
-
-        return hasKorean && hasEnglish;
-    }
-
-    /// <summary>
-    /// AI 청킹 힌트 매핑
-    /// </summary>
-    private string MapChunkingHint(string hint)
-    {
-        return hint.ToLowerInvariant() switch
+        var techScore = (strategy, hasTechnicalContent) switch
         {
-            "semantic" => "Semantic",
-            "structure" or "structural" => "Smart",
-            "paragraph" => "Paragraph",
-            "fixed" or "fixedsize" => "FixedSize",
-            "memory" or "optimized" => "MemoryOptimized",
-            _ => ""
+            ("Semantic", true) => 0.9,
+            ("Smart", true) => 0.8,
+            ("Paragraph", false) => 0.6,
+            ("FixedSize", false) => 0.5,
+            _ => 0.4
         };
+
+        score.AddScore("technical_content", techScore * _config.Weights.TechnicalContent,
+            $"Technical content: {hasTechnicalContent}");
     }
 
-    /// <summary>
-    /// 사용자 선호도 적용
-    /// </summary>
-    private void ApplyUserPreferences(Dictionary<string, double> scores, ChunkingOptions options)
+    private async Task AddPerformanceHistoryScoreAsync(StrategyScore score, string strategy, CancellationToken cancellationToken)
     {
-        // 성능 우선
-        if (options.PreferPerformance)
+        if (_performanceMonitor == null)
         {
-            scores["FixedSize"] = scores.GetValueOrDefault("FixedSize", 0) + 0.2;
-            scores["Paragraph"] = scores.GetValueOrDefault("Paragraph", 0) + 0.1;
+            score.AddScore("performance_history", 0.5, "No performance monitor available");
+            return;
         }
 
-        // 품질 우선
-        if (options.PreferQuality)
+        try
         {
-            scores["Semantic"] = scores.GetValueOrDefault("Semantic", 0) + 0.2;
-            scores["Smart"] = scores.GetValueOrDefault("Smart", 0) + 0.1;
-        }
+            var stats = await _performanceMonitor.GetStatisticsAsync();
 
-        // 메모리 효율성 우선
-        if (options.MinimizeMemoryUsage)
+            // 성능 통계가 있다면 해당 전략의 과거 성과를 고려
+            var performanceScore = stats.AverageChunkQuality * 0.7 + (1.0 - stats.ErrorRate) * 0.3;
+            score.AddScore("performance_history", performanceScore * 0.1,
+                $"Historical performance: {performanceScore:F3}");
+        }
+        catch (Exception ex)
         {
-            scores["MemoryOptimized"] = scores.GetValueOrDefault("MemoryOptimized", 0) + 0.3;
+            _logger?.LogWarning(ex, "Failed to get performance history for strategy: {Strategy}", strategy);
+            score.AddScore("performance_history", 0.5, "Performance history unavailable");
         }
     }
 
-    /// <summary>
-    /// 전략 캐싱 및 반환
-    /// </summary>
-    private async Task<IChunkingStrategy> GetCachedStrategyAsync(string strategyName)
+    private double CalculateSizeConsistency(IReadOnlyList<WebContentChunk> chunks)
     {
-        if (!_cachedStrategies.TryGetValue(strategyName, out var strategy))
+        if (chunks.Count < 2) return 1.0;
+
+        var lengths = chunks.Select(c => c.Content.Length).ToArray();
+        var average = lengths.Average();
+        var variance = lengths.Select(l => Math.Pow(l - average, 2)).Average();
+        var standardDeviation = Math.Sqrt(variance);
+        var coefficientOfVariation = standardDeviation / average;
+
+        return Math.Max(0.0, 1.0 - coefficientOfVariation);
+    }
+
+    private Task<double> CalculateSemanticCohesion(IReadOnlyList<WebContentChunk> chunks, CancellationToken cancellationToken)
+    {
+        // 의미적 응집성 평가 (간단한 구현)
+        // 실제로는 임베딩 서비스를 사용해야 하지만 여기서는 키워드 기반 평가
+        if (chunks.Count < 2) return Task.FromResult(1.0);
+
+        var cohesionScores = new List<double>();
+        for (int i = 0; i < chunks.Count - 1; i++)
         {
-            strategy = await _strategyFactory.CreateStrategyAsync(strategyName);
-            _cachedStrategies[strategyName] = strategy;
-        }
-        return strategy;
-    }
-
-    /// <summary>
-    /// 선택 이유 생성
-    /// </summary>
-    private async Task<string> GetSelectionReasonAsync(ExtractedContent content, string strategyName)
-    {
-        await Task.CompletedTask;
-
-        return strategyName switch
-        {
-            "Smart" => "구조화된 콘텐츠로 헤더 기반 분할이 효과적",
-            "Semantic" => "의미론적 일관성이 중요한 텍스트 콘텐츠",
-            "MemoryOptimized" => "대용량 문서로 메모리 효율성 우선",
-            "Paragraph" => "일반적인 문서로 안정적인 문단 분할 적용",
-            "FixedSize" => "단순 구조로 고정 크기 분할이 적합",
-            _ => "기본 전략 적용"
-        };
-    }
-
-    /// <summary>
-    /// 신뢰도 점수 계산
-    /// </summary>
-    private async Task<double> CalculateConfidenceScoreAsync(ExtractedContent content, string strategyName)
-    {
-        await Task.CompletedTask;
-
-        // 간단한 신뢰도 계산 (실제로는 더 정교한 알고리즘 필요)
-        var baseConfidence = 0.7;
-
-        if (!string.IsNullOrEmpty(content.MainContent))
-            baseConfidence += 0.1;
-
-        if (content.Headings?.Any() == true)
-            baseConfidence += 0.1;
-
-        if (!string.IsNullOrEmpty(content.Title))
-            baseConfidence += 0.1;
-
-        return Math.Min(baseConfidence, 1.0);
-    }
-
-    /// <summary>
-    /// 폴백 분석 생성
-    /// </summary>
-    private ContentAnalysisMetadata CreateFallbackAnalysis(ExtractedContent content)
-    {
-        return new ContentAnalysisMetadata
-        {
-            ContentType = ContentType.General,
-            StructuralComplexity = 0.5,
-            HasImages = content.ImageUrls?.Any() ?? false,
-            HasTechnicalContent = false,
-            DocumentLength = content.MainContent?.Length ?? 0,
-            IsMultiLanguage = false,
-            IsAIFriendly = false,
-            IsPWA = false,
-            IsInteractive = false
-        };
-    }
-
-    /// <summary>
-    /// 문자열 패턴 카운트
-    /// </summary>
-    private int CountOccurrences(string text, string[] patterns)
-    {
-        return patterns.Sum(pattern =>
-            (text.Length - text.Replace(pattern, "").Length) / pattern.Length);
-    }
-
-    public async Task<double> EvaluateSuitabilityAsync(
-        ExtractedContent content,
-        ChunkingOptions? options = null)
-    {
-        await Task.CompletedTask;
-        return 1.0; // Auto 전략은 항상 최고 적합도
-    }
-
-    public StrategyPerformanceInfo GetPerformanceInfo()
-    {
-        return new StrategyPerformanceInfo
-        {
-            AverageProcessingTimePerMb = 200.0, // 전략 선택 오버헤드 포함
-            MemoryUsageMultiplier = 1.2,
-            QualityScoreRange = (0.7, 0.95, 0.85),
-            Scalability = ScalabilityLevel.High,
-            Complexity = ComplexityLevel.Moderate,
-            RecommendedUseCases = new[] { "다양한 콘텐츠 유형", "메타데이터 활용", "자동 최적화" },
-            Limitations = new[] { "전략 선택 오버헤드", "메타데이터 의존성" },
-            MinContentLength = 100,
-            MaxContentLength = null,
-            SupportedLanguages = new[] { "ko", "en", "ja", "zh" },
-            Dependencies = new[] { "IMetadataDiscoveryService", "IChunkingStrategyFactory" }
-        };
-    }
-
-    public IReadOnlyList<StrategyOption> GetConfigurationOptions()
-    {
-        return new List<StrategyOption>
-        {
-            new() {
-                Key = "LargeDocumentThreshold",
-                Name = "대용량 문서 임계값",
-                Description = "대용량 문서로 판단하는 문자 수 임계값",
-                OptionType = typeof(int),
-                DefaultValue = 50000,
-                ValueRange = (1000, 1000000)
-            },
-            new() {
-                Key = "HighComplexityThreshold",
-                Name = "고복잡도 임계값",
-                Description = "구조적 복잡도 판단 임계값",
-                OptionType = typeof(double),
-                DefaultValue = 0.7,
-                ValueRange = (0.0, 1.0)
-            },
-            new() {
-                Key = "EnableMetadataHints",
-                Name = "메타데이터 힌트 활성화",
-                Description = "ai.txt 등 메타데이터 힌트 사용 여부",
-                OptionType = typeof(bool),
-                DefaultValue = true
-            },
-            new() {
-                Key = "CacheStrategies",
-                Name = "전략 캐싱 활성화",
-                Description = "전략 인스턴스 캐싱으로 성능 향상",
-                OptionType = typeof(bool),
-                DefaultValue = true
-            }
-        };
-    }
-
-    public async Task<double> EvaluateChunkQualityAsync(
-        WebContentChunk chunk,
-        ChunkEvaluationContext? context = null)
-    {
-        // 선택된 전략의 품질 평가 위임
-        if (chunk.AdditionalMetadata.TryGetValue("AutoSelectedStrategy", out var strategyName))
-        {
-            var strategy = await GetCachedStrategyAsync(strategyName.ToString() ?? "Paragraph");
-            return await strategy.EvaluateChunkQualityAsync(chunk, context);
+            var similarity = CalculateTextSimilarity(chunks[i].Content, chunks[i + 1].Content);
+            cohesionScores.Add(similarity);
         }
 
-        return 0.8; // 기본 품질 점수
+        return Task.FromResult(cohesionScores.Average());
     }
 
-    public ChunkingStatistics GetStatistics()
+    private double CalculateStructuralConsistency(IReadOnlyList<WebContentChunk> chunks, ContentAnalysisMetadata analysis)
     {
-        return new ChunkingStatistics
-        {
-            TotalProcessedContents = 0, // 실제 처리는 선택된 전략이 수행
-            TotalGeneratedChunks = 0,
-            AverageChunkSize = 0,
-            AverageProcessingTimeMs = 200,
-            AverageQualityScore = 0.85,
-            StatsPeriodStart = DateTimeOffset.UtcNow.AddHours(-1),
-            StatsPeriodEnd = DateTimeOffset.UtcNow
-        };
+        // 구조적 일관성: 청크들이 논리적 구조를 유지하는지 평가
+        var consistencyScore = 1.0;
+
+        // 청크 크기의 적절성
+        var avgChunkSize = chunks.Average(c => c.Content.Length);
+        var targetSize = analysis.DocumentLength / Math.Max(chunks.Count, 1);
+        var sizeRatio = Math.Min(avgChunkSize, targetSize) / Math.Max(avgChunkSize, targetSize);
+        consistencyScore *= sizeRatio;
+
+        return Math.Max(0.0, consistencyScore);
     }
 
-}
+    private async Task<double> CalculateTokenEfficiency(IReadOnlyList<WebContentChunk> chunks, CancellationToken cancellationToken)
+    {
+        if (_tokenCountService == null) return 0.8; // 기본점수
 
-/// <summary>
-/// 콘텐츠 분석 메타데이터
-/// </summary>
-public class ContentAnalysisMetadata
-{
-    public ContentType ContentType { get; set; } = ContentType.General;
-    public double StructuralComplexity { get; set; }
-    public bool HasImages { get; set; }
-    public bool HasTechnicalContent { get; set; }
-    public int DocumentLength { get; set; }
-    public bool IsMultiLanguage { get; set; }
-    public bool IsAIFriendly { get; set; }
-    public bool IsPWA { get; set; }
-    public bool IsInteractive { get; set; }
-    public string? PreferredChunkingHint { get; set; }
-}
+        try
+        {
+            var tokenCounts = await _tokenCountService.CountTokensBatchAsync(
+                chunks.Select(c => c.Content), cancellationToken);
 
-/// <summary>
-/// 콘텐츠 타입 열거형
-/// </summary>
-public enum ContentType
-{
-    General,
-    Article,
-    Blog,
-    Documentation,
-    Technical,
-    ApiReference,
-    News,
-    Product,
-    Legal
-}
+            var avgTokensPerChunk = tokenCounts.Average();
+            var idealTokenRange = (500, 1500); // 이상적인 토큰 범위
 
-/// <summary>
-/// Auto 청킹 구성
-/// </summary>
-public class AutoChunkingConfiguration
-{
-    public int LargeDocumentThreshold { get; set; } = 50000;
-    public double HighComplexityThreshold { get; set; } = 0.7;
-    public bool EnableMetadataHints { get; set; } = true;
-    public bool CacheStrategies { get; set; } = true;
+            if (avgTokensPerChunk >= idealTokenRange.Item1 && avgTokensPerChunk <= idealTokenRange.Item2)
+                return 1.0;
+
+            if (avgTokensPerChunk < idealTokenRange.Item1)
+                return avgTokensPerChunk / idealTokenRange.Item1;
+
+            return idealTokenRange.Item2 / avgTokensPerChunk;
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "Failed to calculate token efficiency");
+            return 0.8;
+        }
+    }
+
+    private double CalculateTextDensity(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return 0.0;
+
+        var totalChars = text.Length;
+        var meaningfulChars = text.Count(c => !char.IsWhiteSpace(c) && c != '\n' && c != '\r');
+        return (double)meaningfulChars / totalChars;
+    }
+
+    private double CalculateBaseStructuralConsistency(ExtractedContent content)
+    {
+        var headingCount = content.Headings?.Count ?? 0;
+        var textLength = content.MainContent?.Length ?? content.Text?.Length ?? 0;
+
+        if (textLength == 0) return 0.0;
+        if (headingCount == 0) return 0.5; // 구조가 없으면 중간 점수
+
+        var headingDensity = (double)headingCount / (textLength / 1000.0);
+        return Math.Min(1.0, headingDensity * 0.1); // 적절한 헤딩 밀도 점수
+    }
+
+    private Task<double> EstimateSemanticCohesion(string text, CancellationToken cancellationToken)
+    {
+        // 간단한 의미적 응집성 추정 (실제로는 NLP 모델 사용)
+        var sentences = text.Split(['.', '!', '?'], StringSplitOptions.RemoveEmptyEntries);
+        if (sentences.Length < 2) return Task.FromResult(1.0);
+
+        var cohesionSum = 0.0;
+        for (int i = 0; i < sentences.Length - 1; i++)
+        {
+            cohesionSum += CalculateTextSimilarity(sentences[i], sentences[i + 1]);
+        }
+
+        return Task.FromResult(cohesionSum / (sentences.Length - 1));
+    }
+
+    private double CalculateReadabilityScore(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return 0.0;
+
+        var sentences = text.Split(['.', '!', '?'], StringSplitOptions.RemoveEmptyEntries);
+        var words = text.Split([' ', '\t', '\n', '\r'], StringSplitOptions.RemoveEmptyEntries);
+
+        if (sentences.Length == 0 || words.Length == 0) return 0.0;
+
+        var avgWordsPerSentence = (double)words.Length / sentences.Length;
+        var avgCharsPerWord = words.Average(w => w.Length);
+
+        // 간단한 가독성 점수 (낮을수록 읽기 쉬움)
+        var complexityScore = avgWordsPerSentence * 0.1 + avgCharsPerWord * 0.2;
+        return Math.Max(0.0, 1.0 - complexityScore / 20.0);
+    }
+
+    private double CalculateTextSimilarity(string text1, string text2)
+    {
+        // 간단한 텍스트 유사성 계산 (Jaccard 유사성)
+        var words1 = text1.ToLowerInvariant().Split([' ', '\t', '\n'], StringSplitOptions.RemoveEmptyEntries).ToHashSet();
+        var words2 = text2.ToLowerInvariant().Split([' ', '\t', '\n'], StringSplitOptions.RemoveEmptyEntries).ToHashSet();
+
+        if (!words1.Any() && !words2.Any()) return 1.0;
+        if (!words1.Any() || !words2.Any()) return 0.0;
+
+        var intersection = words1.Intersect(words2).Count();
+        var union = words1.Union(words2).Count();
+
+        return (double)intersection / union;
+    }
+
+    #endregion
 }

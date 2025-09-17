@@ -57,15 +57,11 @@ public class ChunkingStrategyFactory : IChunkingStrategyFactory
         }
     }
 
-    public IReadOnlyList<string> GetAvailableStrategies()
+    public IEnumerable<string> GetAvailableStrategies()
     {
-        return _strategyCreators.Keys.ToList().AsReadOnly();
+        return _strategyCreators.Keys;
     }
 
-    public async Task<IChunkingStrategy> CreateStrategy(string strategyName)
-    {
-        return await CreateStrategyAsync(strategyName);
-    }
 
     public async Task<StrategyInfo> GetStrategyInfoAsync(string strategyName)
     {

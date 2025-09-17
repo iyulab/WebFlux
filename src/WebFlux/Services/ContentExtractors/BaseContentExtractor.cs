@@ -192,7 +192,7 @@ public abstract class BaseContentExtractor : IContentExtractor
             CharacterCount = extractedText.Length,
             ReadingTimeMinutes = EstimateReadingTime(extractedText),
             Keywords = ExtractKeywords(extractedText),
-            OriginalMetadata = webContent.Metadata?.AdditionalData ?? new Dictionary<string, object>()
+            OriginalMetadata = webContent.Metadata?.AdditionalData?.ToDictionary(kv => kv.Key, kv => kv.Value) ?? new Dictionary<string, object>()
         };
 
         return Task.FromResult(metadata);
@@ -402,14 +402,21 @@ public abstract class BaseContentExtractor : IContentExtractor
             throw new ArgumentException("Source URL cannot be null or empty", nameof(sourceUrl));
 
         // 콘텐츠 타입에 따른 자동 추출
-        return contentType?.ToLowerInvariant() switch
-        {
-            var ct when ct.Contains("html") => await ExtractFromHtmlAsync(content, sourceUrl, cancellationToken),
-            var ct when ct.Contains("json") => await ExtractFromJsonAsync(content, sourceUrl, cancellationToken),
-            var ct when ct.Contains("xml") => await ExtractFromXmlAsync(content, sourceUrl, cancellationToken),
-            var ct when ct.Contains("markdown") || ct.Contains("md") => await ExtractFromMarkdownAsync(content, sourceUrl, cancellationToken),
-            _ => await ExtractFromTextAsync(content, sourceUrl, cancellationToken)
-        };
+        if (string.IsNullOrWhiteSpace(contentType))
+            return await ExtractFromTextAsync(content, sourceUrl, cancellationToken);
+
+        var ct = contentType.ToLowerInvariant();
+
+        if (ct.Contains("html"))
+            return await ExtractFromHtmlAsync(content, sourceUrl, cancellationToken);
+        if (ct.Contains("json"))
+            return await ExtractFromJsonAsync(content, sourceUrl, cancellationToken);
+        if (ct.Contains("xml"))
+            return await ExtractFromXmlAsync(content, sourceUrl, cancellationToken);
+        if (ct.Contains("markdown") || ct.Contains("md"))
+            return await ExtractFromMarkdownAsync(content, sourceUrl, cancellationToken);
+
+        return await ExtractFromTextAsync(content, sourceUrl, cancellationToken);
     }
 
     /// <summary>

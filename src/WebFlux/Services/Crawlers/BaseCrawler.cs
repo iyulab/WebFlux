@@ -138,8 +138,29 @@ public abstract class BaseCrawler : ICrawler
 
             visited.Add(currentUrl);
 
-            var result = await CrawlAsync(currentUrl, options, cancellationToken);
-            result = result with { Depth = depth };
+            var originalResult = await CrawlAsync(currentUrl, options, cancellationToken);
+            var result = new CrawlResult
+            {
+                Url = originalResult.Url,
+                FinalUrl = originalResult.FinalUrl,
+                StatusCode = originalResult.StatusCode,
+                IsSuccess = originalResult.IsSuccess,
+                HtmlContent = originalResult.HtmlContent,
+                Headers = originalResult.Headers,
+                ContentType = originalResult.ContentType,
+                Encoding = originalResult.Encoding,
+                ContentLength = originalResult.ContentLength,
+                ResponseTimeMs = originalResult.ResponseTimeMs,
+                CrawledAt = originalResult.CrawledAt,
+                Depth = depth, // Set the desired depth
+                ParentUrl = originalResult.ParentUrl,
+                DiscoveredLinks = originalResult.DiscoveredLinks,
+                ErrorMessage = originalResult.ErrorMessage,
+                Exception = originalResult.Exception,
+                ImageUrls = originalResult.ImageUrls,
+                Metadata = originalResult.Metadata,
+                WebMetadata = originalResult.WebMetadata
+            };
 
             yield return result;
 
@@ -157,7 +178,7 @@ public abstract class BaseCrawler : ICrawler
             // 예의상 지연
             if (options?.DelayMs > 0)
             {
-                await Task.Delay(options.DelayMs.Value, cancellationToken);
+                await Task.Delay(options.DelayMs, cancellationToken);
             }
         }
     }
@@ -188,7 +209,7 @@ public abstract class BaseCrawler : ICrawler
 
             if (options?.DelayMs > 0)
             {
-                await Task.Delay(options.DelayMs.Value, cancellationToken);
+                await Task.Delay(options.DelayMs, cancellationToken);
             }
         }
     }

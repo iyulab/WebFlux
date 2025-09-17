@@ -16,6 +16,15 @@ public class ChunkingOptions
     public int MaxChunkSize { get; set; } = 512;
 
     /// <summary>
+    /// 청크 크기 (MaxChunkSize의 별칭)
+    /// </summary>
+    public int ChunkSize
+    {
+        get => MaxChunkSize;
+        set => MaxChunkSize = value;
+    }
+
+    /// <summary>
     /// 청크 간 겹치는 부분 크기 (토큰 수, 기본값: 50)
     /// </summary>
     public int ChunkOverlap { get; set; } = 50;
@@ -97,9 +106,30 @@ public class ChunkingOptions
     public bool UseMemoryOptimization { get; set; } = false;
 
     /// <summary>
+    /// 메모리 사용량 최소화 여부 (UseMemoryOptimization의 별칭)
+    /// </summary>
+    public bool MinimizeMemoryUsage
+    {
+        get => UseMemoryOptimization;
+        set => UseMemoryOptimization = value;
+    }
+
+    /// <summary>
     /// 스트리밍 처리 사용 여부 (기본값: true)
     /// </summary>
     public bool UseStreaming { get; set; } = true;
+
+    /// <summary>
+    /// 멀티모달 처리 활성화 여부 (Phase 5A.3 재설계)
+    /// 모든 청킹 전략에 선택적으로 적용 가능
+    /// </summary>
+    public bool EnableMultimodalProcessing { get; set; } = false;
+
+    /// <summary>
+    /// 멀티모달 처리 옵션
+    /// EnableMultimodalProcessing이 true일 때만 사용됨
+    /// </summary>
+    public MultimodalProcessingOptions? MultimodalOptions { get; set; }
 }
 
 /// <summary>
