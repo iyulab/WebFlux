@@ -1,92 +1,92 @@
 # WebFlux
-> RAG 시스템을 위한 AI 최적화 웹 콘텐츠 처리 SDK
+> AI-Optimized Web Content Processing SDK for RAG Systems
 
-## 🎯 개요
+## 🎯 Overview
 
-**WebFlux**는 **Web Intelligence Engine**을 탑재한 RAG 전처리 SDK입니다 - 웹 콘텐츠를 AI 친화적 청크로 변환하는 **.NET 9 SDK**입니다.
+**WebFlux** is a RAG preprocessing SDK powered by the **Web Intelligence Engine** - a **.NET 9 SDK** that transforms web content into AI-friendly chunks.
 
-### 🧠 Web Intelligence Engine (Phase 4 완성)
+### 🧠 Web Intelligence Engine (Phase 4 Complete)
 
-**15개 웹 메타데이터 표준**을 통합 분석하여 **60% 크롤링 효율성 개선**을 달성:
+Achieves **60% crawling efficiency improvement** through integrated analysis of **15 web metadata standards**:
 
 #### 🤖 AI-Friendly Standards
-- **🤖 llms.txt**: AI 에이전트를 위한 사이트 구조 가이드
-- **🧠 ai.txt**: AI 사용 정책 및 윤리적 가이드라인
-- **📱 manifest.json**: PWA 메타데이터 및 앱 정보
-- **🤖 robots.txt**: RFC 9309 완전 준수 크롤링 규칙
+- **🤖 llms.txt**: Site structure guide for AI agents
+- **🧠 ai.txt**: AI usage policies and ethical guidelines
+- **📱 manifest.json**: PWA metadata and app information
+- **🤖 robots.txt**: RFC 9309 compliant crawling rules
 
 #### 🏗️ Structural Intelligence
-- **🗺️ sitemap.xml**: XML/Text/RSS/Atom 지원, URL 패턴 분석
-- **📋 README.md**: 프로젝트 구조 및 문서화 분석
-- **⚙️ _config.yml**: Jekyll/Hugo 사이트 구성 분석
-- **📦 package.json**: Node.js 프로젝트 메타데이터
+- **🗺️ sitemap.xml**: XML/Text/RSS/Atom support with URL pattern analysis
+- **📋 README.md**: Project structure and documentation analysis
+- **⚙️ _config.yml**: Jekyll/Hugo site configuration analysis
+- **📦 package.json**: Node.js project metadata
 
 #### 🔒 Security & Compliance
-- **🔐 security.txt**: 보안 정책 및 연락처
-- **🛡️ .well-known**: 표준 메타데이터 디렉토리
-- **📊 ads.txt**: 광고 정책 및 파트너십
-- **🏢 humans.txt**: 팀 및 기여자 정보
+- **🔐 security.txt**: Security policies and contact information
+- **🛡️ .well-known**: Standard metadata directory
+- **📊 ads.txt**: Advertising policies and partnerships
+- **🏢 humans.txt**: Team and contributor information
 
-### 🏗️ 아키텍처 원칙: 인터페이스 제공자
+### 🏗️ Architecture Principle: Interface Provider
 
-#### ✅ WebFlux가 제공하는 것:
-- **🧠 Web Intelligence**: 15개 메타데이터 표준 통합 분석
-- **🕷️ 지능형 크롤링**: 메타데이터 기반 우선순위 및 최적화
-- **📄 고급 콘텐츠 추출**: 구조적 지능을 활용한 정확도 70% 향상
-- **🔌 AI 인터페이스**: Clean interface 설계로 공급자 독립성
-- **🎛️ 처리 파이프라인**: Metadata Discovery → Intelligent Crawling → Optimized Chunking
+#### ✅ What WebFlux Provides:
+- **🧠 Web Intelligence**: Integrated analysis of 15 metadata standards
+- **🕷️ Intelligent Crawling**: Metadata-driven prioritization and optimization
+- **📄 Advanced Content Extraction**: 70% accuracy improvement using structural intelligence
+- **🔌 AI Interfaces**: Clean interface design for provider independence
+- **🎛️ Processing Pipeline**: Metadata Discovery → Intelligent Crawling → Optimized Chunking
 
-#### ❌ WebFlux가 제공하지 않는 것:
-- **AI 서비스 구현**: 특정 AI 공급자 구현 제외
-- **벡터 생성**: 임베딩은 소비 앱 책임
-- **데이터 저장**: 벡터 DB 구현 제외
+#### ❌ What WebFlux Does NOT Provide:
+- **AI Service Implementations**: Specific AI provider implementations excluded
+- **Vector Generation**: Embeddings are consumer app responsibility
+- **Data Storage**: Vector DB implementations excluded
 
-### ✨ 핵심 특징
-- **🧠 Web Intelligence Engine**: 메타데이터 기반 지능형 분석
-- **📦 단일 NuGet 패키지**: `dotnet add package WebFlux`로 간편 설치
-- **🎯 AI 윤리적 크롤링**: ai.txt 표준을 통한 책임감 있는 데이터 수집
-- **📱 PWA 감지**: manifest.json 분석으로 웹앱 최적화
-- **🕷️ RFC 준수 크롤링**: robots.txt, sitemap.xml 완전 지원
-- **📄 15개 표준 지원**: 웹 메타데이터 통합 분석
-- **🎛️ 7가지 청킹 전략**: Auto, Smart, Intelligent, MemoryOptimized, Semantic, Paragraph, FixedSize
-- **🖼️ 멀티모달 처리**: 텍스트 + 이미지 → 통합 텍스트 변환
-- **⚡ 병렬 처리**: 동적 스케일링, 메모리 백프레셔 제어
-- **📊 실시간 스트리밍**: 지능형 캐시, 실시간 청크 반환
-- **🏗️ Clean Architecture**: 의존성 역전, 확장성 보장
+### ✨ Key Features
+- **🧠 Web Intelligence Engine**: Metadata-driven intelligent analysis
+- **📦 Single NuGet Package**: Easy installation with `dotnet add package WebFlux`
+- **🎯 Ethical AI Crawling**: Responsible data collection through ai.txt standards
+- **📱 PWA Detection**: Web app optimization through manifest.json analysis
+- **🕷️ RFC-Compliant Crawling**: Full support for robots.txt, sitemap.xml
+- **📄 15 Standards Support**: Integrated web metadata analysis
+- **🎛️ 7 Chunking Strategies**: Auto, Smart, Intelligent, MemoryOptimized, Semantic, Paragraph, FixedSize
+- **🖼️ Multimodal Processing**: Text + Image → Unified text conversion
+- **⚡ Parallel Processing**: Dynamic scaling with memory backpressure control
+- **📊 Real-time Streaming**: Intelligent caching with real-time chunk delivery
+- **🏗️ Clean Architecture**: Dependency inversion with guaranteed extensibility
 
 ---
 
-## 🚀 빠른 시작
+## 🚀 Quick Start
 
-### 설치
+### Installation
 ```bash
 dotnet add package WebFlux
 ```
 
-### 기본 사용법
+### Basic Usage
 ```csharp
 using WebFlux;
 using Microsoft.Extensions.DependencyInjection;
 
 var services = new ServiceCollection();
 
-// 필수 서비스 등록 (소비 애플리케이션에서 구현)
-services.AddScoped<ITextCompletionService, YourLLMService>();        // LLM 서비스
-services.AddScoped<ITextEmbeddingService, YourEmbeddingService>();   // 임베딩 서비스
+// Required services (implemented by consumer application)
+services.AddScoped<ITextCompletionService, YourLLMService>();        // LLM service
+services.AddScoped<ITextEmbeddingService, YourEmbeddingService>();   // Embedding service
 
-// 선택사항: 이미지-텍스트 서비스 (멀티모달 처리용)
+// Optional: Image-to-text service (for multimodal processing)
 services.AddScoped<IImageToTextService, YourVisionService>();
 
-// 또는 OpenAI 서비스 사용 (환경 변수에 API 키 설정 필요)
+// Or use OpenAI services (requires API key in environment variables)
 // services.AddWebFluxOpenAIServices();
 
-// 또는 테스트용 Mock 서비스 사용
+// Or use Mock services for testing
 // services.AddWebFluxMockAIServices();
 
-// 소비 어플리케이션에서 관리
-services.AddScoped<IVectorStore, YourVectorStore>();                // 벡터 저장소
+// Consumer application manages vector store
+services.AddScoped<IVectorStore, YourVectorStore>();                // Vector storage
 
-// WebFlux 서비스 등록 (병렬 처리 및 스트리밍 엔진 포함)
+// Register WebFlux services (includes parallel processing and streaming engine)
 services.AddWebFlux();
 
 var provider = services.BuildServiceProvider();
@@ -94,12 +94,12 @@ var processor = provider.GetRequiredService<IWebContentProcessor>();
 var embeddingService = provider.GetRequiredService<IEmbeddingService>();
 var vectorStore = provider.GetRequiredService<IVectorStore>();
 
-// 스트리밍 처리 (권장 - 메모리 효율적, 병렬 최적화)
+// Streaming processing (recommended - memory efficient, parallel optimized)
 var crawlOptions = new CrawlOptions
 {
-    MaxDepth = 3,                    // 최대 크롤링 깊이
-    MaxPages = 100,                  // 최대 페이지 수
-    RespectRobotsTxt = true,         // robots.txt 준수
+    MaxDepth = 3,                    // Maximum crawling depth
+    MaxPages = 100,                  // Maximum number of pages
+    RespectRobotsTxt = true,         // Respect robots.txt
     DelayBetweenRequests = TimeSpan.FromMilliseconds(500)
 };
 
@@ -110,9 +110,9 @@ await foreach (var result in processor.ProcessWithProgressAsync("https://docs.ex
         foreach (var chunk in result.Result)
         {
             Console.WriteLine($"📄 URL: {chunk.SourceUrl}");
-            Console.WriteLine($"   청크 {chunk.ChunkIndex}: {chunk.Content.Length}자");
+            Console.WriteLine($"   Chunk {chunk.ChunkIndex}: {chunk.Content.Length} characters");
 
-            // RAG 파이프라인: 임베딩 생성 → 벡터 저장소 저장
+            // RAG pipeline: Generate embedding → Store in vector database
             var embedding = await embeddingService.GenerateAsync(chunk.Content);
             await vectorStore.StoreAsync(new {
                 Id = chunk.Id,
@@ -126,15 +126,15 @@ await foreach (var result in processor.ProcessWithProgressAsync("https://docs.ex
 }
 ```
 
-### 단계별 처리 (고급 사용법)
+### Step-by-Step Processing (Advanced Usage)
 ```csharp
-// 각 단계를 개별적으로 제어하고 싶을 때 사용
+// Use when you want individual control over each stage
 
-// 1단계: 웹 크롤링 (Crawler)
+// Stage 1: Web Crawling (Crawler)
 var crawlResults = await processor.CrawlAsync("https://docs.example.com", crawlOptions);
-Console.WriteLine($"크롤링된 페이지: {crawlResults.Count()}개");
+Console.WriteLine($"Crawled pages: {crawlResults.Count()}");
 
-// 2단계: 콘텐츠 추출 (Extractor)
+// Stage 2: Content Extraction (Extractor)
 var extractedContents = new List<RawWebContent>();
 foreach (var crawlResult in crawlResults)
 {
@@ -142,7 +142,7 @@ foreach (var crawlResult in crawlResults)
     extractedContents.Add(rawContent);
 }
 
-// 3단계: 구조 분석 (Parser with LLM)
+// Stage 3: Structural Analysis (Parser with LLM)
 var parsedContents = new List<ParsedWebContent>();
 foreach (var rawContent in extractedContents)
 {
@@ -150,22 +150,22 @@ foreach (var rawContent in extractedContents)
     parsedContents.Add(parsedContent);
 }
 
-// 4단계: 청킹 (Chunking Strategy)
+// Stage 4: Chunking (Chunking Strategy)
 var allChunks = new List<WebContentChunk>();
 foreach (var parsedContent in parsedContents)
 {
     var chunks = await processor.ChunkAsync(parsedContent, new ChunkingOptions
     {
-        Strategy = "Smart",  // 구조-인식 청킹 (권장)
+        Strategy = "Smart",  // Structure-aware chunking (recommended)
         MaxChunkSize = 512,
         OverlapSize = 64
     });
     allChunks.AddRange(chunks);
 }
 
-Console.WriteLine($"생성된 총 청크: {allChunks.Count}개");
+Console.WriteLine($"Total chunks generated: {allChunks.Count}");
 
-// 5단계: RAG 파이프라인 (임베딩 → 저장)
+// Stage 5: RAG Pipeline (Embedding → Storage)
 foreach (var chunk in allChunks)
 {
     var embedding = await embeddingService.GenerateAsync(chunk.Content);
@@ -179,73 +179,73 @@ foreach (var chunk in allChunks)
 }
 ```
 
-### 지원 콘텐츠 형식
-- **HTML** (.html, .htm) - DOM 구조 분석 및 콘텐츠 추출
-- **Markdown** (.md) - 구조 보존
-- **JSON** (.json) - API 응답 및 구조화 데이터
-- **XML** (.xml) - RSS/Atom 피드 포함
-- **RSS/Atom** 피드 - 뉴스 및 블로그 콘텐츠
-- **PDF** (웹 호스팅) - 온라인 문서 처리
+### Supported Content Formats
+- **HTML** (.html, .htm) - DOM structure analysis and content extraction
+- **Markdown** (.md) - Structure preservation
+- **JSON** (.json) - API responses and structured data
+- **XML** (.xml) - Including RSS/Atom feeds
+- **RSS/Atom** feeds - News and blog content
+- **PDF** (web-hosted) - Online document processing
 
 ---
 
-## 🕷️ 크롤링 전략 가이드
+## 🕷️ Crawling Strategy Guide
 
-### 크롤링 옵션
+### Crawling Options
 ```csharp
 var crawlOptions = new CrawlOptions
 {
-    // 기본 설정
-    MaxDepth = 3,                                    // 최대 크롤링 깊이
-    MaxPages = 100,                                  // 최대 페이지 수
-    DelayBetweenRequests = TimeSpan.FromSeconds(1),  // 요청 간 지연
-    
-    // 준수 및 예의
-    RespectRobotsTxt = true,                         // robots.txt 준수
+    // Basic settings
+    MaxDepth = 3,                                    // Maximum crawling depth
+    MaxPages = 100,                                  // Maximum number of pages
+    DelayBetweenRequests = TimeSpan.FromSeconds(1),  // Delay between requests
+
+    // Compliance and courtesy
+    RespectRobotsTxt = true,                         // Respect robots.txt
     UserAgent = "WebFlux/1.0 (+https://your-site.com/bot)", // User-Agent
-    
-    // 필터링
-    AllowedDomains = ["docs.example.com", "help.example.com"], // 허용 도메인
-    ExcludePatterns = ["/admin/", "/private/", "*.pdf"],        // 제외 패턴
-    IncludePatterns = ["/docs/", "/help/", "/api/"],            // 포함 패턴
-    
-    // 고급 설정
-    MaxConcurrentRequests = 5,                       // 동시 요청 수
-    Timeout = TimeSpan.FromSeconds(30),              // 요청 타임아웃
-    RetryCount = 3,                                  // 재시도 횟수
-    
-    // 콘텐츠 필터
-    MinContentLength = 100,                          // 최소 콘텐츠 길이
-    MaxContentLength = 1000000,                      // 최대 콘텐츠 길이
+
+    // Filtering
+    AllowedDomains = ["docs.example.com", "help.example.com"], // Allowed domains
+    ExcludePatterns = ["/admin/", "/private/", "*.pdf"],        // Exclude patterns
+    IncludePatterns = ["/docs/", "/help/", "/api/"],            // Include patterns
+
+    // Advanced settings
+    MaxConcurrentRequests = 5,                       // Concurrent requests
+    Timeout = TimeSpan.FromSeconds(30),              // Request timeout
+    RetryCount = 3,                                  // Retry count
+
+    // Content filters
+    MinContentLength = 100,                          // Minimum content length
+    MaxContentLength = 1000000,                      // Maximum content length
 };
 ```
 
-### 크롤링 전략
-| 전략 | 설명 | 최적 사용 케이스 |
-|------|------|-----------------|
-| **BreadthFirst** | 너비 우선 탐색 | 사이트 전체 개요 필요 |
-| **DepthFirst** | 깊이 우선 탐색 | 특정 섹션 집중 탐색 |
-| **Intelligent** | LLM 기반 우선순위 | 고품질 콘텐츠 우선 |
-| **Sitemap** | sitemap.xml 기반 | 구조화된 사이트 |
+### Crawling Strategies
+| Strategy | Description | Optimal Use Case |
+|----------|-------------|------------------|
+| **BreadthFirst** | Breadth-first search | Need site-wide overview |
+| **DepthFirst** | Depth-first search | Focus on specific sections |
+| **Intelligent** | LLM-based prioritization | High-quality content first |
+| **Sitemap** | sitemap.xml based | Structured sites |
 
 ---
 
-## 🎛️ 청킹 전략 가이드
+## 🎛️ Chunking Strategy Guide
 
-### 전략 선택 가이드
-| 전략 | 최적 사용 케이스 | 품질 점수 | 메모리 사용 | 상태 |
-|------|-----------------|----------|------------|------|
-| **Smart** (권장) | HTML 문서, API 문서, 구조화된 콘텐츠 | ⭐⭐⭐⭐⭐ | 중간 | ✅ 구현 완료 |
-| **Semantic** | 일반 웹페이지, 아티클, 의미적 일관성 필요 | ⭐⭐⭐⭐⭐ | 중간 | ✅ 구현 완료 |
-| **Paragraph** | 마크다운 문서, 위키, 단락 구조 보존 | ⭐⭐⭐⭐ | 낮음 | ✅ 구현 완료 |
-| **FixedSize** | 균일한 처리 필요, 테스트 환경 | ⭐⭐⭐ | 낮음 | ✅ 구현 완료 |
-| **Auto** | 모든 웹 콘텐츠 - 자동 최적화 | ⭐⭐⭐⭐⭐ | 중간 | 🚧 개발 예정 |
-| **Intelligent** | 블로그, 뉴스, 지식베이스 | ⭐⭐⭐⭐⭐ | 높음 | 🚧 개발 예정 |
-| **MemoryOptimized** | 대규모 사이트, 서버 환경 | ⭐⭐⭐⭐⭐ | 낮음 (84% 절감) | 🚧 개발 예정 |
+### Strategy Selection Guide
+| Strategy | Optimal Use Case | Quality Score | Memory Usage | Status |
+|----------|------------------|---------------|--------------|---------|
+| **Smart** (recommended) | HTML docs, API docs, structured content | ⭐⭐⭐⭐⭐ | Medium | ✅ Complete |
+| **Semantic** | General web pages, articles, semantic consistency | ⭐⭐⭐⭐⭐ | Medium | ✅ Complete |
+| **Paragraph** | Markdown docs, wikis, paragraph structure preservation | ⭐⭐⭐⭐ | Low | ✅ Complete |
+| **FixedSize** | Uniform processing, test environments | ⭐⭐⭐ | Low | ✅ Complete |
+| **Auto** | All web content - automatic optimization | ⭐⭐⭐⭐⭐ | Medium | ✅ Complete |
+| **Intelligent** | Blogs, news, knowledge bases | ⭐⭐⭐⭐⭐ | High | ✅ Complete |
+| **MemoryOptimized** | Large-scale sites, server environments | ⭐⭐⭐⭐⭐ | Low (84% reduction) | ✅ Complete |
 
 ---
 
-## ⚡ 엔터프라이즈급 성능 최적화
+## ⚡ Enterprise-Grade Performance Optimization
 
 ### 🚀 병렬 크롤링 엔진
 - **CPU 코어별 동적 스케일링**: 시스템 리소스에 맞춘 자동 확장

@@ -3,21 +3,30 @@ using WebFlux.Core.Interfaces;
 using WebFlux.Core.Models;
 using System.Text.RegularExpressions;
 using System.Text;
+using Microsoft.Extensions.Logging;
 
 namespace WebFlux.Services.ContentExtractors;
 
 /// <summary>
 /// Playwright 기반 동적 콘텐츠 추출기
 /// JavaScript가 렌더링된 후의 완전한 DOM에서 구조화된 텍스트와 메타데이터 추출
+/// Phase 5A.1: 멀티모달 처리를 위한 이미지 추출 및 스크린샷 기능 지원
 /// </summary>
 public class PlaywrightContentExtractor : IContentExtractor
 {
     private readonly IPlaywright _playwright;
+    private readonly ILogger<PlaywrightContentExtractor> _logger;
+    private readonly IImageToTextService? _imageToTextService;
     private readonly ExtractionStatistics _statistics = new();
 
-    public PlaywrightContentExtractor(IPlaywright playwright)
+    public PlaywrightContentExtractor(
+        IPlaywright playwright,
+        ILogger<PlaywrightContentExtractor> logger,
+        IImageToTextService? imageToTextService = null)
     {
         _playwright = playwright ?? throw new ArgumentNullException(nameof(playwright));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _imageToTextService = imageToTextService;
     }
 
     /// <summary>
@@ -234,18 +243,63 @@ public class PlaywrightContentExtractor : IContentExtractor
             // 메타데이터 추출
             var metadata = await ExtractMetadataFromPage(page, sourceUrl);
 
+            // Phase 5A.1: 이미지 추출 및 처리
+            var images = await ExtractImagesFromPage(page, sourceUrl);
+            var imageTexts = new List<string>();
+
+            if (_imageToTextService != null && images.Count > 0)
+            {
+                _logger.LogInformation("Extracting text from {ImageCount} images", images.Count);
+
+                foreach (var image in images.Take(10)) // 최대 10개 이미지만 처리
+                {
+                    try
+                    {
+                        var imageText = await _imageToTextService.ExtractTextFromWebImageAsync(
+                            image.Url,
+                            new ImageToTextOptions { IncludeContext = true },
+                            cancellationToken);
+
+                        if (imageText.IsSuccess && !string.IsNullOrWhiteSpace(imageText.ExtractedText))
+                        {
+                            imageTexts.Add($"[Image: {imageText.ExtractedText}]");
+                            _logger.LogDebug("Extracted text from image {ImageUrl}: {Text}",
+                                image.Url, imageText.ExtractedText.Substring(0, Math.Min(100, imageText.ExtractedText.Length)));
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to extract text from image {ImageUrl}", image.Url);
+                    }
+                }
+            }
+
             // 텍스트 추출
             var visibleText = await page.InnerTextAsync("body");
             var cleanedText = CleanExtractedText(visibleText);
+
+            // 이미지 텍스트를 메인 텍스트와 통합
+            var combinedText = cleanedText;
+            if (imageTexts.Count > 0)
+            {
+                combinedText += "\n\n" + string.Join("\n", imageTexts);
+                metadata.OriginalMetadata["images_processed"] = imageTexts.Count;
+                metadata.OriginalMetadata["total_images_found"] = images.Count;
+            }
 
             _statistics.TotalExtractions++;
 
             return new ExtractedContent
             {
-                Text = cleanedText,
+                Text = combinedText,
                 Metadata = metadata,
-                WordCount = cleanedText.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length,
-                CharacterCount = cleanedText.Length
+                WordCount = combinedText.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length,
+                CharacterCount = combinedText.Length,
+                Images = images,
+                OriginalUrl = sourceUrl,
+                ExtractionTimestamp = DateTimeOffset.UtcNow,
+                ExtractionMethod = "Playwright + MLLM",
+                ProcessingTimeMs = (int)(DateTimeOffset.UtcNow - metadata.ExtractedAt).TotalMilliseconds
             };
         }
         catch (Exception ex)
@@ -323,6 +377,154 @@ public class PlaywrightContentExtractor : IContentExtractor
         }
 
         return metadata;
+    }
+
+    /// <summary>
+    /// 페이지에서 이미지 정보 추출 (Phase 5A.1: 멀티모달 처리)
+    /// </summary>
+    private async Task<List<ImageInfo>> ExtractImagesFromPage(IPage page, string sourceUrl)
+    {
+        var images = new List<ImageInfo>();
+
+        try
+        {
+            _logger.LogDebug("Extracting images from page: {Url}", sourceUrl);
+
+            var imageElements = await page.QuerySelectorAllAsync("img[src]");
+            var position = 0;
+
+            foreach (var imgElement in imageElements.Take(20)) // 최대 20개 이미지만 처리
+            {
+                try
+                {
+                    var src = await imgElement.GetAttributeAsync("src");
+                    var alt = await imgElement.GetAttributeAsync("alt");
+                    var title = await imgElement.GetAttributeAsync("title");
+
+                    if (string.IsNullOrWhiteSpace(src)) continue;
+
+                    // 상대 URL을 절대 URL로 변환
+                    var imageUrl = src;
+                    if (!Uri.IsWellFormedUriString(imageUrl, UriKind.Absolute))
+                    {
+                        if (Uri.TryCreate(new Uri(sourceUrl), src, out var absoluteUri))
+                        {
+                            imageUrl = absoluteUri.ToString();
+                        }
+                        else
+                        {
+                            continue; // 유효하지 않은 URL 건너뛰기
+                        }
+                    }
+
+                    // 이미지 크기 및 형식 감지
+                    var boundingBox = await imgElement.BoundingBoxAsync();
+                    var dimensions = boundingBox != null
+                        ? $"{(int)boundingBox.Width}x{(int)boundingBox.Height}"
+                        : null;
+
+                    // 이미지 주변 컨텍스트 추출
+                    var context = await ExtractImageContext(imgElement, page);
+
+                    var imageInfo = new ImageInfo
+                    {
+                        Url = imageUrl,
+                        AltText = alt,
+                        Title = title,
+                        Dimensions = dimensions,
+                        Position = position++,
+                        Context = context,
+                        Format = DetermineImageFormat(imageUrl)
+                    };
+
+                    images.Add(imageInfo);
+                    _logger.LogTrace("Found image: {Url} (alt: {Alt})", imageUrl, alt ?? "none");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to extract image information from element");
+                }
+            }
+
+            _logger.LogDebug("Extracted {ImageCount} images from page", images.Count);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to extract images from page");
+        }
+
+        return images;
+    }
+
+    /// <summary>
+    /// 이미지 주변 컨텍스트 추출
+    /// </summary>
+    private async Task<string?> ExtractImageContext(IElementHandle imgElement, IPage page)
+    {
+        try
+        {
+            // 이미지의 부모 요소에서 텍스트 컨텍스트 추출
+            var parent = await imgElement.EvaluateHandleAsync("el => el.parentElement");
+            if (parent != null)
+            {
+                var contextText = await parent.InnerTextAsync();
+                if (!string.IsNullOrWhiteSpace(contextText) && contextText.Length < 200)
+                {
+                    return contextText.Trim();
+                }
+            }
+
+            // 이미지 근처의 캡션이나 figcaption 찾기
+            var figcaption = await page.EvaluateAsync<string?>(
+                @"(img) => {
+                    const figure = img.closest('figure');
+                    if (figure) {
+                        const caption = figure.querySelector('figcaption');
+                        if (caption) return caption.textContent;
+                    }
+
+                    const next = img.nextElementSibling;
+                    if (next && (next.tagName === 'P' || next.className.includes('caption'))) {
+                        return next.textContent;
+                    }
+
+                    return null;
+                }",
+                imgElement);
+
+            return figcaption;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// URL에서 이미지 형식 감지
+    /// </summary>
+    private string? DetermineImageFormat(string imageUrl)
+    {
+        try
+        {
+            var uri = new Uri(imageUrl);
+            var extension = Path.GetExtension(uri.LocalPath).ToLowerInvariant();
+
+            return extension switch
+            {
+                ".jpg" or ".jpeg" => "JPEG",
+                ".png" => "PNG",
+                ".gif" => "GIF",
+                ".webp" => "WebP",
+                ".svg" => "SVG",
+                ".bmp" => "BMP",
+                _ => null
+            };
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     /// <summary>
