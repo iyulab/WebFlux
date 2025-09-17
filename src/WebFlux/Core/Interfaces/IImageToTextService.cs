@@ -63,6 +63,18 @@ public interface IImageToTextService
     IReadOnlyList<string> GetSupportedImageFormats();
 
     /// <summary>
+    /// 웹 이미지에서 텍스트를 추출하고 상세한 결과를 반환합니다. (Phase 5A.2 멀티모달 파이프라인)
+    /// </summary>
+    /// <param name="imageUrl">텍스트를 추출할 웹 이미지 URL</param>
+    /// <param name="options">변환 옵션</param>
+    /// <param name="cancellationToken">취소 토큰</param>
+    /// <returns>상세한 이미지-텍스트 변환 결과</returns>
+    Task<ImageToTextResult> ExtractTextFromWebImageAsync(
+        string imageUrl,
+        ImageToTextOptions? options = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// 서비스의 사용 가능 여부를 확인합니다.
     /// </summary>
     /// <param name="cancellationToken">취소 토큰</param>

@@ -74,6 +74,9 @@ public static class ServiceCollectionExtensions
         // 진행률 리포팅 서비스 등록
         services.AddWebFluxProgressReporting();
 
+        // Phase 5A.2: 멀티모달 처리 파이프라인 등록
+        services.AddWebFluxMultimodal();
+
         // 로깅 구성
         services.AddLogging();
 
@@ -202,6 +205,9 @@ public static class ServiceCollectionExtensions
         // Phase 4D: 고급 청킹 전략들
         services.TryAddTransient<AutoChunkingStrategy>();
         services.TryAddTransient<MemoryOptimizedChunkingStrategy>();
+
+        // Phase 5A.3: 멀티모달 청킹 전략
+        services.TryAddTransient<MultimodalChunkingStrategy>();
 
         // 청킹 전략 팩토리 등록
         services.TryAddSingleton<IChunkingStrategyFactory, ChunkingStrategyFactory>();
@@ -344,6 +350,19 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddWebFluxProgressReporting(this IServiceCollection services)
     {
         services.TryAddSingleton<IProgressReporter, InMemoryProgressReporter>();
+
+        return services;
+    }
+
+    /// <summary>
+    /// 멀티모달 처리 서비스를 등록합니다. (Phase 5A.2)
+    /// </summary>
+    /// <param name="services">서비스 컬렉션</param>
+    /// <returns>서비스 컬렉션</returns>
+    public static IServiceCollection AddWebFluxMultimodal(this IServiceCollection services)
+    {
+        // 멀티모달 처리 파이프라인 등록
+        services.TryAddScoped<IMultimodalProcessingPipeline, MultimodalProcessingPipeline>();
 
         return services;
     }
