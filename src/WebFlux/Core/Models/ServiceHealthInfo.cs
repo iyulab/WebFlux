@@ -8,7 +8,11 @@ public class ServiceHealthInfo
     /// <summary>
     /// 서비스 이름
     /// </summary>
+#if NET8_0_OR_GREATER
     public required string ServiceName { get; init; }
+#else
+    public string ServiceName { get; init; } = string.Empty;
+#endif
 
     /// <summary>
     /// 서비스 상태

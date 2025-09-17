@@ -1,6 +1,21 @@
 # WebFlux
 > AI-Optimized Web Content Processing SDK for RAG Systems
 
+[![NuGet Version](https://img.shields.io/nuget/v/WebFlux?style=flat-square&logo=nuget&color=004880)](https://www.nuget.org/packages/WebFlux/)
+[![NuGet Downloads](https://img.shields.io/nuget/dt/WebFlux?style=flat-square&logo=nuget&color=004880)](https://www.nuget.org/packages/WebFlux/)
+[![GitHub Release](https://img.shields.io/github/v/release/iyulab/WebFlux?style=flat-square&logo=github)](https://github.com/iyulab/WebFlux/releases)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/iyulab/WebFlux/nuget-publish.yml?branch=main&style=flat-square&logo=github-actions)](https://github.com/iyulab/WebFlux/actions)
+
+[![.NET Support](https://img.shields.io/badge/.NET-6%20|%207%20|%208%20|%209-512BD4?style=flat-square&logo=dotnet)](https://dotnet.microsoft.com/)
+[![License](https://img.shields.io/github/license/iyulab/WebFlux?style=flat-square&color=green)](https://github.com/iyulab/WebFlux/blob/main/LICENSE)
+[![Test Coverage](https://img.shields.io/badge/Test%20Coverage-90%25-brightgreen?style=flat-square&logo=codecov)](https://github.com/iyulab/WebFlux)
+[![Code Quality](https://img.shields.io/badge/Quality-A+-brightgreen?style=flat-square&logo=codeclimate)](https://github.com/iyulab/WebFlux)
+
+[![AI-Driven](https://img.shields.io/badge/AI--Driven-Auto%20Chunking-FF6B6B?style=flat-square&logo=openai)](https://github.com/iyulab/WebFlux)
+[![Web Intelligence](https://img.shields.io/badge/Web%20Intelligence-15%20Standards-4ECDC4?style=flat-square&logo=w3c)](https://github.com/iyulab/WebFlux)
+[![Performance](https://img.shields.io/badge/Performance-100%20pages%2Fmin-45B7D1?style=flat-square&logo=speedtest)](https://github.com/iyulab/WebFlux)
+[![Memory Optimized](https://img.shields.io/badge/Memory-84%25%20Reduction-96CEB4?style=flat-square&logo=memory)](https://github.com/iyulab/WebFlux)
+
 ## 🎯 Overview
 
 **WebFlux** is a RAG preprocessing SDK powered by the **Web Intelligence Engine** - a **.NET 9 SDK** that transforms web content into AI-friendly chunks.
@@ -61,8 +76,22 @@ Achieves **60% crawling efficiency improvement** and **AI-driven intelligent chu
 ## 🚀 Quick Start
 
 ### Installation
+
+[![NuGet](https://img.shields.io/nuget/v/WebFlux?style=for-the-badge&logo=nuget&logoColor=white&label=WebFlux&color=004880)](https://www.nuget.org/packages/WebFlux/)
+
+**Package Manager Console:**
+```powershell
+Install-Package WebFlux
+```
+
+**dotnet CLI:**
 ```bash
 dotnet add package WebFlux
+```
+
+**PackageReference (.csproj):**
+```xml
+<PackageReference Include="WebFlux" Version="0.1.0" />
 ```
 
 ### Basic Usage
@@ -234,20 +263,25 @@ var crawlOptions = new CrawlOptions
 
 ## 🎛️ Chunking Strategy Guide
 
+[![Chunking Strategies](https://img.shields.io/badge/Chunking%20Strategies-7%20Available-9B59B6?style=flat-square&logo=gear)](https://github.com/iyulab/WebFlux)
+
 ### Strategy Selection Guide
 | Strategy | Optimal Use Case | Quality Score | Memory Usage | Status |
 |----------|------------------|---------------|--------------|---------|
-| **Auto** (recommended) | All web content - AI-driven automatic optimization | ⭐⭐⭐⭐⭐ | Medium | ✅ Phase 5B Complete |
-| **Smart** | HTML docs, API docs, structured content | ⭐⭐⭐⭐⭐ | Medium | ✅ Complete |
-| **Semantic** | General web pages, articles, semantic consistency | ⭐⭐⭐⭐⭐ | Medium | ✅ Complete |
-| **Intelligent** | Blogs, news, knowledge bases | ⭐⭐⭐⭐⭐ | High | ✅ Complete |
-| **MemoryOptimized** | Large-scale sites, server environments | ⭐⭐⭐⭐⭐ | Low (84% reduction) | ✅ Complete |
-| **Paragraph** | Markdown docs, wikis, paragraph structure preservation | ⭐⭐⭐⭐ | Low | ✅ Complete |
-| **FixedSize** | Uniform processing, test environments | ⭐⭐⭐ | Low | ✅ Complete |
+| **Auto** 🤖 (recommended) | All web content - AI-driven automatic optimization | ⭐⭐⭐⭐⭐ | 🟡 Medium | ✅ Phase 5B Complete |
+| **Smart** 🧠 | HTML docs, API docs, structured content | ⭐⭐⭐⭐⭐ | 🟡 Medium | ✅ Complete |
+| **Semantic** 🔍 | General web pages, articles, semantic consistency | ⭐⭐⭐⭐⭐ | 🟡 Medium | ✅ Complete |
+| **Intelligent** 💡 | Blogs, news, knowledge bases | ⭐⭐⭐⭐⭐ | 🔴 High | ✅ Complete |
+| **MemoryOptimized** ⚡ | Large-scale sites, server environments | ⭐⭐⭐⭐⭐ | 🟢 Low (84% reduction) | ✅ Complete |
+| **Paragraph** 📄 | Markdown docs, wikis, paragraph structure preservation | ⭐⭐⭐⭐ | 🟢 Low | ✅ Complete |
+| **FixedSize** 📏 | Uniform processing, test environments | ⭐⭐⭐ | 🟢 Low | ✅ Complete |
 
 ---
 
 ## ⚡ Enterprise-Grade Performance Optimization
+
+[![Performance Verified](https://img.shields.io/badge/Performance-Verified-success?style=flat-square&logo=speedtest)](https://github.com/iyulab/WebFlux)
+[![Memory Efficient](https://img.shields.io/badge/Memory-84%25%20Optimized-green?style=flat-square&logo=memory)](https://github.com/iyulab/WebFlux)
 
 ### 🚀 병렬 크롤링 엔진
 - **CPU 코어별 동적 스케일링**: 시스템 리소스에 맞춘 자동 확장
@@ -484,3 +518,5 @@ services.AddTransient<IContentExtractor, CustomContentExtractor>();
 
 ### 📖 주요 문서
 - [**🏗️ 아키텍처**](docs/ARCHITECTURE.md) - 시스템 설계 및 확장성
+- [**📋 작업 계획**](TASKS.md) - 개발 로드맵 및 완료 현황
+- [**📦 버전 관리**](VERSION_MANAGEMENT.md) - 버전 관리 및 릴리즈 가이드

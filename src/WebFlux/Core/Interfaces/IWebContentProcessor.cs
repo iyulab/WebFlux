@@ -94,7 +94,11 @@ public interface IWebContentProcessor
 public class ProcessingProgress
 {
     /// <summary>작업 ID</summary>
+#if NET8_0_OR_GREATER
     public required string JobId { get; init; }
+#else
+    public string JobId { get; init; } = string.Empty;
+#endif
 
     /// <summary>진행률 (0.0 - 1.0)</summary>
     public double Progress { get; init; }

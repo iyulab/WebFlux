@@ -8,12 +8,20 @@ public class ProcessingError
     /// <summary>
     /// 오류 코드
     /// </summary>
+#if NET8_0_OR_GREATER
     public required string Code { get; init; }
+#else
+    public string Code { get; init; } = string.Empty;
+#endif
 
     /// <summary>
     /// 오류 메시지
     /// </summary>
+#if NET8_0_OR_GREATER
     public required string Message { get; init; }
+#else
+    public string Message { get; init; } = string.Empty;
+#endif
 
     /// <summary>
     /// 오류 심각도

@@ -86,7 +86,11 @@ public interface ICrawler
 public class CrawlResult
 {
     /// <summary>요청 URL</summary>
+#if NET8_0_OR_GREATER
     public required string Url { get; init; }
+#else
+    public string Url { get; init; } = string.Empty;
+#endif
 
     /// <summary>실제 응답 URL (리디렉션 포함)</summary>
     public string FinalUrl { get; init; } = string.Empty;

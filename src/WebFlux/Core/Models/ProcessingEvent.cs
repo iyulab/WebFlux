@@ -70,10 +70,18 @@ public class CrawlingStartedEvent : ProcessingEvent
     public override string EventType => "CrawlingStarted";
 
     /// <summary>시작 URL</summary>
+#if NET8_0_OR_GREATER
     public required string StartUrl { get; init; }
+#else
+    public string StartUrl { get; init; } = string.Empty;
+#endif
 
     /// <summary>크롤링 옵션</summary>
+#if NET8_0_OR_GREATER
     public required object CrawlOptions { get; init; }
+#else
+    public object CrawlOptions { get; init; } = new object();
+#endif
 
     /// <summary>예상 페이지 수</summary>
     public int? EstimatedPageCount { get; init; }
@@ -110,7 +118,11 @@ public class PageCrawledEvent : ProcessingEvent
     public override string EventType => "PageCrawled";
 
     /// <summary>크롤링된 URL</summary>
+#if NET8_0_OR_GREATER
     public required string Url { get; init; }
+#else
+    public string Url { get; init; } = string.Empty;
+#endif
 
     /// <summary>HTTP 상태 코드</summary>
     public int StatusCode { get; init; }
@@ -136,16 +148,28 @@ public class ChunkingStartedEvent : ProcessingEvent
     public override string EventType => "ChunkingStarted";
 
     /// <summary>소스 URL</summary>
+#if NET8_0_OR_GREATER
     public required string SourceUrl { get; init; }
+#else
+    public string SourceUrl { get; init; } = string.Empty;
+#endif
 
     /// <summary>청킹 전략</summary>
+#if NET8_0_OR_GREATER
     public required string Strategy { get; init; }
+#else
+    public string Strategy { get; init; } = string.Empty;
+#endif
 
     /// <summary>콘텐츠 크기 (문자 수)</summary>
     public int ContentLength { get; init; }
 
     /// <summary>청킹 옵션</summary>
+#if NET8_0_OR_GREATER
     public required object ChunkingOptions { get; init; }
+#else
+    public object ChunkingOptions { get; init; } = new object();
+#endif
 }
 
 /// <summary>
@@ -156,7 +180,11 @@ public class ChunkingCompletedEvent : ProcessingEvent
     public override string EventType => "ChunkingCompleted";
 
     /// <summary>소스 URL</summary>
+#if NET8_0_OR_GREATER
     public required string SourceUrl { get; init; }
+#else
+    public string SourceUrl { get; init; } = string.Empty;
+#endif
 
     /// <summary>생성된 청크 수</summary>
     public int GeneratedChunks { get; init; }
@@ -179,10 +207,18 @@ public class ChunkGeneratedEvent : ProcessingEvent
     public override string EventType => "ChunkGenerated";
 
     /// <summary>청크 ID</summary>
+#if NET8_0_OR_GREATER
     public required string ChunkId { get; init; }
+#else
+    public string ChunkId { get; init; } = string.Empty;
+#endif
 
     /// <summary>소스 URL</summary>
+#if NET8_0_OR_GREATER
     public required string SourceUrl { get; init; }
+#else
+    public string SourceUrl { get; init; } = string.Empty;
+#endif
 
     /// <summary>청크 크기 (토큰 수)</summary>
     public int ChunkSize { get; init; }
@@ -205,7 +241,11 @@ public class ImageProcessedEvent : ProcessingEvent
     public override string EventType => "ImageProcessed";
 
     /// <summary>이미지 URL</summary>
+#if NET8_0_OR_GREATER
     public required string ImageUrl { get; init; }
+#else
+    public string ImageUrl { get; init; } = string.Empty;
+#endif
 
     /// <summary>생성된 설명 길이</summary>
     public int DescriptionLength { get; init; }
@@ -228,7 +268,11 @@ public class ErrorOccurredEvent : ProcessingEvent
     public override string EventType => "ErrorOccurred";
 
     /// <summary>오류 코드</summary>
+#if NET8_0_OR_GREATER
     public required string ErrorCode { get; init; }
+#else
+    public string ErrorCode { get; init; } = string.Empty;
+#endif
 
     /// <summary>오류 카테고리</summary>
     public string ErrorCategory { get; init; } = "General";
@@ -256,7 +300,11 @@ public class PerformanceMetricsEvent : ProcessingEvent
     public override string EventType => "PerformanceMetrics";
 
     /// <summary>메트릭 이름</summary>
+#if NET8_0_OR_GREATER
     public required string MetricName { get; init; }
+#else
+    public string MetricName { get; init; } = string.Empty;
+#endif
 
     /// <summary>메트릭 값</summary>
     public double Value { get; init; }

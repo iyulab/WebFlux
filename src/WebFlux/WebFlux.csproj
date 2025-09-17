@@ -32,6 +32,7 @@
     <!-- 구성 -->
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.9" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="9.0.9" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="9.0.9" />
 
     <!-- 캐싱 -->
     <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="9.0.9" />
