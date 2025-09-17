@@ -291,24 +291,6 @@ public enum ContentType
     Unknown
 }
 
-/// <summary>
-/// 링크 유형 열거형
-/// </summary>
-public enum LinkType
-{
-    /// <summary>내부 링크</summary>
-    Internal,
-    /// <summary>외부 링크</summary>
-    External,
-    /// <summary>앵커 링크</summary>
-    Anchor,
-    /// <summary>이메일</summary>
-    Email,
-    /// <summary>전화번호</summary>
-    Phone,
-    /// <summary>파일 다운로드</summary>
-    Download
-}
 
 /// <summary>
 /// 추출 통계

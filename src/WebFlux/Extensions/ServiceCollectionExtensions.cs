@@ -152,6 +152,14 @@ public static class ServiceCollectionExtensions
         // manifest.json 파서 서비스 등록
         services.TryAddScoped<IManifestParser, ManifestParser>();
 
+        // Phase 4C: Structural Intelligence Engine 서비스 등록
+        services.TryAddScoped<IPackageEcosystemAnalyzer, PackageEcosystemAnalyzer>();
+        services.TryAddScoped<IAPIDocumentationExtractor, APIDocumentationExtractor>();
+        services.TryAddScoped<IContentRelationshipMapper, ContentRelationshipMapper>();
+
+        // 메타데이터 발견 통합 서비스 등록
+        services.TryAddScoped<IMetadataDiscoveryService, MetadataDiscoveryService>();
+
         return services;
     }
 
