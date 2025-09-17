@@ -6,7 +6,7 @@
 [![GitHub Release](https://img.shields.io/github/v/release/iyulab/WebFlux?style=flat-square&logo=github)](https://github.com/iyulab/WebFlux/releases)
 [![Build Status](https://img.shields.io/github/actions/workflow/status/iyulab/WebFlux/nuget-publish.yml?branch=main&style=flat-square&logo=github-actions)](https://github.com/iyulab/WebFlux/actions)
 
-[![.NET Support](https://img.shields.io/badge/.NET-6%20|%207%20|%208%20|%209-512BD4?style=flat-square&logo=dotnet)](https://dotnet.microsoft.com/)
+[![.NET Support](https://img.shields.io/badge/.NET-8%20|%209-512BD4?style=flat-square&logo=dotnet)](https://dotnet.microsoft.com/)
 [![License](https://img.shields.io/github/license/iyulab/WebFlux?style=flat-square&color=green)](https://github.com/iyulab/WebFlux/blob/main/LICENSE)
 [![Test Coverage](https://img.shields.io/badge/Test%20Coverage-90%25-brightgreen?style=flat-square&logo=codecov)](https://github.com/iyulab/WebFlux)
 [![Code Quality](https://img.shields.io/badge/Quality-A+-brightgreen?style=flat-square&logo=codeclimate)](https://github.com/iyulab/WebFlux)
@@ -18,7 +18,7 @@
 
 ## 🎯 Overview
 
-**WebFlux** is a RAG preprocessing SDK powered by the **Web Intelligence Engine** - a **.NET 9 SDK** that transforms web content into AI-friendly chunks.
+**WebFlux** is a RAG preprocessing SDK powered by the **Web Intelligence Engine** - a **.NET 8/9 SDK** that transforms web content into AI-friendly chunks through intelligent analysis of 15 web metadata standards.
 
 ### 🧠 Web Intelligence Engine (Phase 4-5B Complete)
 
@@ -283,33 +283,33 @@ var crawlOptions = new CrawlOptions
 [![Performance Verified](https://img.shields.io/badge/Performance-Verified-success?style=flat-square&logo=speedtest)](https://github.com/iyulab/WebFlux)
 [![Memory Efficient](https://img.shields.io/badge/Memory-84%25%20Optimized-green?style=flat-square&logo=memory)](https://github.com/iyulab/WebFlux)
 
-### 🚀 병렬 크롤링 엔진
-- **CPU 코어별 동적 스케일링**: 시스템 리소스에 맞춘 자동 확장
-- **메모리 백프레셔 제어**: Threading.Channels 기반 고성능 비동기 처리
-- **지능형 작업 분산**: 페이지 크기와 복잡도에 따른 최적 분배
-- **중복 제거**: URL 해시 기반 자동 중복 페이지 필터링
+### 🚀 Parallel Crawling Engine
+- **Dynamic CPU Core Scaling**: Automatic scaling based on system resources
+- **Memory Backpressure Control**: Threading.Channels-based high-performance async processing
+- **Intelligent Work Distribution**: Optimal distribution based on page size and complexity
+- **Deduplication**: URL hash-based automatic duplicate page filtering
 
-### 📊 스트리밍 최적화
-- **실시간 청크 반환**: AsyncEnumerable 기반 즉시 결과 제공
-- **LRU 캐시 시스템**: URL 해시 기반 자동 캐싱 및 만료 관리
-- **캐시 우선 검사**: 동일 페이지 재처리 시 즉시 반환
+### 📊 Streaming Optimization
+- **Real-time Chunk Delivery**: AsyncEnumerable-based immediate result streaming
+- **LRU Cache System**: URL hash-based automatic caching and expiration management
+- **Cache-First Strategy**: Instant return for previously processed pages
 
-### 📈 검증된 성능 지표
-- **크롤링 속도**: 100페이지/분 (평균 1MB 페이지 기준)
-- **메모리 효율**: 페이지 크기 1.5배 이하 메모리 사용, MemoryOptimized 전략으로 84% 절약
-- **품질 보장**: 청크 완성도 81%, 컨텍스트 보존 75%+ 달성
-- **AI 기반 최적화**: Phase 5B Auto 전략으로 4요소 품질 평가 및 지능형 전략 선택
-- **지능형 캐싱**: 품질 기반 캐시 만료 (고품질 4시간, 저품질 1시간)
-- **실시간 모니터링**: OpenTelemetry 통합, 성능 추적 및 오류 감지
-- **병렬 확장**: CPU 코어 수에 따른 선형 성능 향상
-- **빌드 안정성**: 38개 오류 → 0개 오류로 100% 컴파일 성공
-- **테스트 커버리지**: 90% 테스트 커버리지, 프로덕션 안정성 검증
+### 📈 Verified Performance Metrics
+- **Crawling Speed**: 100 pages/minute (average 1MB page baseline)
+- **Memory Efficiency**: ≤1.5x page size memory usage, 84% reduction with MemoryOptimized strategy
+- **Quality Assurance**: 81% chunk completeness, 75%+ context preservation
+- **AI-Based Optimization**: Phase 5B Auto strategy with 4-factor quality assessment and intelligent strategy selection
+- **Intelligent Caching**: Quality-based cache expiration (high-quality 4 hours, low-quality 1 hour)
+- **Real-time Monitoring**: OpenTelemetry integration, performance tracking and error detection
+- **Parallel Scaling**: Linear performance improvement with CPU core count
+- **Build Stability**: 38 errors → 0 errors, 100% compilation success
+- **Test Coverage**: 90% test coverage, production stability verified
 
 ---
 
-## 🔧 고급 사용법
+## 🔧 Advanced Usage
 
-### LLM 서비스 구현 예시 (GPT-5-nano)
+### LLM Service Implementation Example (GPT-5-nano)
 ```csharp
 public class OpenAiTextCompletionService : ITextCompletionService
 {
@@ -325,7 +325,7 @@ public class OpenAiTextCompletionService : ITextCompletionService
         TextCompletionOptions? options = null,
         CancellationToken cancellationToken = default)
     {
-        var chatClient = _client.GetChatClient("gpt-5-nano"); // 최신 모델 사용
+        var chatClient = _client.GetChatClient("gpt-5-nano"); // Use latest model
 
         var response = await chatClient.CompleteChatAsync(
             [new UserChatMessage(prompt)],
@@ -341,7 +341,7 @@ public class OpenAiTextCompletionService : ITextCompletionService
 }
 ```
 
-### 멀티모달 처리 - 웹 이미지 텍스트 추출
+### Multimodal Processing - Web Image Text Extraction
 ```csharp
 public class OpenAiImageToTextService : IImageToTextService
 {
@@ -359,14 +359,14 @@ public class OpenAiImageToTextService : IImageToTextService
         ImageToTextOptions? options = null,
         CancellationToken cancellationToken = default)
     {
-        // 웹 이미지 다운로드
+        // Download web image
         var imageData = await _httpClient.GetByteArrayAsync(imageUrl, cancellationToken);
         
         var chatClient = _client.GetChatClient("gpt-5-nano");
 
         var messages = new List<ChatMessage>
         {
-            new SystemChatMessage("웹페이지 이미지에서 모든 텍스트를 정확히 추출하세요."),
+            new SystemChatMessage("Extract all text accurately from the webpage image."),
             new UserChatMessage(ChatMessageContentPart.CreateImagePart(
                 BinaryData.FromBytes(imageData), "image/jpeg"))
         };
@@ -388,7 +388,7 @@ public class OpenAiImageToTextService : IImageToTextService
 }
 ```
 
-### RAG 파이프라인 통합
+### RAG Pipeline Integration
 ```csharp
 public class WebRagService
 {
@@ -407,7 +407,7 @@ public class WebRagService
 
         var chunkingOptions = new ChunkingOptions
         {
-            Strategy = "Auto",   // Phase 5B AI 기반 자동 최적화 (권장)
+            Strategy = "Auto",   // Phase 5B AI-based automatic optimization (recommended)
             MaxChunkSize = 512,
             OverlapSize = 64
         };
@@ -418,7 +418,7 @@ public class WebRagService
             {
                 foreach (var chunk in result.Result)
                 {
-                    // 임베딩 생성 및 저장
+                    // Generate embedding and store
                     var embedding = await _embeddingService.GenerateAsync(chunk.Content);
                     await _vectorStore.StoreAsync(new VectorDocument
                     {
@@ -432,14 +432,14 @@ public class WebRagService
                 }
             }
 
-            // 진행률 표시
+            // Display progress
             if (result.Progress != null)
             {
-                Console.WriteLine($"크롤링 진행률: {result.Progress.PagesProcessed}/{result.Progress.TotalPages}");
-                Console.WriteLine($"청킹 진행률: {result.Progress.PercentComplete:F1}%");
+                Console.WriteLine($"Crawling Progress: {result.Progress.PagesProcessed}/{result.Progress.TotalPages}");
+                Console.WriteLine($"Chunking Progress: {result.Progress.PercentComplete:F1}%");
                 if (result.Progress.EstimatedRemainingTime.HasValue)
                 {
-                    Console.WriteLine($"예상 남은 시간: {result.Progress.EstimatedRemainingTime.Value:mm\\:ss}");
+                    Console.WriteLine($"Estimated Remaining Time: {result.Progress.EstimatedRemainingTime.Value:mm\\:ss}");
                 }
             }
         }
@@ -447,7 +447,7 @@ public class WebRagService
 
     public async Task UpdateWebsiteContentAsync(string baseUrl)
     {
-        // 증분 업데이트 - 변경된 페이지만 재처리
+        // Incremental update - reprocess only changed pages
         var lastCrawlTime = await _vectorStore.GetLastCrawlTimeAsync(baseUrl);
         
         var crawlOptions = new CrawlOptions
@@ -462,7 +462,7 @@ public class WebRagService
 }
 ```
 
-### 커스텀 콘텐츠 추출기
+### Custom Content Extractor
 ```csharp
 public class CustomContentExtractor : IContentExtractor
 {
@@ -479,7 +479,7 @@ public class CustomContentExtractor : IContentExtractor
     {
         var content = await response.Content.ReadAsStringAsync(cancellationToken);
         
-        // 커스텀 파싱 로직
+        // Custom parsing logic
         var parsedContent = ParseCustomFormat(content);
         
         return new RawWebContent
@@ -502,21 +502,12 @@ public class CustomContentExtractor : IContentExtractor
         };
     }
 
-    private string ParseCustomFormat(string content) => content; // 구현 필요
-    private string ExtractTitle(string content) => ""; // 구현 필요
-    private string ExtractDescription(string content) => ""; // 구현 필요
-    private List<string> ExtractKeywords(string content) => new(); // 구현 필요
+    private string ParseCustomFormat(string content) => content; // Implementation required
+    private string ExtractTitle(string content) => ""; // Implementation required
+    private string ExtractDescription(string content) => ""; // Implementation required
+    private List<string> ExtractKeywords(string content) => new(); // Implementation required
 }
 
-// 등록
+// Registration
 services.AddTransient<IContentExtractor, CustomContentExtractor>();
 ```
-
----
-
-## 📚 문서 및 가이드
-
-### 📖 주요 문서
-- [**🏗️ 아키텍처**](docs/ARCHITECTURE.md) - 시스템 설계 및 확장성
-- [**📋 작업 계획**](TASKS.md) - 개발 로드맵 및 완료 현황
-- [**📦 버전 관리**](VERSION_MANAGEMENT.md) - 버전 관리 및 릴리즈 가이드

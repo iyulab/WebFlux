@@ -163,6 +163,9 @@ public static class ServiceCollectionExtensions
         // 콘텐츠 추출기 팩토리 등록
         services.TryAddSingleton<IContentExtractorFactory, ContentExtractorFactory>();
 
+        // Phase 5C: 고급 메타데이터 추출기 등록
+        services.TryAddScoped<IEnhancedMetadataExtractor, EnhancedMetadataExtractor>();
+
         // 메타데이터 추출 서비스는 소비자가 구현 (Interface Provider 패턴)
 
         return services;

@@ -1,0 +1,55 @@
+# Test Websites for Phase 5C Metadata Extraction Testing
+
+## Rich Metadata Sites (GitHub Pages & Documentation)
+https://docs.github.com/en/get-started/quickstart/hello-world
+https://docs.microsoft.com/en-us/dotnet/
+https://learn.microsoft.com/en-us/aspnet/core/
+https://nodejs.org/en/docs/
+https://reactjs.org/docs/getting-started.html
+
+## Blog Sites with Rich Metadata
+https://dev.to/
+https://medium.com/@techwriter/example-post
+https://stackoverflow.blog/
+https://blog.github.com/
+
+## Technical Documentation Sites
+https://www.markdownguide.org/getting-started/
+https://yaml.org/spec/
+https://html.spec.whatwg.org/
+
+## Jekyll/Hugo Sites (Static Site Generators)
+https://jekyllrb.com/docs/
+https://gohugo.io/getting-started/
+https://pages.github.com/
+
+## Open Source Project Pages
+https://github.com/microsoft/playwright
+https://github.com/dotnet/core
+https://github.com/asp-net-core/
+
+## AI/ML Documentation Sites
+https://huggingface.co/docs
+https://openai.com/blog/
+https://www.anthropic.com/
+
+## Local Test Files
+file:///D:/data/WebFlux/tests/TestData/sample-rich-metadata.html
+file:///D:/data/WebFlux/tests/TestData/sample-blog-post.html
+
+## Expected Metadata Standards to Test:
+# 1. HTML Meta Tags (title, description, keywords, author, robots)
+# 2. Open Graph (og:title, og:description, og:image, og:url, og:type)
+# 3. Twitter Cards (twitter:card, twitter:title, twitter:description, twitter:image)
+# 4. Schema.org JSON-LD (Article, Organization, Person, SoftwareLibrary)
+# 5. Dublin Core (DC.title, DC.creator, DC.subject, DC.description)
+# 6. Canonical URLs (rel="canonical")
+# 7. Language information (lang, hreflang)
+# 8. Article metadata (article:published_time, article:author)
+# 9. Site navigation (breadcrumbs, site structure)
+# 10. Theme and visual metadata (theme-color, favicon)
+# 11. Mobile optimization (viewport, app metadata)
+# 12. Social media metadata (site_name, locale)
+# 13. Publication information (last-modified, publication-date)
+# 14. Category and classification metadata
+# 15. Rights and licensing information
