@@ -166,6 +166,9 @@ public static class ServiceCollectionExtensions
         // Phase 5C: 고급 메타데이터 추출기 등록
         services.TryAddScoped<IEnhancedMetadataExtractor, EnhancedMetadataExtractor>();
 
+        // Phase 5C Week 2: 마크다운 구조 분석기 등록
+        services.TryAddScoped<IMarkdownStructureAnalyzer, MarkdownStructureAnalyzer>();
+
         // 메타데이터 추출 서비스는 소비자가 구현 (Interface Provider 패턴)
 
         return services;
