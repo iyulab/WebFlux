@@ -6,8 +6,13 @@ namespace WebFlux.Services;
 /// <summary>
 /// Mock 텍스트 완성 서비스 (테스트용)
 /// 실제 AI 서비스 대신 가짜 응답 제공
+/// DEBUG 빌드에서만 사용되며, Release에서는 더미 데이터 기반으로 동작
 /// </summary>
+#if DEBUG
 public class MockTextCompletionService : ITextCompletionService
+#else
+internal class MockTextCompletionService : ITextCompletionService
+#endif
 {
     private readonly Random _random = new();
     private readonly Dictionary<string, string[]> _responseTemplates;
@@ -17,6 +22,8 @@ public class MockTextCompletionService : ITextCompletionService
 
     public MockTextCompletionService()
     {
+#if DEBUG
+        // DEBUG 모드: 다양한 시나리오 테스트를 위한 풍부한 응답 데이터
         _responseTemplates = new Dictionary<string, string[]>
         {
             ["summarize"] = new[]
@@ -25,23 +32,47 @@ public class MockTextCompletionService : ITextCompletionService
                 "The article covers important aspects of digital transformation, customer engagement strategies, and operational efficiency improvements.",
                 "Main points include industry analysis, competitive landscape, and future opportunities in the emerging market sectors."
             },
+#else
+        // RELEASE 모드: 프로덕션에서는 간소화된 더미 데이터만 제공
+        _responseTemplates = new Dictionary<string, string[]>
+        {
+            ["summarize"] = new[]
+            {
+                "Content summary: Key business insights and strategic recommendations provided.",
+                "Analysis of main topics with actionable conclusions for implementation."
+            },
+#endif
             ["analyze"] = new[]
             {
+#if DEBUG
                 "Analysis reveals three critical factors: market positioning, resource allocation, and strategic timing for optimal implementation.",
                 "Key findings indicate strong correlation between user engagement metrics and conversion rates across multiple touchpoints.",
                 "Data suggests significant opportunities for optimization through automation, personalization, and enhanced user experience design."
+#else
+                "Analysis complete: Key factors and strategic recommendations identified.",
+                "Data insights: Performance metrics and optimization opportunities outlined."
+#endif
             },
             ["extract"] = new[]
             {
+#if DEBUG
                 "• Key insight: Customer satisfaction drives retention\n• Important fact: 85% improvement in efficiency\n• Notable trend: Mobile usage increasing 40% yearly",
                 "• Primary finding: Cost reduction of 25% achieved\n• Critical factor: Integration challenges identified\n• Success metric: 95% user adoption rate",
                 "• Main conclusion: Strategy alignment essential\n• Risk factor: Market volatility concerns\n• Opportunity: New customer segments emerging"
+#else
+                "• Key insights extracted from content\n• Important metrics and trends identified\n• Strategic recommendations provided"
+#endif
             },
             ["default"] = new[]
             {
+#if DEBUG
                 "This is a comprehensive analysis of the provided content, highlighting key themes and actionable insights for strategic decision-making.",
                 "The content presents valuable information that can be leveraged for improving operational efficiency and driving business growth.",
                 "Based on the context provided, several important considerations emerge for effective implementation and long-term success."
+#else
+                "Content analysis completed with key insights and recommendations.",
+                "Strategic overview provided based on content evaluation."
+#endif
             }
         };
     }

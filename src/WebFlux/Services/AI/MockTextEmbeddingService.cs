@@ -6,8 +6,13 @@ namespace WebFlux.Services.AI;
 /// <summary>
 /// Mock 텍스트 임베딩 서비스 (테스트 및 데모용)
 /// 실제 AI 서비스 없이도 의미론적 청킹 테스트 가능
+/// DEBUG 빌드에서만 사용되며, Release에서는 더미 데이터 기반으로 동작
 /// </summary>
+#if DEBUG
 public class MockTextEmbeddingService : ITextEmbeddingService
+#else
+internal class MockTextEmbeddingService : ITextEmbeddingService
+#endif
 {
     private readonly ILogger<MockTextEmbeddingService> _logger;
     private readonly Random _random = new();

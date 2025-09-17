@@ -199,6 +199,10 @@ public static class ServiceCollectionExtensions
         services.TryAddTransient<SmartChunkingStrategy>();
         services.TryAddTransient<SemanticChunkingStrategy>();
 
+        // Phase 4D: 고급 청킹 전략들
+        services.TryAddTransient<AutoChunkingStrategy>();
+        services.TryAddTransient<MemoryOptimizedChunkingStrategy>();
+
         // 청킹 전략 팩토리 등록
         services.TryAddSingleton<IChunkingStrategyFactory, ChunkingStrategyFactory>();
 
@@ -252,12 +256,21 @@ public static class ServiceCollectionExtensions
 
     /// <summary>
     /// Mock AI 서비스를 등록합니다. (테스트 및 데모용)
+    /// DEBUG 빌드에서만 사용 가능하며, Release에서는 제한된 기능 제공
     /// </summary>
     /// <param name="services">서비스 컬렉션</param>
     /// <returns>서비스 컬렉션</returns>
     public static IServiceCollection AddWebFluxMockAIServices(this IServiceCollection services)
     {
+#if DEBUG
+        // DEBUG 모드: 전체 Mock 서비스 등록
         return services.AddWebFluxAIServices<MockTextCompletionService, MockImageToTextService, MockTextEmbeddingService>();
+#else
+        // RELEASE 모드: 경고 로그와 함께 제한적 등록
+        var logger = services.BuildServiceProvider().GetService<ILogger<ServiceCollectionExtensions>>();
+        logger?.LogWarning("Mock AI services are registered in Release mode. Consider using production AI services for better performance.");
+        return services.AddWebFluxAIServices<MockTextCompletionService, MockImageToTextService, MockTextEmbeddingService>();
+#endif
     }
 
     /// <summary>

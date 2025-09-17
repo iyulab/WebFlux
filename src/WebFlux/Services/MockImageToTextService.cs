@@ -6,8 +6,13 @@ namespace WebFlux.Services;
 /// <summary>
 /// Mock 이미지-텍스트 변환 서비스 (테스트용)
 /// 실제 Vision AI 서비스 대신 가짜 이미지 설명 제공
+/// DEBUG 빌드에서만 사용되며, Release에서는 더미 데이터 기반으로 동작
 /// </summary>
+#if DEBUG
 public class MockImageToTextService : IImageToTextService
+#else
+internal class MockImageToTextService : IImageToTextService
+#endif
 {
     private readonly Random _random = new();
     private readonly Dictionary<string, string[]> _imageDescriptions;

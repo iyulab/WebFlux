@@ -711,6 +711,11 @@ public enum ErrorSeverity
     High,
 
     /// <summary>
+    /// 오류
+    /// </summary>
+    Error,
+
+    /// <summary>
     /// 심각
     /// </summary>
     Critical
