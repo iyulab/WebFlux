@@ -54,7 +54,7 @@
     <PackageReference Include="Markdig" Version="0.37.0" />
 
     <!-- YAML 설정 파일 분석 -->
-    <PackageReference Include="YamlDotNet" Version="16.2.1" />
+    <PackageReference Include="YamlDotNet" Version="16.0.0" />
 
     <!-- HTTP 재시도 및 회로차단기 -->
     <PackageReference Include="Polly" Version="8.4.2" />
