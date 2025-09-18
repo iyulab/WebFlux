@@ -76,6 +76,9 @@ public static class ServiceCollectionExtensions
         // Phase 5A.2: 멀티모달 처리 파이프라인 등록
         services.AddWebFluxMultimodal();
 
+        // Phase 5C.2: 회복탄력성 서비스 등록
+        services.AddWebFluxResilience();
+
         // 로깅 구성
         services.AddLogging();
 
@@ -348,4 +351,22 @@ public static class ServiceCollectionExtensions
 
         return services;
     }
+
+    /// <summary>
+    /// 회복탄력성 서비스를 등록합니다. (Polly 기반)
+    /// 재시도, 회로차단기, 시간초과, 벌크헤드 패턴 제공
+    /// </summary>
+    /// <param name="services">서비스 컬렉션</param>
+    /// <returns>서비스 컬렉션</returns>
+    public static IServiceCollection AddWebFluxResilience(this IServiceCollection services)
+    {
+        // 회복탄력성 서비스 등록
+        services.TryAddSingleton<IResilienceService, ResilienceService>();
+
+        // HTTP 클라이언트 등록 (기본 정책은 ResilienceService에서 적용)
+        services.AddHttpClient("webflux-default");
+
+        return services;
+    }
+
 }
