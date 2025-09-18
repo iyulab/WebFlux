@@ -48,6 +48,21 @@ public class WebFluxConfiguration
     public EventConfiguration Events { get; set; } = new();
 
     /// <summary>
+    /// 처리 최적화 설정 (Phase 5C.2)
+    /// </summary>
+    public ProcessingOptimizationConfiguration ProcessingOptimization { get; set; } = new();
+
+    /// <summary>
+    /// 토큰 카운팅 설정 (Phase 5C.2)
+    /// </summary>
+    public TokenCountingConfiguration TokenCounting { get; set; } = new();
+
+    /// <summary>
+    /// 기본 토크나이저 모델 (Phase 5C.2)
+    /// </summary>
+    public TokenizerModel? DefaultTokenizerModel { get; set; }
+
+    /// <summary>
     /// 사용자 정의 설정
     /// </summary>
     public IDictionary<string, object> CustomSettings { get; set; } = new Dictionary<string, object>();
@@ -485,4 +500,194 @@ public class EventFilter
     /// 포함 여부 (기본: true = 포함, false = 제외)
     /// </summary>
     public bool Include { get; set; } = true;
+}
+
+/// <summary>
+/// 처리 최적화 구성 (Phase 5C.2)
+/// </summary>
+public class ProcessingOptimizationConfiguration
+{
+    /// <summary>
+    /// 최적화 활성화 여부
+    /// </summary>
+    public bool Enabled { get; set; } = true;
+
+    /// <summary>
+    /// 자동 전략 선택 활성화
+    /// </summary>
+    public bool EnableAutoStrategySelection { get; set; } = true;
+
+    /// <summary>
+    /// 성능 모니터링 간격 (초)
+    /// </summary>
+    public int PerformanceMonitoringInterval { get; set; } = 60;
+
+    /// <summary>
+    /// 리소스 사용량 임계값
+    /// </summary>
+    public ResourceThresholds ResourceThresholds { get; set; } = new();
+
+    /// <summary>
+    /// 캐시 최적화 설정
+    /// </summary>
+    public CacheOptimizationSettings CacheOptimization { get; set; } = new();
+
+    /// <summary>
+    /// 병목 감지 활성화
+    /// </summary>
+    public bool EnableBottleneckDetection { get; set; } = true;
+
+    /// <summary>
+    /// 토큰 최적화 활성화
+    /// </summary>
+    public bool EnableTokenOptimization { get; set; } = true;
+
+    /// <summary>
+    /// 최적화 통계 수집 활성화
+    /// </summary>
+    public bool EnableStatisticsCollection { get; set; } = true;
+}
+
+/// <summary>
+/// 리소스 임계값 설정
+/// </summary>
+public class ResourceThresholds
+{
+    /// <summary>
+    /// CPU 사용률 경고 임계값 (0.0-1.0)
+    /// </summary>
+    public double CpuWarningThreshold { get; set; } = 0.7;
+
+    /// <summary>
+    /// CPU 사용률 위험 임계값 (0.0-1.0)
+    /// </summary>
+    public double CpuCriticalThreshold { get; set; } = 0.9;
+
+    /// <summary>
+    /// 메모리 사용률 경고 임계값 (0.0-1.0)
+    /// </summary>
+    public double MemoryWarningThreshold { get; set; } = 0.75;
+
+    /// <summary>
+    /// 메모리 사용률 위험 임계값 (0.0-1.0)
+    /// </summary>
+    public double MemoryCriticalThreshold { get; set; } = 0.9;
+
+    /// <summary>
+    /// 응답 시간 경고 임계값 (밀리초)
+    /// </summary>
+    public int ResponseTimeWarningMs { get; set; } = 5000;
+
+    /// <summary>
+    /// 응답 시간 위험 임계값 (밀리초)
+    /// </summary>
+    public int ResponseTimeCriticalMs { get; set; } = 10000;
+}
+
+/// <summary>
+/// 캐시 최적화 설정
+/// </summary>
+public class CacheOptimizationSettings
+{
+    /// <summary>
+    /// 지능형 TTL 계산 활성화
+    /// </summary>
+    public bool EnableIntelligentTTL { get; set; } = true;
+
+    /// <summary>
+    /// 캐시 키 최적화 활성화
+    /// </summary>
+    public bool EnableKeyOptimization { get; set; } = true;
+
+    /// <summary>
+    /// 압축 활성화 임계값 (바이트)
+    /// </summary>
+    public int CompressionThreshold { get; set; } = 1024;
+
+    /// <summary>
+    /// 캐시 예열 활성화
+    /// </summary>
+    public bool EnableWarmup { get; set; } = false;
+
+    /// <summary>
+    /// 최대 캐시 엔트리 수
+    /// </summary>
+    public int MaxCacheEntries { get; set; } = 10000;
+}
+
+/// <summary>
+/// 토큰 카운팅 구성 (Phase 5C.2)
+/// </summary>
+public class TokenCountingConfiguration
+{
+    /// <summary>
+    /// 토큰 카운팅 활성화 여부
+    /// </summary>
+    public bool Enabled { get; set; } = true;
+
+    /// <summary>
+    /// 캐시 활성화 여부
+    /// </summary>
+    public bool EnableCaching { get; set; } = true;
+
+    /// <summary>
+    /// 캐시 최대 크기
+    /// </summary>
+    public int CacheMaxSize { get; set; } = 10000;
+
+    /// <summary>
+    /// 지원되는 토크나이저 모델
+    /// </summary>
+    public ISet<string> SupportedModels { get; set; } = new HashSet<string>
+    {
+        "GPT3", "GPT4", "GPT4Turbo", "Claude3", "Claude3Opus", "Llama2", "Llama3", "Generic"
+    };
+
+    /// <summary>
+    /// 모델별 비용 정보 (토큰당 USD)
+    /// </summary>
+    public IDictionary<string, double> ModelCosts { get; set; } = new Dictionary<string, double>
+    {
+        ["GPT4"] = 0.00003,
+        ["GPT4Turbo"] = 0.00001,
+        ["GPT3"] = 0.000002,
+        ["Claude3Opus"] = 0.000015,
+        ["Claude3"] = 0.000003,
+        ["Llama3"] = 0.000001,
+        ["Llama2"] = 0.0000005,
+        ["Generic"] = 0.000001
+    };
+
+    /// <summary>
+    /// 토큰 분석 활성화
+    /// </summary>
+    public bool EnableTokenAnalysis { get; set; } = true;
+
+    /// <summary>
+    /// 토큰 통계 수집 활성화
+    /// </summary>
+    public bool EnableStatistics { get; set; } = true;
+}
+
+/// <summary>
+/// 토크나이저 모델 열거형 (Phase 5C.2에서 이동)
+/// </summary>
+public enum TokenizerModel
+{
+    /// <summary>GPT-3.5</summary>
+    GPT3,
+    /// <summary>GPT-4</summary>
+    GPT4,
+    /// <summary>GPT-4 Turbo</summary>
+    GPT4Turbo,
+    /// <summary>Claude 3 Haiku</summary>
+    Claude3,
+    /// <summary>Claude 3 Opus</summary>
+    Claude3Opus,
+    /// <summary>Llama 2</summary>
+    Llama2,
+    /// <summary>Llama 3</summary>
+    Llama3,
+    /// <summary>범용 토크나이저</summary>
+    Generic
 }

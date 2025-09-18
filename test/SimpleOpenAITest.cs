@@ -24,7 +24,7 @@ public class SimpleOpenAITest
             LoadEnvironmentVariables();
 
             var apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
-            var model = Environment.GetEnvironmentVariable("OPENAI_MODEL") ?? "gpt-3.5-turbo";
+            var model = Environment.GetEnvironmentVariable("OPENAI_MODEL") ?? "gpt-5-nano";
 
             if (string.IsNullOrEmpty(apiKey))
             {

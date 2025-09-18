@@ -25,7 +25,7 @@ public class SimpleOpenAITest
             LoadEnvironmentVariables();
 
             var apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
-            var model = Environment.GetEnvironmentVariable("OPENAI_MODEL") ?? "gpt-3.5-turbo";
+            var model = Environment.GetEnvironmentVariable("OPENAI_MODEL") ?? "gpt-5-nano";
 
             if (string.IsNullOrEmpty(apiKey))
             {
@@ -234,7 +234,7 @@ public class SimpleOpenAITest
         }
         else
         {
-            // 기존 모델들 (gpt-3.5-turbo, gpt-4 등)
+            // 기존 모델들 (gpt-5-nano, gpt-4 등)
             requestData = new
             {
                 model = model,

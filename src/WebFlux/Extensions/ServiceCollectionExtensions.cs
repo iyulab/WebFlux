@@ -79,6 +79,9 @@ public static class ServiceCollectionExtensions
         // Phase 5C.2: 회복탄력성 서비스 등록
         services.AddWebFluxResilience();
 
+        // Phase 5C.2: 처리 최적화 서비스 등록
+        services.AddWebFluxProcessingOptimization();
+
         // 로깅 구성
         services.AddLogging();
 
@@ -365,6 +368,25 @@ public static class ServiceCollectionExtensions
 
         // HTTP 클라이언트 등록 (기본 정책은 ResilienceService에서 적용)
         services.AddHttpClient("webflux-default");
+
+        return services;
+    }
+
+    /// <summary>
+    /// 처리 최적화 서비스를 등록합니다. (지능형 성능 최적화)
+    /// 콘텐츠 분석, 성능 메트릭, 리소스 모니터링을 통한 동적 최적화
+    /// </summary>
+    /// <param name="services">서비스 컬렉션</param>
+    /// <returns>서비스 컬렉션</returns>
+    public static IServiceCollection AddWebFluxProcessingOptimization(this IServiceCollection services)
+    {
+        // 처리 최적화 서비스 등록
+        services.TryAddSingleton<IProcessingOptimizationService, ProcessingOptimizationService>();
+
+        // Interface Provider 패턴: 실제 구현체는 소비자가 제공
+        // services.TryAddSingleton<IPerformanceMonitor, 구현체>();    // 성능 모니터링
+        // services.TryAddSingleton<ITokenCountService, 구현체>();     // 토큰 계산
+        // services.TryAddSingleton<ICacheService, 구현체>();          // 캐시 서비스
 
         return services;
     }

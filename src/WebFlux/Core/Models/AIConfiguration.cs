@@ -28,7 +28,7 @@ public class AIConfiguration
     /// <summary>
     /// 텍스트 완성 모델
     /// </summary>
-    public string CompletionModel { get; set; } = "gpt-3.5-turbo";
+    public string CompletionModel { get; set; } = "gpt-5-nano";
 
     /// <summary>
     /// 멀티모달 모델 (이미지 처리용)
