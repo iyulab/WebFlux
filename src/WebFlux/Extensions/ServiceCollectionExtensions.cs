@@ -381,7 +381,7 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddWebFluxProcessingOptimization(this IServiceCollection services)
     {
         // 처리 최적화 서비스 등록
-        services.TryAddSingleton<IProcessingOptimizationService, ProcessingOptimizationService>();
+        // services.TryAddSingleton<IProcessingOptimizationService, ProcessingOptimizationService>();
 
         // Interface Provider 패턴: 실제 구현체는 소비자가 제공
         // services.TryAddSingleton<IPerformanceMonitor, 구현체>();    // 성능 모니터링

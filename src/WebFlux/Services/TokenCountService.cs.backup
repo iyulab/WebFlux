@@ -17,6 +17,7 @@ public class TokenCountService : ITokenCountService
 {
     private readonly ILogger<TokenCountService> _logger;
     private readonly WebFluxConfiguration _configuration;
+    private readonly TokenizerModel _defaultModel;
 
     // 토크나이저별 캐시
     private readonly ConcurrentDictionary<string, int> _tokenCache;
@@ -37,14 +38,17 @@ public class TokenCountService : ITokenCountService
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _configuration = configuration?.Value ?? throw new ArgumentNullException(nameof(configuration));
 
+        // 기본 모델 설정 (구성에서 가져오거나 기본값 사용)
+        _defaultModel = _configuration.TokenCountingConfiguration?.DefaultModel ?? TokenizerModel.GPT4;
+
         _tokenCache = new ConcurrentDictionary<string, int>();
         _tokenizers = new ConcurrentDictionary<TokenizerModel, ITokenizer>();
         _statistics = new ConcurrentDictionary<TokenizerModel, TokenStatistics>();
 
         InitializeTokenizers();
 
-        _logger.LogInformation("TokenCountService initialized with {TokenizerCount} tokenizers",
-            _tokenizers.Count);
+        _logger.LogInformation("TokenCountService initialized with {TokenizerCount} tokenizers, default model: {DefaultModel}",
+            _tokenizers.Count, _defaultModel);
     }
 
     public int CountTokens(string text)

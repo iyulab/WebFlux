@@ -141,8 +141,95 @@ public class PerformanceStatistics
     /// <summary>활성 활동 수</summary>
     public int ActiveActivities { get; set; }
 
+    /// <summary>시스템 메트릭</summary>
+    public SystemMetrics SystemMetrics { get; set; } = new();
+
+    /// <summary>청킹 통계</summary>
+    public ChunkingStatistics ChunkingStatistics { get; set; } = new();
+
+    /// <summary>처리 통계</summary>
+    public ProcessingStatistics ProcessingStatistics { get; set; } = new();
+
+    /// <summary>리소스 통계</summary>
+    public ResourceStatistics ResourceStatistics { get; set; } = new();
+
     /// <summary>세부 메트릭</summary>
     public Dictionary<string, object> DetailedMetrics { get; set; } = new();
+}
+
+/// <summary>
+/// 시스템 메트릭
+/// </summary>
+public class SystemMetrics
+{
+    /// <summary>총 메모리 (바이트)</summary>
+    public long TotalMemoryBytes { get; set; }
+
+    /// <summary>작업 세트 메모리 (바이트)</summary>
+    public long WorkingSetBytes { get; set; }
+
+    /// <summary>CPU 사용률 (%)</summary>
+    public double CpuUsagePercent { get; set; }
+
+    /// <summary>활성 스레드 수</summary>
+    public int ActiveThreads { get; set; }
+
+    /// <summary>GC 컬렉션 수</summary>
+    public Dictionary<int, long> GCCollections { get; set; } = new();
+}
+
+/// <summary>
+/// 청킹 통계
+/// </summary>
+public class ChunkingStatistics
+{
+    /// <summary>총 청크 수</summary>
+    public long TotalChunks { get; set; }
+
+    /// <summary>평균 청크 크기</summary>
+    public double AverageChunkSize { get; set; }
+
+    /// <summary>평균 품질 점수</summary>
+    public double AverageQualityScore { get; set; }
+
+    /// <summary>전략별 통계</summary>
+    public Dictionary<string, long> StrategyUsage { get; set; } = new();
+}
+
+/// <summary>
+/// 처리 통계
+/// </summary>
+public class ProcessingStatistics
+{
+    /// <summary>총 처리 시간</summary>
+    public TimeSpan TotalProcessingTime { get; set; }
+
+    /// <summary>평균 처리 시간</summary>
+    public TimeSpan AverageProcessingTime { get; set; }
+
+    /// <summary>성공한 작업 수</summary>
+    public long SuccessfulOperations { get; set; }
+
+    /// <summary>실패한 작업 수</summary>
+    public long FailedOperations { get; set; }
+}
+
+/// <summary>
+/// 리소스 통계
+/// </summary>
+public class ResourceStatistics
+{
+    /// <summary>메모리 피크 사용량</summary>
+    public long PeakMemoryUsage { get; set; }
+
+    /// <summary>평균 메모리 사용량</summary>
+    public long AverageMemoryUsage { get; set; }
+
+    /// <summary>CPU 피크 사용률</summary>
+    public double PeakCpuUsage { get; set; }
+
+    /// <summary>평균 CPU 사용률</summary>
+    public double AverageCpuUsage { get; set; }
 }
 
 /// <summary>

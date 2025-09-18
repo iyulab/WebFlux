@@ -128,34 +128,3 @@ public class ProcessingProgress
     public IReadOnlyList<string> Errors { get; init; } = Array.Empty<string>();
 }
 
-/// <summary>
-/// 처리 통계 정보
-/// </summary>
-public class ProcessingStatistics
-{
-    /// <summary>총 처리된 페이지 수</summary>
-    public long TotalProcessedPages { get; init; }
-
-    /// <summary>총 생성된 청크 수</summary>
-    public long TotalGeneratedChunks { get; init; }
-
-    /// <summary>평균 처리 시간 (밀리초)</summary>
-    public double AverageProcessingTimeMs { get; init; }
-
-    /// <summary>평균 청크 품질 점수</summary>
-    public double AverageQualityScore { get; init; }
-
-    /// <summary>전략별 사용 통계</summary>
-    public IReadOnlyDictionary<string, long> StrategyUsage { get; init; } =
-        new Dictionary<string, long>();
-
-    /// <summary>오류 통계</summary>
-    public IReadOnlyDictionary<string, long> ErrorStatistics { get; init; } =
-        new Dictionary<string, long>();
-
-    /// <summary>통계 수집 기간</summary>
-    public DateTimeOffset StatsPeriodStart { get; init; }
-
-    /// <summary>통계 수집 종료</summary>
-    public DateTimeOffset StatsPeriodEnd { get; init; }
-}

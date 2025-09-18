@@ -7,8 +7,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebFlux", "WebFlux\WebFlux.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebFlux.Tests", "WebFlux.Tests\WebFlux.Tests.csproj", "{DBBAA37A-47A3-458A-85DF-DF57402296F9}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebFlux.Sample", "..\samples\WebFlux.Sample\WebFlux.Sample.csproj", "{9DB49262-2B13-495C-9360-5F95FB715D00}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -43,18 +41,6 @@ Global
 		{DBBAA37A-47A3-458A-85DF-DF57402296F9}.Release|x64.Build.0 = Release|Any CPU
 		{DBBAA37A-47A3-458A-85DF-DF57402296F9}.Release|x86.ActiveCfg = Release|Any CPU
 		{DBBAA37A-47A3-458A-85DF-DF57402296F9}.Release|x86.Build.0 = Release|Any CPU
-		{9DB49262-2B13-495C-9360-5F95FB715D00}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{9DB49262-2B13-495C-9360-5F95FB715D00}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{9DB49262-2B13-495C-9360-5F95FB715D00}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{9DB49262-2B13-495C-9360-5F95FB715D00}.Debug|x64.Build.0 = Debug|Any CPU
-		{9DB49262-2B13-495C-9360-5F95FB715D00}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{9DB49262-2B13-495C-9360-5F95FB715D00}.Debug|x86.Build.0 = Debug|Any CPU
-		{9DB49262-2B13-495C-9360-5F95FB715D00}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{9DB49262-2B13-495C-9360-5F95FB715D00}.Release|Any CPU.Build.0 = Release|Any CPU
-		{9DB49262-2B13-495C-9360-5F95FB715D00}.Release|x64.ActiveCfg = Release|Any CPU
-		{9DB49262-2B13-495C-9360-5F95FB715D00}.Release|x64.Build.0 = Release|Any CPU
-		{9DB49262-2B13-495C-9360-5F95FB715D00}.Release|x86.ActiveCfg = Release|Any CPU
-		{9DB49262-2B13-495C-9360-5F95FB715D00}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

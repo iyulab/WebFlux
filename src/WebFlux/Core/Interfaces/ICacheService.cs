@@ -116,6 +116,27 @@ public enum CacheOperationType
 /// </summary>
 public class CacheStatistics
 {
+    /// <summary>총 요청 수</summary>
+    public long TotalRequests { get; set; }
+
+    /// <summary>총 히트 수</summary>
+    public long TotalHits { get; set; }
+
+    /// <summary>총 미스 수</summary>
+    public long TotalMisses { get; set; }
+
+    /// <summary>메모리 히트 수</summary>
+    public long MemoryHits { get; set; }
+
+    /// <summary>분산 캐시 히트 수</summary>
+    public long DistributedHits { get; set; }
+
+    /// <summary>제거된 항목 수</summary>
+    public long Evictions { get; set; }
+
+    /// <summary>현재 엔트리 수</summary>
+    public long CurrentEntryCount { get; set; }
+
     /// <summary>총 키 수</summary>
     public long TotalKeys { get; set; }
 
@@ -124,6 +145,15 @@ public class CacheStatistics
 
     /// <summary>미스 수</summary>
     public long Misses { get; set; }
+
+    /// <summary>전체 히트율</summary>
+    public double HitRate => TotalRequests > 0 ? (double)TotalHits / TotalRequests : 0;
+
+    /// <summary>메모리 히트율</summary>
+    public double MemoryHitRate => TotalRequests > 0 ? (double)MemoryHits / TotalRequests : 0;
+
+    /// <summary>분산 캐시 히트율</summary>
+    public double DistributedHitRate => TotalRequests > 0 ? (double)DistributedHits / TotalRequests : 0;
 
     /// <summary>히트율</summary>
     public double HitRatio => Hits + Misses > 0 ? (double)Hits / (Hits + Misses) : 0;
@@ -136,4 +166,10 @@ public class CacheStatistics
 
     /// <summary>제거된 키 수</summary>
     public long EvictedKeys { get; set; }
+
+    /// <summary>키 통계</summary>
+    public Dictionary<string, object> KeyStatistics { get; set; } = new();
+
+    /// <summary>마지막 업데이트 시간</summary>
+    public DateTime LastUpdated { get; set; } = DateTime.UtcNow;
 }

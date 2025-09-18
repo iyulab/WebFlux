@@ -51,8 +51,32 @@ public class PerformanceMonitorService : IPerformanceMonitor
         _processingMetrics = new ConcurrentDictionary<string, ProcessingMetrics>();
         _resourceMetrics = new ConcurrentDictionary<string, ResourceMetrics>();
 
-        // 메트릭 초기화
-        InitializeMetrics();
+        // 메트릭 직접 초기화 (readonly 필드를 위해)
+        _requestCounter = _meter.CreateCounter<long>(
+            name: "webflux_requests_total",
+            description: "Total number of requests processed");
+
+        _errorCounter = _meter.CreateCounter<long>(
+            name: "webflux_errors_total",
+            description: "Total number of errors occurred");
+
+        _processingTimeHistogram = _meter.CreateHistogram<double>(
+            name: "webflux_processing_duration_ms",
+            description: "Processing duration in milliseconds");
+
+        _chunkQualityHistogram = _meter.CreateHistogram<double>(
+            name: "webflux_chunk_quality_score",
+            description: "Chunk quality score");
+
+        _memoryUsageGauge = _meter.CreateObservableGauge<double>(
+            name: "webflux_memory_usage_bytes",
+            description: "Current memory usage in bytes",
+            observeValue: () => GC.GetTotalMemory(false));
+
+        _cpuUsageGauge = _meter.CreateObservableGauge<double>(
+            name: "webflux_cpu_usage_percent",
+            description: "Current CPU usage percentage",
+            observeValue: () => GetCpuUsage());
 
         // 주기적 메트릭 수집 (30초 간격)
         _metricsCollectionTimer = new Timer(CollectResourceMetrics, null,
@@ -296,40 +320,6 @@ public class PerformanceMonitorService : IPerformanceMonitor
 
     #region Private Methods
 
-    private void InitializeMetrics()
-    {
-        // 요청 카운터
-        _requestCounter = _meter.CreateCounter<long>(
-            name: "webflux_requests_total",
-            description: "Total number of requests processed");
-
-        // 오류 카운터
-        _errorCounter = _meter.CreateCounter<long>(
-            name: "webflux_errors_total",
-            description: "Total number of errors occurred");
-
-        // 처리 시간 히스토그램
-        _processingTimeHistogram = _meter.CreateHistogram<double>(
-            name: "webflux_processing_duration_ms",
-            description: "Processing duration in milliseconds");
-
-        // 청킹 품질 히스토그램
-        _chunkQualityHistogram = _meter.CreateHistogram<double>(
-            name: "webflux_chunk_quality_score",
-            description: "Chunk quality score");
-
-        // 메모리 사용량 게이지
-        _memoryUsageGauge = _meter.CreateObservableGauge<double>(
-            name: "webflux_memory_usage_bytes",
-            description: "Current memory usage in bytes",
-            observeValue: () => GC.GetTotalMemory(false));
-
-        // CPU 사용량 게이지 (간단한 구현)
-        _cpuUsageGauge = _meter.CreateObservableGauge<double>(
-            name: "webflux_cpu_usage_percent",
-            description: "Current CPU usage percentage",
-            observeValue: () => GetCpuUsage());
-    }
 
     private void CollectResourceMetrics(object? state)
     {
@@ -371,13 +361,13 @@ public class PerformanceMonitorService : IPerformanceMonitor
         }
     }
 
-    private async Task<SystemMetrics> GetSystemMetricsAsync()
+    private async Task<WebFlux.Core.Interfaces.SystemMetrics> GetSystemMetricsAsync()
     {
         try
         {
             using var process = Process.GetCurrentProcess();
 
-            return new SystemMetrics
+            return new WebFlux.Core.Interfaces.SystemMetrics
             {
                 TotalMemoryBytes = GC.GetTotalMemory(false),
                 WorkingSetBytes = process.WorkingSet64,
@@ -394,7 +384,7 @@ public class PerformanceMonitorService : IPerformanceMonitor
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to get system metrics");
-            return new SystemMetrics();
+            return new WebFlux.Core.Interfaces.SystemMetrics();
         }
     }
 
