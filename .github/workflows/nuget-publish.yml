@@ -6,11 +6,8 @@ on:
     paths:
       - 'src/Directory.Build.props'
       - 'src/WebFlux/**/*.cs'
-      - 'tests/**/*.cs'  # 단위 테스트 변경도 트리거
-    paths-ignore:
-      - 'samples/**'       # samples 폴더 제외
-      - 'docs/**'          # 문서 변경 제외
-      - '**/*.md'          # README 등 마크다운 제외
+      - 'tests/**/*.cs'
+      - '.github/workflows/nuget-publish.yml'
   workflow_dispatch:
     inputs:
       force_publish:
