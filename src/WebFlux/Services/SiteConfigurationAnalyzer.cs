@@ -46,13 +46,15 @@ public class SiteConfigurationAnalyzer : ISiteConfigurationAnalyzer
     /// <summary>
     /// YAML 설정 파일을 분석합니다
     /// </summary>
-    public async Task<SiteConfiguration> AnalyzeConfigurationAsync(
+    public Task<SiteConfiguration> AnalyzeConfigurationAsync(
         string yamlContent,
         string sourceUrl,
         CancellationToken cancellationToken = default)
     {
+        if (yamlContent == null)
+            throw new ArgumentNullException(nameof(yamlContent));
         if (string.IsNullOrWhiteSpace(yamlContent))
-            throw new ArgumentException("YAML content cannot be null or empty", nameof(yamlContent));
+            throw new ArgumentException("YAML content cannot be empty", nameof(yamlContent));
 
         try
         {
@@ -90,7 +92,7 @@ public class SiteConfigurationAnalyzer : ISiteConfigurationAnalyzer
             var issues = ValidateConfiguration(configuration);
             var qualityAssessment = AssessQuality(configuration);
 
-            return new SiteConfiguration
+            return Task.FromResult(new SiteConfiguration
             {
                 SourceUrl = configuration.SourceUrl,
                 ConfigType = configuration.ConfigType,
@@ -105,7 +107,7 @@ public class SiteConfigurationAnalyzer : ISiteConfigurationAnalyzer
                 ParsedYaml = configuration.ParsedYaml,
                 QualityScore = qualityAssessment.OverallScore,
                 Issues = issues
-            };
+            });
         }
         catch (Exception ex)
         {

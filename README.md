@@ -1,85 +1,58 @@
 # WebFlux
-> AI-Optimized Web Content Processing SDK for RAG Systems
+
+A .NET SDK for preprocessing web content for RAG (Retrieval-Augmented Generation) systems.
 
 [![NuGet Version](https://img.shields.io/nuget/v/WebFlux?style=flat-square&logo=nuget&color=004880)](https://www.nuget.org/packages/WebFlux/)
 [![NuGet Downloads](https://img.shields.io/nuget/dt/WebFlux?style=flat-square&logo=nuget&color=004880)](https://www.nuget.org/packages/WebFlux/)
-[![GitHub Release](https://img.shields.io/github/v/release/iyulab/WebFlux?style=flat-square&logo=github)](https://github.com/iyulab/WebFlux/releases)
-[![Build Status](https://img.shields.io/github/actions/workflow/status/iyulab/WebFlux/nuget-publish.yml?branch=main&style=flat-square&logo=github-actions)](https://github.com/iyulab/WebFlux/actions)
-
 [![.NET Support](https://img.shields.io/badge/.NET-8%20|%209-512BD4?style=flat-square&logo=dotnet)](https://dotnet.microsoft.com/)
 [![License](https://img.shields.io/github/license/iyulab/WebFlux?style=flat-square&color=green)](https://github.com/iyulab/WebFlux/blob/main/LICENSE)
-[![Test Coverage](https://img.shields.io/badge/Test%20Coverage-90%25-brightgreen?style=flat-square&logo=codecov)](https://github.com/iyulab/WebFlux)
-[![Code Quality](https://img.shields.io/badge/Quality-A+-brightgreen?style=flat-square&logo=codeclimate)](https://github.com/iyulab/WebFlux)
 
-[![AI-Driven](https://img.shields.io/badge/AI--Driven-Auto%20Chunking-FF6B6B?style=flat-square&logo=openai)](https://github.com/iyulab/WebFlux)
-[![Web Intelligence](https://img.shields.io/badge/Web%20Intelligence-15%20Standards-4ECDC4?style=flat-square&logo=w3c)](https://github.com/iyulab/WebFlux)
-[![Performance](https://img.shields.io/badge/Performance-100%20pages%2Fmin-45B7D1?style=flat-square&logo=speedtest)](https://github.com/iyulab/WebFlux)
-[![Memory Optimized](https://img.shields.io/badge/Memory-84%25%20Reduction-96CEB4?style=flat-square&logo=memory)](https://github.com/iyulab/WebFlux)
+## Overview
 
-## 🎯 Overview
+WebFlux is a .NET library that processes web content into chunks suitable for RAG systems. It handles the complete pipeline from web crawling to content chunking, with support for various content formats and processing strategies.
 
-**WebFlux** is a RAG preprocessing SDK powered by the **Web Intelligence Engine** - a **.NET 8/9 SDK** that transforms web content into AI-friendly chunks through intelligent analysis of 15 web metadata standards.
+### What is WebFlux?
 
-### 🧠 Web Intelligence Engine (Phase 5C Complete)
+WebFlux transforms web content into structured, semantic chunks optimized for retrieval systems. The library provides:
 
-Achieves **60% crawling efficiency improvement** and **AI-driven intelligent chunking** through integrated analysis of **15 web metadata standards**:
+- **Content Extraction**: Parse HTML, Markdown, JSON, XML, and other web formats
+- **Content Analysis**: Analyze document structure, quality, and metadata
+- **Content Reconstruction**: Optionally enhance content with LLM-based strategies
+- **Content Chunking**: Split content into semantic chunks with configurable strategies
 
-#### 🤖 AI-Friendly Standards
-- **🤖 llms.txt**: Site structure guide for AI agents
-- **🧠 ai.txt**: AI usage policies and ethical guidelines
-- **📱 manifest.json**: PWA metadata and app information
-- **🤖 robots.txt**: RFC 9309 compliant crawling rules
+### Architecture
 
-#### 🏗️ Structural Intelligence
-- **🗺️ sitemap.xml**: XML/Text/RSS/Atom support with URL pattern analysis
-- **📋 README.md**: Project structure and documentation analysis
-- **⚙️ _config.yml**: Jekyll/Hugo site configuration analysis
-- **📦 package.json**: Node.js project metadata
+WebFlux follows an interface-based architecture where the library defines the contracts, and consuming applications provide implementations for AI services:
 
-#### 🔒 Security & Compliance
-- **🔐 security.txt**: Security policies and contact information
-- **🛡️ .well-known**: Standard metadata directory
-- **📊 ads.txt**: Advertising policies and partnerships
-- **🏢 humans.txt**: Team and contributor information
+**What WebFlux Provides:**
+- Processing pipeline and orchestration
+- Content extraction and parsing
+- Chunking strategies and algorithms
+- Web crawling and metadata analysis
+- Interface definitions for AI services
 
-### 🏗️ Architecture Principle: Interface Provider
+**What You Provide:**
+- LLM service implementation (ITextCompletionService)
+- Embedding service implementation (ITextEmbeddingService)
+- Image processing implementation (IImageToTextService) - optional
+- Vector storage implementation (IVectorStore)
 
-#### ✅ What WebFlux Provides:
-- **🧠 Web Intelligence**: Integrated analysis of 15 metadata standards
-- **🕷️ Intelligent Crawling**: Metadata-driven prioritization and optimization
-- **📄 Advanced Content Extraction**: 70% accuracy improvement using structural intelligence
-- **🔌 AI Interfaces**: Clean interface design for provider independence
-- **🎛️ Processing Pipeline**: Metadata Discovery → Intelligent Crawling → Optimized Chunking
+This design allows you to use any LLM provider (OpenAI, Anthropic, Azure, local models) while maintaining a consistent processing pipeline.
 
-#### ❌ What WebFlux Does NOT Provide:
-- **AI Service Implementations**: Specific AI provider implementations excluded
-- **Vector Generation**: Embeddings are consumer app responsibility
-- **Data Storage**: Vector DB implementations excluded
+## Features
 
-### ✨ Key Features
-- **🧠 Web Intelligence Engine**: Metadata-driven intelligent analysis
-- **🤖 AI-Driven Auto Chunking**: Phase 5B intelligent strategy selection with quality evaluation
-- **📦 Single NuGet Package**: Easy installation with `dotnet add package WebFlux`
-- **🎯 Ethical AI Crawling**: Responsible data collection through ai.txt standards
-- **📱 PWA Detection**: Web app optimization through manifest.json analysis
-- **🕷️ RFC-Compliant Crawling**: Full support for robots.txt, sitemap.xml
-- **📄 15 Standards Support**: Integrated web metadata analysis
-- **🎛️ 7 Chunking Strategies**: Auto, Smart, Intelligent, MemoryOptimized, Semantic, Paragraph, FixedSize
-- **🖼️ Multimodal Processing**: Text + Image → Unified text conversion
-- **⚡ Parallel Processing**: Dynamic scaling with memory backpressure control
-- **📊 Real-time Streaming**: Intelligent caching with real-time chunk delivery
-- **🔍 Quality Evaluation**: 4-factor quality assessment with intelligent caching
-- **🏗️ Clean Architecture**: Dependency inversion with guaranteed extensibility
+- **4-Stage Processing Pipeline**: Extract → Analyze → Reconstruct → Chunk
+- **Multiple Chunking Strategies**: Auto, Smart, Semantic, Intelligent, MemoryOptimized, Paragraph, FixedSize
+- **Content Reconstruction**: Optional LLM-based enhancement with None, Summarize, Expand, Rewrite, Enrich strategies
+- **Web Metadata Support**: robots.txt, sitemap.xml, ai.txt, llms.txt, manifest.json, and 10+ other standards
+- **Multimodal Processing**: Text and image content processing
+- **Streaming Support**: Process large websites with AsyncEnumerable
+- **Parallel Processing**: Concurrent crawling and processing
+- **Extensible Design**: Implement custom extractors, strategies, and processors
 
----
+## Installation
 
-## 🚀 Quick Start
-
-### Installation
-
-[![NuGet](https://img.shields.io/nuget/v/WebFlux?style=for-the-badge&logo=nuget&logoColor=white&label=WebFlux&color=004880)](https://www.nuget.org/packages/WebFlux/)
-
-**Package Manager Console:**
+**NuGet Package Manager:**
 ```powershell
 Install-Package WebFlux
 ```
@@ -89,425 +62,167 @@ Install-Package WebFlux
 dotnet add package WebFlux
 ```
 
-**PackageReference (.csproj):**
+**.csproj:**
 ```xml
 <PackageReference Include="WebFlux" Version="0.1.0" />
 ```
 
-### Basic Usage
+## Quick Start
+
 ```csharp
 using WebFlux;
 using Microsoft.Extensions.DependencyInjection;
 
 var services = new ServiceCollection();
 
-// Required services (implemented by consumer application)
-services.AddScoped<ITextCompletionService, YourLLMService>();        // LLM service
-services.AddScoped<ITextEmbeddingService, YourEmbeddingService>();   // Embedding service
+// Register your AI service implementations
+services.AddScoped<ITextCompletionService, YourLLMService>();
+services.AddScoped<ITextEmbeddingService, YourEmbeddingService>();
+services.AddScoped<IImageToTextService, YourVisionService>(); // Optional
 
-// Optional: Image-to-text service (for multimodal processing)
-services.AddScoped<IImageToTextService, YourVisionService>();
+// Register your vector store implementation
+services.AddScoped<IVectorStore, YourVectorStore>();
 
-// Or use OpenAI services (requires API key in environment variables)
-// services.AddWebFluxOpenAIServices();
-
-// Or use Mock services for testing
-// services.AddWebFluxMockAIServices();
-
-// Consumer application manages vector store
-services.AddScoped<IVectorStore, YourVectorStore>();                // Vector storage
-
-// Register WebFlux services (includes parallel processing and streaming engine)
+// Register WebFlux
 services.AddWebFlux();
 
 var provider = services.BuildServiceProvider();
 var processor = provider.GetRequiredService<IWebContentProcessor>();
-var embeddingService = provider.GetRequiredService<IEmbeddingService>();
-var vectorStore = provider.GetRequiredService<IVectorStore>();
 
-// Streaming processing (recommended - memory efficient, parallel optimized)
-var crawlOptions = new CrawlOptions
+// Process a website
+var options = new CrawlOptions
 {
-    MaxDepth = 3,                    // Maximum crawling depth
-    MaxPages = 100,                  // Maximum number of pages
-    RespectRobotsTxt = true,         // Respect robots.txt
-    DelayBetweenRequests = TimeSpan.FromMilliseconds(500)
+    MaxDepth = 3,
+    MaxPages = 100,
+    RespectRobotsTxt = true
 };
 
-await foreach (var result in processor.ProcessWithProgressAsync("https://docs.example.com", crawlOptions))
+await foreach (var result in processor.ProcessWithProgressAsync("https://example.com", options))
 {
     if (result.IsSuccess && result.Result != null)
     {
         foreach (var chunk in result.Result)
         {
-            Console.WriteLine($"📄 URL: {chunk.SourceUrl}");
-            Console.WriteLine($"   Chunk {chunk.ChunkIndex}: {chunk.Content.Length} characters");
-
-            // RAG pipeline: Generate embedding → Store in vector database
-            var embedding = await embeddingService.GenerateAsync(chunk.Content);
-            await vectorStore.StoreAsync(new {
-                Id = chunk.Id,
-                Content = chunk.Content,
-                Metadata = chunk.Metadata,
-                Vector = embedding,
-                SourceUrl = chunk.SourceUrl
-            });
+            // Store chunks in your vector database
+            await StoreChunk(chunk);
         }
     }
 }
 ```
 
-### Step-by-Step Processing (Advanced Usage)
+## Core Concepts
+
+### Processing Pipeline
+
+WebFlux processes web content through four stages:
+
+1. **Extract**: Fetch and parse web content (HTML, Markdown, JSON, XML, PDF)
+2. **Analyze**: Analyze document structure, quality metrics, and metadata
+3. **Reconstruct**: Optionally enhance content using LLM strategies
+4. **Chunk**: Split content into semantic chunks for retrieval
+
+### Chunking Strategies
+
+Choose a chunking strategy based on your content and requirements:
+
+| Strategy | Use Case |
+|----------|----------|
+| Auto | Automatically selects the best strategy |
+| Smart | HTML documentation, structured content |
+| Semantic | General web pages, articles |
+| Intelligent | Blogs, news, knowledge bases |
+| MemoryOptimized | Large documents, memory constraints |
+| Paragraph | Markdown docs, natural boundaries |
+| FixedSize | Uniform chunks, testing |
+
+### Reconstruction Strategies
+
+Optionally enhance content quality before chunking:
+
+| Strategy | Description | Requires LLM |
+|----------|-------------|--------------|
+| None | Use original content | No |
+| Summarize | Create condensed version | Yes |
+| Expand | Add explanations and examples | Yes |
+| Rewrite | Improve clarity and consistency | Yes |
+| Enrich | Add context and metadata | Yes |
+
+Note: LLM-based strategies require ITextCompletionService implementation. If not provided, the system automatically falls back to "None" strategy with appropriate warnings.
+
+### Web Metadata Standards
+
+WebFlux analyzes multiple web standards to optimize crawling and content extraction:
+
+- **robots.txt**: Crawling rules and permissions
+- **sitemap.xml**: Site structure and URL discovery
+- **ai.txt**: AI usage policies and guidelines
+- **llms.txt**: Site structure for AI agents
+- **manifest.json**: PWA metadata
+- **security.txt**: Security policies
+- **.well-known**: Standard metadata
+- And more (package.json, ads.txt, humans.txt, etc.)
+
+## Documentation
+
+For detailed guides and advanced usage:
+
+- **[Tutorial](docs/TUTORIAL.md)**: Step-by-step installation and usage guide
+- **[Pipeline Design](docs/PIPELINE_DESIGN.md)**: Processing pipeline architecture
+- **[Interfaces](docs/INTERFACES.md)**: Interface contracts and implementations
+- **[Chunking Strategies](docs/CHUNKING_STRATEGIES.md)**: Detailed strategy guide
+
+## Example: Basic Usage
+
 ```csharp
-// Use when you want individual control over each stage
+// Simple single-page processing
+var processor = provider.GetRequiredService<IWebContentProcessor>();
 
-// Stage 1: Web Crawling (Crawler)
-var crawlResults = await processor.CrawlAsync("https://docs.example.com", crawlOptions);
-Console.WriteLine($"Crawled pages: {crawlResults.Count()}");
-
-// Stage 2: Content Extraction (Extractor)
-var extractedContents = new List<RawWebContent>();
-foreach (var crawlResult in crawlResults)
-{
-    var rawContent = await processor.ExtractAsync(crawlResult.Url);
-    extractedContents.Add(rawContent);
-}
-
-// Stage 3: Structural Analysis (Parser with LLM)
-var parsedContents = new List<ParsedWebContent>();
-foreach (var rawContent in extractedContents)
-{
-    var parsedContent = await processor.ParseAsync(rawContent);
-    parsedContents.Add(parsedContent);
-}
-
-// Stage 4: Chunking (Chunking Strategy)
-var allChunks = new List<WebContentChunk>();
-foreach (var parsedContent in parsedContents)
-{
-    var chunks = await processor.ChunkAsync(parsedContent, new ChunkingOptions
+var chunks = await processor.ChunkAsync(
+    "https://example.com/article",
+    new ChunkingOptions
     {
-        Strategy = "Auto",   // Phase 5B AI-driven optimization (recommended)
+        Strategy = "Auto",
         MaxChunkSize = 512,
         OverlapSize = 64
-    });
-    allChunks.AddRange(chunks);
-}
-
-Console.WriteLine($"Total chunks generated: {allChunks.Count}");
-
-// Stage 5: RAG Pipeline (Embedding → Storage)
-foreach (var chunk in allChunks)
-{
-    var embedding = await embeddingService.GenerateAsync(chunk.Content);
-    await vectorStore.StoreAsync(new {
-        Id = chunk.Id,
-        Content = chunk.Content,
-        Metadata = chunk.Metadata,
-        Vector = embedding,
-        SourceUrl = chunk.SourceUrl
-    });
-}
-```
-
-### Supported Content Formats
-- **HTML** (.html, .htm) - DOM structure analysis and content extraction
-- **Markdown** (.md) - Structure preservation
-- **JSON** (.json) - API responses and structured data
-- **XML** (.xml) - Including RSS/Atom feeds
-- **RSS/Atom** feeds - News and blog content
-- **PDF** (web-hosted) - Online document processing
-
----
-
-## 🕷️ Crawling Strategy Guide
-
-### Crawling Options
-```csharp
-var crawlOptions = new CrawlOptions
-{
-    // Basic settings
-    MaxDepth = 3,                                    // Maximum crawling depth
-    MaxPages = 100,                                  // Maximum number of pages
-    DelayBetweenRequests = TimeSpan.FromSeconds(1),  // Delay between requests
-
-    // Compliance and courtesy
-    RespectRobotsTxt = true,                         // Respect robots.txt
-    UserAgent = "WebFlux/1.0 (+https://your-site.com/bot)", // User-Agent
-
-    // Filtering
-    AllowedDomains = ["docs.example.com", "help.example.com"], // Allowed domains
-    ExcludePatterns = ["/admin/", "/private/", "*.pdf"],        // Exclude patterns
-    IncludePatterns = ["/docs/", "/help/", "/api/"],            // Include patterns
-
-    // Advanced settings
-    MaxConcurrentRequests = 5,                       // Concurrent requests
-    Timeout = TimeSpan.FromSeconds(30),              // Request timeout
-    RetryCount = 3,                                  // Retry count
-
-    // Content filters
-    MinContentLength = 100,                          // Minimum content length
-    MaxContentLength = 1000000,                      // Maximum content length
-};
-```
-
-### Crawling Strategies
-| Strategy | Description | Optimal Use Case |
-|----------|-------------|------------------|
-| **BreadthFirst** | Breadth-first search | Need site-wide overview |
-| **DepthFirst** | Depth-first search | Focus on specific sections |
-| **Intelligent** | LLM-based prioritization | High-quality content first |
-| **Sitemap** | sitemap.xml based | Structured sites |
-
----
-
-## 🎛️ Chunking Strategy Guide
-
-[![Chunking Strategies](https://img.shields.io/badge/Chunking%20Strategies-7%20Available-9B59B6?style=flat-square&logo=gear)](https://github.com/iyulab/WebFlux)
-
-### Strategy Selection Guide
-| Strategy | Optimal Use Case | Quality Score | Memory Usage | Status |
-|----------|------------------|---------------|--------------|---------|
-| **Auto** 🤖 (recommended) | All web content - AI-driven automatic optimization | ⭐⭐⭐⭐⭐ | 🟡 Medium | ✅ Phase 5B Complete |
-| **Smart** 🧠 | HTML docs, API docs, structured content | ⭐⭐⭐⭐⭐ | 🟡 Medium | ✅ Complete |
-| **Semantic** 🔍 | General web pages, articles, semantic consistency | ⭐⭐⭐⭐⭐ | 🟡 Medium | ✅ Complete |
-| **Intelligent** 💡 | Blogs, news, knowledge bases | ⭐⭐⭐⭐⭐ | 🔴 High | ✅ Complete |
-| **MemoryOptimized** ⚡ | Large-scale sites, server environments | ⭐⭐⭐⭐⭐ | 🟢 Low (84% reduction) | ✅ Complete |
-| **Paragraph** 📄 | Markdown docs, wikis, paragraph structure preservation | ⭐⭐⭐⭐ | 🟢 Low | ✅ Complete |
-| **FixedSize** 📏 | Uniform processing, test environments | ⭐⭐⭐ | 🟢 Low | ✅ Complete |
-
----
-
-## ⚡ Enterprise-Grade Performance Optimization
-
-[![Performance Verified](https://img.shields.io/badge/Performance-Verified-success?style=flat-square&logo=speedtest)](https://github.com/iyulab/WebFlux)
-[![Memory Efficient](https://img.shields.io/badge/Memory-84%25%20Optimized-green?style=flat-square&logo=memory)](https://github.com/iyulab/WebFlux)
-
-### 🚀 Parallel Crawling Engine
-- **Dynamic CPU Core Scaling**: Automatic scaling based on system resources
-- **Memory Backpressure Control**: Threading.Channels-based high-performance async processing
-- **Intelligent Work Distribution**: Optimal distribution based on page size and complexity
-- **Deduplication**: URL hash-based automatic duplicate page filtering
-
-### 📊 Streaming Optimization
-- **Real-time Chunk Delivery**: AsyncEnumerable-based immediate result streaming
-- **LRU Cache System**: URL hash-based automatic caching and expiration management
-- **Cache-First Strategy**: Instant return for previously processed pages
-
-### 📈 Verified Performance Metrics
-- **Crawling Speed**: 100 pages/minute (average 1MB page baseline)
-- **Memory Efficiency**: ≤1.5x page size memory usage, 84% reduction with MemoryOptimized strategy
-- **Quality Assurance**: 81% chunk completeness, 75%+ context preservation
-- **AI-Based Optimization**: Phase 5B Auto strategy with 4-factor quality assessment and intelligent strategy selection
-- **Intelligent Caching**: Quality-based cache expiration (high-quality 4 hours, low-quality 1 hour)
-- **Real-time Monitoring**: OpenTelemetry integration, performance tracking and error detection
-- **Parallel Scaling**: Linear performance improvement with CPU core count
-- **Build Stability**: 38 errors → 0 errors, 100% compilation success
-- **Test Coverage**: 90% test coverage, production stability verified
-
----
-
-## 🔧 Advanced Usage
-
-### LLM Service Implementation Example (GPT-5-nano)
-```csharp
-public class OpenAiTextCompletionService : ITextCompletionService
-{
-    private readonly OpenAIClient _client;
-
-    public OpenAiTextCompletionService(string apiKey)
-    {
-        _client = new OpenAIClient(apiKey);
     }
+);
 
+foreach (var chunk in chunks)
+{
+    Console.WriteLine($"Chunk {chunk.ChunkIndex}: {chunk.Content}");
+}
+```
+
+## Example: Custom Implementation
+
+```csharp
+// Implement your LLM service
+public class MyLLMService : ITextCompletionService
+{
     public async Task<string> CompleteAsync(
         string prompt,
         TextCompletionOptions? options = null,
         CancellationToken cancellationToken = default)
     {
-        var chatClient = _client.GetChatClient("gpt-5-nano"); // Use latest model
-
-        var response = await chatClient.CompleteChatAsync(
-            [new UserChatMessage(prompt)],
-            new ChatCompletionOptions
-            {
-                MaxOutputTokenCount = options?.MaxTokens ?? 2000,
-                Temperature = options?.Temperature ?? 0.3f
-            },
-            cancellationToken);
-
-        return response.Value.Content[0].Text;
+        // Your implementation here
+        return await CallYourLLMAPI(prompt, options, cancellationToken);
     }
 }
+
+// Register and use
+services.AddScoped<ITextCompletionService, MyLLMService>();
 ```
 
-### Multimodal Processing - Web Image Text Extraction
-```csharp
-public class OpenAiImageToTextService : IImageToTextService
-{
-    private readonly OpenAIClient _client;
-    private readonly HttpClient _httpClient;
+## Contributing
 
-    public OpenAiImageToTextService(string apiKey, HttpClient httpClient)
-    {
-        _client = new OpenAIClient(apiKey);
-        _httpClient = httpClient;
-    }
+Contributions are welcome! Please see our contributing guidelines for details.
 
-    public async Task<ImageToTextResult> ExtractTextFromWebImageAsync(
-        string imageUrl,
-        ImageToTextOptions? options = null,
-        CancellationToken cancellationToken = default)
-    {
-        // Download web image
-        var imageData = await _httpClient.GetByteArrayAsync(imageUrl, cancellationToken);
-        
-        var chatClient = _client.GetChatClient("gpt-5-nano");
+## License
 
-        var messages = new List<ChatMessage>
-        {
-            new SystemChatMessage("Extract all text accurately from the webpage image."),
-            new UserChatMessage(ChatMessageContentPart.CreateImagePart(
-                BinaryData.FromBytes(imageData), "image/jpeg"))
-        };
+This project is licensed under the MIT License - see the LICENSE file for details.
 
-        var response = await chatClient.CompleteChatAsync(messages, new ChatCompletionOptions
-        {
-            MaxOutputTokenCount = 1000,
-            Temperature = 0.1f
-        }, cancellationToken);
+## Support
 
-        return new ImageToTextResult
-        {
-            ExtractedText = response.Value.Content[0].Text,
-            Confidence = 0.95,
-            IsSuccess = true,
-            SourceUrl = imageUrl
-        };
-    }
-}
-```
-
-### RAG Pipeline Integration
-```csharp
-public class WebRagService
-{
-    private readonly IWebContentProcessor _processor;
-    private readonly IEmbeddingService _embeddingService;
-    private readonly IVectorStore _vectorStore;
-
-    public async Task IndexWebsiteAsync(string baseUrl, CrawlOptions? crawlOptions = null)
-    {
-        crawlOptions ??= new CrawlOptions
-        {
-            MaxDepth = 3,
-            MaxPages = 100,
-            Strategy = "Intelligent"
-        };
-
-        var chunkingOptions = new ChunkingOptions
-        {
-            Strategy = "Auto",   // Phase 5B AI-based automatic optimization (recommended)
-            MaxChunkSize = 512,
-            OverlapSize = 64
-        };
-
-        await foreach (var result in _processor.ProcessWithProgressAsync(baseUrl, crawlOptions, chunkingOptions))
-        {
-            if (result.IsSuccess && result.Result != null)
-            {
-                foreach (var chunk in result.Result)
-                {
-                    // Generate embedding and store
-                    var embedding = await _embeddingService.GenerateAsync(chunk.Content);
-                    await _vectorStore.StoreAsync(new VectorDocument
-                    {
-                        Id = chunk.Id,
-                        Content = chunk.Content,
-                        Metadata = chunk.Metadata,
-                        Vector = embedding,
-                        SourceUrl = chunk.SourceUrl,
-                        CrawledAt = DateTime.UtcNow
-                    });
-                }
-            }
-
-            // Display progress
-            if (result.Progress != null)
-            {
-                Console.WriteLine($"Crawling Progress: {result.Progress.PagesProcessed}/{result.Progress.TotalPages}");
-                Console.WriteLine($"Chunking Progress: {result.Progress.PercentComplete:F1}%");
-                if (result.Progress.EstimatedRemainingTime.HasValue)
-                {
-                    Console.WriteLine($"Estimated Remaining Time: {result.Progress.EstimatedRemainingTime.Value:mm\\:ss}");
-                }
-            }
-        }
-    }
-
-    public async Task UpdateWebsiteContentAsync(string baseUrl)
-    {
-        // Incremental update - reprocess only changed pages
-        var lastCrawlTime = await _vectorStore.GetLastCrawlTimeAsync(baseUrl);
-        
-        var crawlOptions = new CrawlOptions
-        {
-            MaxDepth = 3,
-            IfModifiedSince = lastCrawlTime,
-            Strategy = "Intelligent"
-        };
-
-        await IndexWebsiteAsync(baseUrl, crawlOptions);
-    }
-}
-```
-
-### Custom Content Extractor
-```csharp
-public class CustomContentExtractor : IContentExtractor
-{
-    public string ExtractorType => "CustomExtractor";
-    public IEnumerable<string> SupportedContentTypes => ["application/custom", "text/custom"];
-
-    public bool CanExtract(string contentType, string url) =>
-        contentType.StartsWith("application/custom") || url.Contains("custom-api");
-
-    public async Task<RawWebContent> ExtractAsync(
-        string url, 
-        HttpResponseMessage response, 
-        CancellationToken cancellationToken = default)
-    {
-        var content = await response.Content.ReadAsStringAsync(cancellationToken);
-        
-        // Custom parsing logic
-        var parsedContent = ParseCustomFormat(content);
-        
-        return new RawWebContent
-        {
-            Url = url,
-            Content = parsedContent,
-            ContentType = response.Content.Headers.ContentType?.MediaType ?? "application/custom",
-            Metadata = new WebContentMetadata
-            {
-                Title = ExtractTitle(parsedContent),
-                Description = ExtractDescription(parsedContent),
-                Keywords = ExtractKeywords(parsedContent),
-                LastModified = response.Content.Headers.LastModified?.DateTime,
-                ContentLength = content.Length,
-                Properties = new Dictionary<string, object>
-                {
-                    ["CustomProperty"] = "CustomValue"
-                }
-            }
-        };
-    }
-
-    private string ParseCustomFormat(string content) => content; // Implementation required
-    private string ExtractTitle(string content) => ""; // Implementation required
-    private string ExtractDescription(string content) => ""; // Implementation required
-    private List<string> ExtractKeywords(string content) => new(); // Implementation required
-}
-
-// Registration
-services.AddTransient<IContentExtractor, CustomContentExtractor>();
-```
+- **Issues**: [GitHub Issues](https://github.com/iyulab/WebFlux/issues)
+- **Documentation**: [docs/](docs/)
+- **NuGet**: [WebFlux Package](https://www.nuget.org/packages/WebFlux/)

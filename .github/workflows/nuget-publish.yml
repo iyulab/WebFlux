@@ -6,6 +6,11 @@ on:
     paths:
       - 'src/Directory.Build.props'
       - 'src/WebFlux/**/*.cs'
+      - 'tests/**/*.cs'  # 단위 테스트 변경도 트리거
+    paths-ignore:
+      - 'samples/**'       # samples 폴더 제외
+      - 'docs/**'          # 문서 변경 제외
+      - '**/*.md'          # README 등 마크다운 제외
   workflow_dispatch:
     inputs:
       force_publish:
@@ -73,8 +78,8 @@ jobs:
       - name: 🔨 Build Solution
         run: dotnet build src/WebFlux.sln --configuration ${{ env.BUILD_CONFIGURATION }} --no-restore
 
-      - name: 🧪 Run Tests
-        run: dotnet test src/WebFlux.sln --configuration ${{ env.BUILD_CONFIGURATION }} --no-build --verbosity normal
+      - name: 🧪 Run Unit Tests (tests/ only, samples/ excluded)
+        run: dotnet test tests/WebFlux.Tests/WebFlux.Tests.csproj --configuration ${{ env.BUILD_CONFIGURATION }} --no-build --verbosity normal
 
   # NuGet 패키지 빌드
   build-package:

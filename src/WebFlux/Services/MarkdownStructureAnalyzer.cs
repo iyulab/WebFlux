@@ -235,7 +235,7 @@ public class MarkdownStructureAnalyzer : IMarkdownStructureAnalyzer
         return (content, frontMatter);
     }
 
-    private async Task<MarkdownStructureInfo> ExtractStructureInfoAsync(
+    private Task<MarkdownStructureInfo> ExtractStructureInfoAsync(
         MarkdownDocument document,
         string content,
         string sourceUrl,
@@ -259,7 +259,7 @@ public class MarkdownStructureAnalyzer : IMarkdownStructureAnalyzer
         var statistics = CalculateStatistics(content, document);
         var metadata = ExtractMetadata(frontMatter, headings, content);
 
-        return new MarkdownStructureInfo
+        return Task.FromResult(new MarkdownStructureInfo
         {
             SourceUrl = sourceUrl,
             Metadata = metadata,
@@ -275,7 +275,7 @@ public class MarkdownStructureAnalyzer : IMarkdownStructureAnalyzer
             Footnotes = footnotes,
             Embeds = embeds,
             Statistics = statistics
-        };
+        });
     }
 
     private IReadOnlyList<MarkdownHeading> ExtractHeadings(MarkdownDocument document, string[] lines)

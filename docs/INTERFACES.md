@@ -829,6 +829,291 @@ foreach (var crawlResult in crawlResults)
 }
 ```
 
+## ✨ 재구성 (Reconstruct) 인터페이스 (v0.2 신규)
+
+### IContentAnalyzer
+
+```csharp
+namespace WebFlux.Core.Interfaces
+{
+    /// <summary>
+    /// 콘텐츠 분석 인터페이스
+    /// Stage 2: 원본 콘텐츠를 분석하여 구조화하고 품질 평가
+    /// </summary>
+    public interface IContentAnalyzer
+    {
+        /// <summary>분석기 이름</summary>
+        string Name { get; }
+
+        /// <summary>분석기 설명</summary>
+        string Description { get; }
+
+        /// <summary>
+        /// 원본 콘텐츠를 분석합니다.
+        /// </summary>
+        /// <param name="rawContent">원본 콘텐츠</param>
+        /// <param name="options">분석 옵션</param>
+        /// <param name="cancellationToken">취소 토큰</param>
+        /// <returns>분석된 콘텐츠</returns>
+        Task<AnalyzedContent> AnalyzeAsync(
+            RawContent rawContent,
+            AnalysisOptions? options = null,
+            CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 스트리밍 방식으로 여러 콘텐츠를 분석합니다.
+        /// </summary>
+        IAsyncEnumerable<AnalyzedContent> AnalyzeStreamAsync(
+            IAsyncEnumerable<RawContent> rawContents,
+            AnalysisOptions? options = null,
+            CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 분석된 콘텐츠의 품질을 평가합니다.
+        /// </summary>
+        double EvaluateQuality(AnalyzedContent analyzedContent);
+    }
+}
+```
+
+### IContentReconstructor
+
+```csharp
+namespace WebFlux.Core.Interfaces
+{
+    /// <summary>
+    /// 콘텐츠 재구성 인터페이스
+    /// Stage 3: 분석된 콘텐츠를 전략에 따라 재구성
+    /// </summary>
+    public interface IContentReconstructor
+    {
+        /// <summary>재구성기 이름</summary>
+        string Name { get; }
+
+        /// <summary>재구성기 설명</summary>
+        string Description { get; }
+
+        /// <summary>
+        /// 콘텐츠를 재구성합니다.
+        /// </summary>
+        /// <param name="analyzedContent">분석된 콘텐츠</param>
+        /// <param name="options">재구성 옵션</param>
+        /// <param name="cancellationToken">취소 토큰</param>
+        /// <returns>재구성된 콘텐츠</returns>
+        Task<ReconstructedContent> ReconstructAsync(
+            AnalyzedContent analyzedContent,
+            ReconstructOptions? options = null,
+            CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 스트리밍 방식으로 여러 콘텐츠를 재구성합니다.
+        /// </summary>
+        IAsyncEnumerable<ReconstructedContent> ReconstructStreamAsync(
+            IAsyncEnumerable<AnalyzedContent> analyzedContents,
+            ReconstructOptions? options = null,
+            CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 재구성된 콘텐츠의 품질을 평가합니다.
+        /// </summary>
+        double EvaluateQuality(ReconstructedContent reconstructedContent);
+    }
+}
+```
+
+### IReconstructStrategy
+
+```csharp
+namespace WebFlux.Core.Interfaces
+{
+    /// <summary>
+    /// 재구성 전략 인터페이스
+    /// 다양한 재구성 알고리즘 지원: None, Summarize, Expand, Rewrite, Enrich
+    /// </summary>
+    public interface IReconstructStrategy
+    {
+        /// <summary>전략 이름</summary>
+        string Name { get; }
+
+        /// <summary>전략 설명</summary>
+        string Description { get; }
+
+        /// <summary>권장 사용 사례</summary>
+        IEnumerable<string> RecommendedUseCases { get; }
+
+        /// <summary>
+        /// 이 전략이 주어진 콘텐츠와 옵션에 적합한지 확인
+        /// </summary>
+        bool IsApplicable(AnalyzedContent content, ReconstructOptions options);
+
+        /// <summary>
+        /// 재구성 전략을 적용합니다.
+        /// </summary>
+        /// <param name="content">분석된 콘텐츠</param>
+        /// <param name="options">재구성 옵션</param>
+        /// <param name="cancellationToken">취소 토큰</param>
+        /// <returns>재구성된 콘텐츠</returns>
+        Task<ReconstructedContent> ApplyAsync(
+            AnalyzedContent content,
+            ReconstructOptions options,
+            CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 예상 처리 시간을 추정합니다.
+        /// </summary>
+        TimeSpan EstimateProcessingTime(AnalyzedContent content, ReconstructOptions options);
+    }
+}
+```
+
+### IReconstructStrategyFactory
+
+```csharp
+namespace WebFlux.Core.Interfaces
+{
+    /// <summary>
+    /// 재구성 전략 팩토리 인터페이스
+    /// 전략 선택 및 생성, Auto 전략 지원
+    /// </summary>
+    public interface IReconstructStrategyFactory
+    {
+        /// <summary>
+        /// 지원하는 모든 재구성 전략을 반환합니다.
+        /// </summary>
+        IEnumerable<string> GetAvailableStrategies();
+
+        /// <summary>
+        /// 특정 전략의 재구성기를 생성합니다.
+        /// </summary>
+        /// <param name="strategyName">전략 이름 (None, Summarize, Expand, Rewrite, Enrich)</param>
+        IReconstructStrategy CreateStrategy(string strategyName);
+
+        /// <summary>
+        /// 콘텐츠와 옵션에 가장 적합한 전략을 자동 선택합니다 (Auto).
+        /// LLM 서비스 가용성을 고려하여 최적 전략을 선택합니다.
+        /// </summary>
+        IReconstructStrategy CreateOptimalStrategy(AnalyzedContent content, ReconstructOptions options);
+
+        /// <summary>
+        /// 전략별 특성 정보를 반환합니다.
+        /// </summary>
+        Dictionary<string, ReconstructStrategyCharacteristics> GetStrategyCharacteristics();
+    }
+
+    /// <summary>
+    /// 재구성 전략 특성 정보
+    /// </summary>
+    public class ReconstructStrategyCharacteristics
+    {
+        /// <summary>전략 이름</summary>
+        public string Name { get; set; } = string.Empty;
+
+        /// <summary>전략 설명</summary>
+        public string Description { get; set; } = string.Empty;
+
+        /// <summary>품질 수준</summary>
+        public QualityLevel QualityLevel { get; set; }
+
+        /// <summary>메모리 사용량</summary>
+        public MemoryUsage MemoryUsage { get; set; }
+
+        /// <summary>연산 비용</summary>
+        public ComputationCost ComputationCost { get; set; }
+
+        /// <summary>LLM 필요 여부</summary>
+        public bool RequiresLLM { get; set; }
+
+        /// <summary>권장 사용 사례</summary>
+        public IEnumerable<string> RecommendedUseCases { get; set; } = new List<string>();
+    }
+}
+```
+
+## 📘 Optional 서비스 사용 가이드
+
+### 서비스 등록 (Optional)
+
+```csharp
+using Microsoft.Extensions.DependencyInjection;
+using WebFlux.Core.Interfaces;
+
+// LLM 서비스 등록 (Optional)
+services.AddScoped<ITextCompletionService, YourLLMService>();
+
+// 이미지-텍스트 서비스 등록 (Optional)
+services.AddScoped<IImageToTextService, YourImageService>();
+
+// 임베딩 서비스 등록 (Optional)
+services.AddScoped<IEmbeddingService, YourEmbeddingService>();
+```
+
+### 서비스 없이 사용하기
+
+```csharp
+// ITextCompletionService 등록 안함
+var services = new ServiceCollection();
+services.AddWebFlux();  // 기본 서비스만 등록
+
+var factory = services.BuildServiceProvider()
+    .GetRequiredService<IReconstructStrategyFactory>();
+
+// Auto 전략 → 자동으로 None 선택
+var options = new ReconstructOptions { Strategy = "Auto" };
+var strategy = factory.CreateOptimalStrategy(content, options);
+
+// LOG INFO: "ITextCompletionService not available. Using 'None' strategy."
+// 원본 콘텐츠 유지, 품질 저하 없음
+```
+
+### 서비스 가용성 경고
+
+**Factory 생성 시**:
+```csharp
+var factory = new ReconstructStrategyFactory(
+    llmService: null,  // 서비스 미등록
+    logger
+);
+// LOG INFO: "ITextCompletionService not registered.
+//            LLM-based strategies will not be available.
+//            Only 'None' strategy will work without quality degradation."
+```
+
+**LLM 전략 선택 시**:
+```csharp
+var strategy = factory.CreateStrategy("Summarize");
+// LOG WARNING: "Strategy 'Summarize' requires ITextCompletionService,
+//               but it is not registered. This strategy will fail if used.
+//               Consider registering ITextCompletionService or using 'None' strategy."
+```
+
+**잘못된 사용 시 명확한 예외**:
+```csharp
+try
+{
+    var result = await strategy.ApplyAsync(content, options);
+}
+catch (InvalidOperationException ex)
+{
+    // "ITextCompletionService is required for Summarize strategy.
+    //  Please register ITextCompletionService in your DI container,
+    //  or use ReconstructOptions.Strategy = \"None\"."
+}
+```
+
+### 전략별 서비스 요구사항
+
+| 전략 | ITextCompletionService | IImageToTextService | IEmbeddingService |
+|------|----------------------|-------------------|------------------|
+| **None** | ❌ 불필요 | ❌ 불필요 | ❌ 불필요 |
+| **Summarize** | ✅ 필수 | ❌ 불필요 | ❌ 불필요 |
+| **Expand** | ✅ 필수 | ❌ 불필요 | ❌ 불필요 |
+| **Rewrite** | ✅ 필수 | ❌ 불필요 | ❌ 불필요 |
+| **Enrich** | ✅ 필수 | ❌ 불필요 | ❌ 불필요 |
+
+**청킹 전략**:
+- **Semantic**: `IEmbeddingService` 필수
+- **나머지 전략**: Optional 서비스 불필요
+
 ---
 
-이 인터페이스 설계는 확장성과 테스트 용이성을 고려하여 작성되었으며, 실제 구현 시 단계적으로 발전시킬 수 있는 구조로 되어 있습니다.
+이 인터페이스 설계는 확장성과 테스트 용이성을 고려하여 작성되었으며, Optional 서비스 누락 시에도 명확한 가이드와 Fallback을 제공하여 실제 구현 시 단계적으로 발전시킬 수 있는 구조로 되어 있습니다.

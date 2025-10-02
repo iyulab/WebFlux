@@ -1,973 +1,498 @@
 # WebFlux 처리 파이프라인 설계
 
-> 크롤링부터 청킹까지 완전한 웹 콘텐츠 처리 파이프라인
+> 추출부터 청킹까지 완전한 웹 콘텐츠 처리 파이프라인
 
 ## 🔄 파이프라인 개요
 
 WebFlux 파이프라인은 **4단계 처리 프로세스**를 통해 웹 콘텐츠를 RAG 최적화 청크로 변환합니다.
 
 ```
-🕷️ Crawler → 📄 Extractor → 🧠 Parser → 🎯 Chunking → ✨ RAG 청크
+📄 Extract → 🔍 Analyze → ✨ Reconstruct → 🎯 Chunk → RAG Ready
 ```
 
 ### 설계 원칙
 
 1. **스트리밍 우선**: 메모리 효율적인 실시간 처리
 2. **병렬 처리**: CPU 코어 활용 극대화
-3. **백프레셔 제어**: 메모리 압박 시 자동 조절
-4. **오류 복구**: 단계별 실패 처리 및 재시도
-5. **진행률 추적**: 실시간 처리 상태 제공
+3. **독립 실행 가능**: 각 단계를 독립적으로 실행 가능
+4. **유연한 구성**: 필요한 단계만 선택하여 사용
+5. **품질 중심**: 각 단계에서 품질 메트릭 추적
 
-## 🏗️ 파이프라인 아키텍처
+## 🏗️ 새로운 4단계 아키텍처
 
 ### 전체 아키텍처 다이어그램
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                    WebFlux Pipeline                             │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐          │
-│  │   Stage 1   │───▶│   Stage 2   │───▶│   Stage 3   │───┐      │
-│  │   Crawler   │    │  Extractor  │    │   Parser    │   │      │
-│  └─────────────┘    └─────────────┘    └─────────────┘   │      │
-│         │                   │                   │        │      │
-│         ▼                   ▼                   ▼        ▼      │
-│  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐   │      │
-│  │ CrawlQueue  │    │ExtractQueue │    │ ParseQueue  │   │      │
-│  │ (Channel)   │    │ (Channel)   │    │ (Channel)   │   │      │
-│  └─────────────┘    └─────────────┘    └─────────────┘   │      │
-│                                                          │      │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │                   Stage 4                              │   │
-│  │               Chunking Engine                          │◀──┘
-│  │  ┌───────────┐  ┌───────────┐  ┌───────────┐         │
-│  │  │Strategy 1 │  │Strategy 2 │  │Strategy N │         │
-│  │  └───────────┘  └───────────┘  └───────────┘         │
-│  └─────────────────────────────────────────────────────────┘
-│                                                                 │
-│  ┌─────────────────────────────────────────────────────────────┐
-│  │               Output Stream                                 │
-│  │    IAsyncEnumerable<ProcessingResult<WebContentChunk>>     │
-│  └─────────────────────────────────────────────────────────────┘
-└─────────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────┐
+│                        WebFlux Pipeline v0.2                       │
+├────────────────────────────────────────────────────────────────────┤
+│                                                                    │
+│  ┌──────────────┐   ┌──────────────┐   ┌──────────────┐          │
+│  │   Stage 1    │──▶│   Stage 2    │──▶│   Stage 3    │──┐       │
+│  │   Extract    │   │   Analyze    │   │ Reconstruct  │  │       │
+│  │              │   │              │   │              │  │       │
+│  │ RawContent   │   │ Analyzed     │   │Reconstructed │  │       │
+│  │              │   │ Content      │   │  Content     │  │       │
+│  └──────────────┘   └──────────────┘   └──────────────┘  │       │
+│         │                   │                   │         │       │
+│         ▼                   ▼                   ▼         ▼       │
+│  ┌────────────────────────────────────────────────────────────┐   │
+│  │                      Stage 4                              │   │
+│  │                  Chunking Engine                          │◀──┘
+│  │                                                            │
+│  │  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐     │
+│  │  │  Fixed  │  │Paragraph│  │ Smart   │  │Semantic │     │
+│  │  │  Size   │  │         │  │         │  │         │     │
+│  │  └─────────┘  └─────────┘  └─────────┘  └─────────┘     │
+│  └────────────────────────────────────────────────────────────┘
+│                                                                    │
+│  ┌────────────────────────────────────────────────────────────────┐
+│  │                    Output Stream                               │
+│  │         IAsyncEnumerable<WebContentChunk>                      │
+│  └────────────────────────────────────────────────────────────────┘
+└────────────────────────────────────────────────────────────────────┘
 ```
 
-### 핵심 컴포넌트
+### 단계별 상세 설명
 
-#### 1. Pipeline Orchestrator
-```csharp
-public class WebContentProcessingPipeline
-{
-    private readonly ICrawlerFactory _crawlerFactory;
-    private readonly IContentExtractorFactory _extractorFactory;
-    private readonly IContentParser _contentParser;
-    private readonly IChunkingStrategyFactory _chunkingFactory;
-    private readonly IPipelineMonitor _monitor;
-    private readonly PipelineConfiguration _config;
+## 📄 Stage 1: Extract (추출)
 
-    public async IAsyncEnumerable<ProcessingResult<IEnumerable<WebContentChunk>>>
-        ProcessAsync(
-            string baseUrl,
-            CrawlOptions? crawlOptions = null,
-            ChunkingOptions? chunkingOptions = null,
-            [EnumeratorCancellation] CancellationToken cancellationToken = default)
-    {
-        using var pipeline = new PipelineContext(_config);
+**목적**: 원본 콘텐츠를 있는 그대로 추출하여 보존
 
-        // 1. 파이프라인 초기화
-        await InitializePipelineAsync(pipeline, baseUrl, crawlOptions);
+**입력**: URL 또는 HTML 문자열
+**출력**: `RawContent`
 
-        // 2. 단계별 처리 채널 생성
-        var crawlChannel = Channel.CreateBounded<CrawlResult>(_config.CrawlChannelCapacity);
-        var extractChannel = Channel.CreateBounded<RawWebContent>(_config.ExtractChannelCapacity);
-        var parseChannel = Channel.CreateBounded<ParsedWebContent>(_config.ParseChannelCapacity);
+**핵심 기능**:
+- HTML 콘텐츠 다운로드
+- 메타데이터 추출 (title, description, keywords)
+- 이미지 URL 수집
+- 링크 추출
+- HTTP 헤더 정보 보존
 
-        // 3. 병렬 파이프라인 시작
-        var crawlTask = ExecuteCrawlStageAsync(baseUrl, crawlOptions, crawlChannel.Writer, pipeline);
-        var extractTask = ExecuteExtractStageAsync(crawlChannel.Reader, extractChannel.Writer, pipeline);
-        var parseTask = ExecuteParseStageAsync(extractChannel.Reader, parseChannel.Writer, pipeline);
-
-        // 4. 청킹 결과 스트리밍
-        await foreach (var parsedContent in parseChannel.Reader.ReadAllAsync(cancellationToken))
-        {
-            var chunks = await ExecuteChunkingStageAsync(parsedContent, chunkingOptions, pipeline);
-
-            yield return ProcessingResult<IEnumerable<WebContentChunk>>.Success(
-                chunks,
-                pipeline.GetCurrentProgress()
-            );
-        }
-    }
-}
-```
-
-## 🕷️ Stage 1: Web Crawling
-
-### 설계 목표
-- robots.txt 준수하는 예의 있는 크롤링
-- 중복 URL 자동 필터링
-- 동적 확장 가능한 병렬 처리
-
-### 구현 아키텍처
+**설계 철학**:
+- 원본 콘텐츠 **완전 보존** (손실 없음)
+- 가공 및 정제 **일절 하지 않음**
+- 향후 재처리 가능하도록 원본 유지
 
 ```csharp
-public class CrawlStageProcessor
-{
-    private readonly SemaphoreSlim _concurrencySemaphore;
-    private readonly HashSet<string> _visitedUrls;
-    private readonly IRobotsTxtParser _robotsParser;
-    private readonly IHttpClientFactory _httpClientFactory;
-
-    public async Task ExecuteAsync(
-        string baseUrl,
-        CrawlOptions options,
-        ChannelWriter<CrawlResult> outputChannel,
-        PipelineContext context)
-    {
-        var crawler = _crawlerFactory.CreateOptimalCrawler(baseUrl, options);
-        var urlQueue = new PriorityQueue<CrawlTask, int>();
-
-        // 초기 URL 추가
-        urlQueue.Enqueue(new CrawlTask(baseUrl, 0), 0);
-
-        var activeTasks = new List<Task>();
-        var processedCount = 0;
-
-        while (urlQueue.Count > 0 || activeTasks.Any())
-        {
-            context.CancellationToken.ThrowIfCancellationRequested();
-
-            // 동시 처리 한도 관리
-            while (activeTasks.Count < options.MaxConcurrentRequests && urlQueue.TryDequeue(out var task, out var priority))
-            {
-                var crawlTask = ProcessSingleUrlAsync(task, options, outputChannel, context);
-                activeTasks.Add(crawlTask);
-            }
-
-            // 완료된 태스크 정리
-            var completedTask = await Task.WhenAny(activeTasks);
-            activeTasks.Remove(completedTask);
-
-            var result = await completedTask;
-            if (result != null)
-            {
-                processedCount++;
-                context.UpdateProgress(processedCount, "Crawling");
-
-                // 새로운 URL 추가
-                await AddDiscoveredUrls(result, urlQueue, options, context);
-            }
-        }
-
-        outputChannel.Complete();
-    }
-
-    private async Task<CrawlResult?> ProcessSingleUrlAsync(
-        CrawlTask task,
-        CrawlOptions options,
-        ChannelWriter<CrawlResult> outputChannel,
-        PipelineContext context)
-    {
-        await _concurrencySemaphore.WaitAsync(context.CancellationToken);
-
-        try
-        {
-            // 중복 체크
-            lock (_visitedUrls)
-            {
-                if (!_visitedUrls.Add(task.Url))
-                    return null; // 이미 처리됨
-            }
-
-            // robots.txt 확인
-            if (options.RespectRobotsTxt && !await _robotsParser.IsAllowedAsync(task.Url, options.UserAgent))
-            {
-                return new CrawlResult
-                {
-                    Url = task.Url,
-                    Error = new CrawlError { ErrorType = "RobotsDisallowed", Message = "Blocked by robots.txt" }
-                };
-            }
-
-            // HTTP 요청 실행
-            using var httpClient = _httpClientFactory.CreateClient("WebFlux");
-            var response = await httpClient.GetAsync(task.Url, context.CancellationToken);
-
-            var result = new CrawlResult
-            {
-                Url = task.Url,
-                Depth = task.Depth,
-                StatusCode = (int)response.StatusCode,
-                ContentType = response.Content.Headers.ContentType?.MediaType ?? "unknown",
-                ContentLength = response.Content.Headers.ContentLength ?? 0,
-                ResponseTime = context.Stopwatch.Elapsed
-            };
-
-            // 출력 채널에 전송
-            await outputChannel.WriteAsync(result, context.CancellationToken);
-            return result;
-        }
-        catch (Exception ex)
-        {
-            var errorResult = new CrawlResult
-            {
-                Url = task.Url,
-                Error = new CrawlError { ErrorType = ex.GetType().Name, Message = ex.Message }
-            };
-
-            await outputChannel.WriteAsync(errorResult, context.CancellationToken);
-            return errorResult;
-        }
-        finally
-        {
-            _concurrencySemaphore.Release();
-
-            // 요청 간 지연
-            if (options.DelayBetweenRequests > TimeSpan.Zero)
-                await Task.Delay(options.DelayBetweenRequests, context.CancellationToken);
-        }
-    }
-}
-
-public class CrawlTask
+public class RawContent
 {
     public string Url { get; set; }
-    public int Depth { get; set; }
-    public string? ParentUrl { get; set; }
-    public DateTime ScheduledAt { get; set; } = DateTime.UtcNow;
-
-    public CrawlTask(string url, int depth, string? parentUrl = null)
-    {
-        Url = url;
-        Depth = depth;
-        ParentUrl = parentUrl;
-    }
+    public string Content { get; set; }              // 원본 HTML
+    public string ContentType { get; set; }
+    public WebContentMetadata Metadata { get; set; }
+    public List<string> ImageUrls { get; set; }
+    public List<string> Links { get; set; }
+    public DateTime ExtractedAt { get; set; }
+    public Dictionary<string, string> Headers { get; set; }
 }
 ```
 
-### 크롤링 전략 구현
+## 🔍 Stage 2: Analyze (분석)
 
-#### BreadthFirstCrawler
+**목적**: 콘텐츠 구조 분석 및 불필요한 요소 제거, 원본은 유지
+
+**입력**: `RawContent`
+**출력**: `AnalyzedContent`
+
+**핵심 기능**:
+- **구조 분석**: 섹션, 제목, 목록, 표 인식
+- **노이즈 제거**: 광고, 네비게이션, 푸터 제거
+- **콘텐츠 정제**: 깨끗한 텍스트 추출
+- **품질 평가**: 콘텐츠 품질 점수 계산
+- **원본 유지**: RawContent와 CleanedContent 모두 보관
+
+**설계 철학**:
+- 원본 유지 + 정제된 버전 제공
+- 구조 정보 최대한 보존
+- 품질 메트릭으로 후속 처리 가이드
+
 ```csharp
-public class BreadthFirstCrawler : ICrawler
+public class AnalyzedContent
 {
-    public string StrategyName => "BreadthFirst";
+    public string Url { get; set; }
+    public string RawContent { get; set; }           // 원본 유지
+    public string CleanedContent { get; set; }       // 정제된 버전
+    public string Title { get; set; }
 
-    public async Task<IEnumerable<CrawlResult>> CrawlAsync(
-        string baseUrl,
-        CrawlOptions options,
-        CancellationToken cancellationToken = default)
-    {
-        var results = new List<CrawlResult>();
-        var queue = new Queue<(string Url, int Depth)>();
-        var visited = new HashSet<string>();
+    // 구조 정보
+    public List<ContentSection> Sections { get; set; }
+    public List<TableData> Tables { get; set; }
+    public List<ImageData> Images { get; set; }
+    public StructureInfo Structure { get; set; }
 
-        queue.Enqueue((baseUrl, 0));
+    // 메타데이터 및 품질
+    public WebContentMetadata Metadata { get; set; }
+    public AnalysisMetrics Metrics { get; set; }     // 품질 점수
 
-        while (queue.Count > 0 && results.Count < options.MaxPages)
-        {
-            var (currentUrl, depth) = queue.Dequeue();
-
-            if (depth > options.MaxDepth || visited.Contains(currentUrl))
-                continue;
-
-            visited.Add(currentUrl);
-
-            try
-            {
-                var result = await CrawlSinglePageAsync(currentUrl, depth);
-                results.Add(result);
-
-                // 링크 추출 및 큐에 추가
-                if (depth < options.MaxDepth)
-                {
-                    var links = ExtractLinks(result.Content, currentUrl);
-                    foreach (var link in links.Take(10)) // 페이지당 최대 10개 링크
-                    {
-                        if (!visited.Contains(link))
-                            queue.Enqueue((link, depth + 1));
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                results.Add(new CrawlResult
-                {
-                    Url = currentUrl,
-                    Error = new CrawlError { Message = ex.Message }
-                });
-            }
-        }
-
-        return results;
-    }
+    public DateTime AnalyzedAt { get; set; }
 }
 ```
 
-## 📄 Stage 2: Content Extraction
-
-### 설계 목표
-- 다양한 콘텐츠 형식 지원 (HTML, Markdown, JSON, XML)
-- 노이즈 제거 및 구조 보존
-- 메타데이터 정확한 추출
-
-### 구현 아키텍처
-
+**분석 메트릭**:
 ```csharp
-public class ExtractStageProcessor
+public class AnalysisMetrics
 {
-    private readonly IContentExtractorFactory _extractorFactory;
-    private readonly ILogger<ExtractStageProcessor> _logger;
-
-    public async Task ExecuteAsync(
-        ChannelReader<CrawlResult> inputChannel,
-        ChannelWriter<RawWebContent> outputChannel,
-        PipelineContext context)
-    {
-        var semaphore = new SemaphoreSlim(context.Config.ExtractionConcurrency);
-        var tasks = new List<Task>();
-
-        await foreach (var crawlResult in inputChannel.ReadAllAsync(context.CancellationToken))
-        {
-            var task = ProcessSingleContentAsync(crawlResult, outputChannel, semaphore, context);
-            tasks.Add(task);
-
-            // 태스크 정리 (메모리 관리)
-            if (tasks.Count >= context.Config.MaxConcurrentExtractions)
-            {
-                var completed = await Task.WhenAny(tasks);
-                tasks.Remove(completed);
-                await completed; // 예외 전파
-            }
-        }
-
-        // 남은 태스크 완료 대기
-        await Task.WhenAll(tasks);
-        outputChannel.Complete();
-    }
-
-    private async Task ProcessSingleContentAsync(
-        CrawlResult crawlResult,
-        ChannelWriter<RawWebContent> outputChannel,
-        SemaphoreSlim semaphore,
-        PipelineContext context)
-    {
-        await semaphore.WaitAsync(context.CancellationToken);
-
-        try
-        {
-            // 추출기 선택
-            var extractor = _extractorFactory.GetExtractor(crawlResult.ContentType, crawlResult.Url);
-
-            if (extractor == null)
-            {
-                _logger.LogWarning("No suitable extractor found for {ContentType} at {Url}",
-                    crawlResult.ContentType, crawlResult.Url);
-                return;
-            }
-
-            // HTTP 재요청 (콘텐츠 추출용)
-            using var httpClient = context.HttpClientFactory.CreateClient();
-            var response = await httpClient.GetAsync(crawlResult.Url, context.CancellationToken);
-
-            // 콘텐츠 추출
-            var extractedContent = await extractor.ExtractAsync(crawlResult.Url, response, context.CancellationToken);
-
-            // 품질 검증
-            var quality = extractor.EvaluateQuality(extractedContent);
-            if (quality < context.Config.MinContentQuality)
-            {
-                _logger.LogWarning("Content quality too low ({Quality}) for {Url}", quality, crawlResult.Url);
-                return;
-            }
-
-            await outputChannel.WriteAsync(extractedContent, context.CancellationToken);
-            context.UpdateProgress($"Extracted: {crawlResult.Url}");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to extract content from {Url}", crawlResult.Url);
-        }
-        finally
-        {
-            semaphore.Release();
-        }
-    }
+    public double ContentQuality { get; set; }       // 0-1
+    public int WordCount { get; set; }
+    public int SectionCount { get; set; }
+    public double ReadabilityScore { get; set; }
+    public bool HasCodeBlocks { get; set; }
+    public bool HasTables { get; set; }
 }
 ```
 
-### 콘텐츠 추출기 구현 예시
+## ✨ Stage 3: Reconstruct (재구성)
 
-#### HtmlContentExtractor
+**목적**: LLM을 활용한 콘텐츠 재구성 및 품질 향상 (Optional)
+
+**입력**: `AnalyzedContent`
+**출력**: `ReconstructedContent`
+
+**핵심 기능**:
+- **전략 기반 재구성**: 5가지 전략 제공
+- **LLM 증강**: 선택적 AI 품질 향상
+- **원본 보존**: 항상 원본 콘텐츠 유지
+- **메트릭 추적**: 재구성 품질 및 비용 추적
+
+### 재구성 전략
+
+#### 1. None (기본값)
 ```csharp
-public class HtmlContentExtractor : IContentExtractor
+// LLM 불필요, 항상 사용 가능
+// 원본 콘텐츠를 그대로 유지
+// 품질: 원본 품질 유지, 비용: 0
+```
+
+#### 2. Summarize (요약)
+```csharp
+// LLM 필수: ITextCompletionService
+// 긴 콘텐츠를 핵심만 추출하여 요약
+// 품질: High, 비용: Medium
+// 사용 사례: 토큰 절감, 빠른 검색
+```
+
+#### 3. Expand (확장)
+```csharp
+// LLM 필수: ITextCompletionService
+// 간략한 콘텐츠에 상세 설명 추가
+// 품질: Very High, 비용: High
+// 사용 사례: 학습 자료, 상세 정보 필요
+```
+
+#### 4. Rewrite (재작성)
+```csharp
+// LLM 필수: ITextCompletionService
+// 명확성과 일관성 향상을 위한 재작성
+// 품질: Very High, 비용: High
+// 사용 사례: RAG 검색 최적화, 스타일 통일
+```
+
+#### 5. Enrich (보강)
+```csharp
+// LLM 필수: ITextCompletionService
+// 추가 컨텍스트, 정의, 예시로 보강
+// 품질: Very High, 비용: Very High
+// 사용 사례: 검색 정확도 향상, 배경지식 추가
+```
+
+### Optional 서비스 처리
+
+**서비스 가용성 경고 시스템**:
+
+```csharp
+// Factory 생성 시 자동 체크
+var factory = new ReconstructStrategyFactory(
+    llmService,  // null이면 INFO 로그
+    logger
+);
+// LOG: "ITextCompletionService not registered.
+//       LLM-based strategies will not be available."
+
+// 전략 생성 시 WARNING
+var strategy = factory.CreateStrategy("Summarize");
+// LOG WARNING: "Strategy 'Summarize' requires ITextCompletionService,
+//               but it is not registered. Consider using 'None' strategy."
+
+// Auto 선택 시 자동 Fallback
+var optimal = factory.CreateOptimalStrategy(content, options);
+// LOG INFO: "ITextCompletionService not available.
+//            Using 'None' strategy."
+```
+
+**예외 메시지**:
+```csharp
+// 서비스 없이 LLM 전략 실행 시
+throw new InvalidOperationException(
+    "ITextCompletionService is required for Summarize strategy. " +
+    "Please register ITextCompletionService in your DI container, " +
+    "or use ReconstructOptions.Strategy = \"None\".");
+```
+
+### 재구성 결과
+
+```csharp
+public class ReconstructedContent
 {
-    private readonly HtmlToMarkdownConverter _markdownConverter;
-    private readonly IImageProcessor _imageProcessor;
+    public string Url { get; set; }
+    public string OriginalContent { get; set; }      // 원본 유지
+    public string ReconstructedText { get; set; }    // 재구성된 텍스트
 
-    public string ExtractorType => "Html";
-    public IEnumerable<string> SupportedContentTypes => new[] { "text/html", "application/xhtml+xml" };
+    // 재구성 정보
+    public string StrategyUsed { get; set; }         // "None", "Summarize", etc.
+    public List<ContentEnhancement> Enhancements { get; set; }
 
-    public async Task<RawWebContent> ExtractAsync(
-        string url,
-        HttpResponseMessage response,
-        CancellationToken cancellationToken = default)
-    {
-        var htmlContent = await response.Content.ReadAsStringAsync(cancellationToken);
-        var document = new HtmlDocument();
-        document.LoadHtml(htmlContent);
+    // LLM 사용 정보
+    public bool UsedLLM { get; set; }
+    public string? LLMModel { get; set; }
 
-        // 1. 메타데이터 추출
-        var metadata = ExtractMetadata(document, response);
+    // 메타데이터 및 메트릭
+    public WebContentMetadata Metadata { get; set; }
+    public ReconstructMetrics Metrics { get; set; }
 
-        // 2. 메인 콘텐츠 추출
-        var mainContent = ExtractMainContent(document);
-
-        // 3. 마크다운 변환
-        var markdownContent = await _markdownConverter.ConvertAsync(mainContent);
-
-        // 4. 이미지 URL 수집
-        var imageUrls = ExtractImageUrls(document, url);
-
-        // 5. 링크 수집
-        var links = ExtractLinks(document, url);
-
-        return new RawWebContent
-        {
-            Url = url,
-            Content = markdownContent,
-            ContentType = "text/markdown", // 변환 후 타입
-            Metadata = metadata,
-            ExtractorType = ExtractorType,
-            ImageUrls = imageUrls,
-            Links = links,
-            Properties = new Dictionary<string, object>
-            {
-                ["OriginalContentType"] = response.Content.Headers.ContentType?.ToString() ?? "unknown",
-                ["ProcessingTime"] = DateTime.UtcNow
-            }
-        };
-    }
-
-    private WebContentMetadata ExtractMetadata(HtmlDocument document, HttpResponseMessage response)
-    {
-        var metadata = new WebContentMetadata();
-
-        // 제목 추출
-        var titleNode = document.DocumentNode.SelectSingleNode("//title");
-        metadata.Title = titleNode?.InnerText?.Trim() ?? "";
-
-        // 설명 추출
-        var descriptionNode = document.DocumentNode
-            .SelectSingleNode("//meta[@name='description']/@content") ??
-            document.DocumentNode.SelectSingleNode("//meta[@property='og:description']/@content");
-        metadata.Description = descriptionNode?.Value ?? "";
-
-        // 키워드 추출
-        var keywordsNode = document.DocumentNode.SelectSingleNode("//meta[@name='keywords']/@content");
-        if (keywordsNode?.Value != null)
-        {
-            metadata.Keywords = keywordsNode.Value.Split(',').Select(k => k.Trim()).ToList();
-        }
-
-        // 작성자
-        var authorNode = document.DocumentNode.SelectSingleNode("//meta[@name='author']/@content");
-        metadata.Author = authorNode?.Value ?? "";
-
-        // 언어
-        var langNode = document.DocumentNode.SelectSingleNode("//html/@lang") ??
-                      document.DocumentNode.SelectSingleNode("//meta[@http-equiv='Content-Language']/@content");
-        metadata.Language = langNode?.Value ?? "en";
-
-        // Last-Modified
-        metadata.LastModified = response.Content.Headers.LastModified?.DateTime;
-
-        return metadata;
-    }
+    public DateTime ReconstructedAt { get; set; }
 }
 ```
 
-## 🧠 Stage 3: Content Parsing
-
-### 설계 목표
-- 구조화된 콘텐츠 분석 및 파싱
-- 섹션, 표, 이미지 정보 구조화
-- LLM 기반 콘텐츠 이해 (선택적)
-
-### 구현 아키텍처
-
+**재구성 메트릭**:
 ```csharp
-public class ParseStageProcessor
+public class ReconstructMetrics
 {
-    private readonly IContentParser _contentParser;
-    private readonly ITextCompletionService? _llmService; // 선택적
-    private readonly ILogger<ParseStageProcessor> _logger;
-
-    public async Task ExecuteAsync(
-        ChannelReader<RawWebContent> inputChannel,
-        ChannelWriter<ParsedWebContent> outputChannel,
-        PipelineContext context)
-    {
-        await foreach (var rawContent in inputChannel.ReadAllAsync(context.CancellationToken))
-        {
-            try
-            {
-                var parsedContent = await _contentParser.ParseAsync(rawContent, context.CancellationToken);
-
-                // LLM 기반 보강 (선택적)
-                if (_llmService != null && context.Config.EnableLLMEnhancement)
-                {
-                    parsedContent = await EnhanceWithLLM(parsedContent, context.CancellationToken);
-                }
-
-                await outputChannel.WriteAsync(parsedContent, context.CancellationToken);
-                context.UpdateProgress($"Parsed: {rawContent.Url}");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to parse content from {Url}", rawContent.Url);
-            }
-        }
-
-        outputChannel.Complete();
-    }
-}
-
-public class ContentParser : IContentParser
-{
-    public async Task<ParsedWebContent> ParseAsync(
-        RawWebContent rawContent,
-        CancellationToken cancellationToken = default)
-    {
-        var parsedContent = new ParsedWebContent
-        {
-            Url = rawContent.Url,
-            Metadata = rawContent.Metadata
-        };
-
-        // 1. 제목 추출
-        parsedContent.Title = ExtractTitle(rawContent);
-
-        // 2. 섹션 구조 분석
-        parsedContent.Sections = ExtractSections(rawContent.Content);
-
-        // 3. 메인 콘텐츠 추출
-        parsedContent.MainContent = ExtractMainContent(parsedContent.Sections);
-
-        // 4. 표 데이터 추출
-        parsedContent.Tables = ExtractTables(rawContent.Content);
-
-        // 5. 이미지 데이터 구조화
-        parsedContent.Images = await ProcessImages(rawContent.ImageUrls);
-
-        // 6. 구조 정보 생성
-        parsedContent.Structure = AnalyzeStructure(parsedContent);
-
-        return parsedContent;
-    }
-
-    private List<ContentSection> ExtractSections(string markdownContent)
-    {
-        var sections = new List<ContentSection>();
-        var lines = markdownContent.Split('\n');
-        var currentSection = new ContentSection();
-        var position = 0;
-
-        foreach (var line in lines)
-        {
-            if (IsHeaderLine(line))
-            {
-                // 이전 섹션 완료
-                if (!string.IsNullOrEmpty(currentSection.Content))
-                {
-                    currentSection.EndPosition = position;
-                    sections.Add(currentSection);
-                }
-
-                // 새 섹션 시작
-                currentSection = new ContentSection
-                {
-                    Heading = ExtractHeadingText(line),
-                    Level = GetHeaderLevel(line),
-                    StartPosition = position
-                };
-            }
-            else
-            {
-                currentSection.Content += line + "\n";
-            }
-
-            position += line.Length + 1;
-        }
-
-        // 마지막 섹션 추가
-        if (!string.IsNullOrEmpty(currentSection.Content))
-        {
-            currentSection.EndPosition = position;
-            sections.Add(currentSection);
-        }
-
-        return BuildHierarchy(sections);
-    }
+    public double Quality { get; set; }              // 재구성 품질
+    public double CompressionRatio { get; set; }     // 압축/확장 비율
+    public int EnhancementBytes { get; set; }        // 추가된 바이트
+    public long ProcessingTimeMs { get; set; }
+    public int LLMCallCount { get; set; }            // LLM 호출 횟수
+    public int? TokensUsed { get; set; }             // 토큰 사용량
+    public Dictionary<string, object> AdditionalMetrics { get; set; }
 }
 ```
 
-## 🎯 Stage 4: Chunking
+## 🎯 Stage 4: Chunk (청킹)
 
-### 설계 목표
-- 다중 청킹 전략 지원
-- 자동 최적 전략 선택
-- 품질 기반 동적 조정
+**목적**: 재구성된 콘텐츠를 RAG 최적화 청크로 분할
 
-### 구현 아키텍처
+**입력**: `ReconstructedContent`
+**출력**: `IEnumerable<WebContentChunk>`
+
+**청킹 전략**:
+1. **FixedSize**: 고정 크기 분할
+2. **Paragraph**: 단락 경계 기준
+3. **Smart**: 의미 경계 인식
+4. **Semantic**: 임베딩 기반 (IEmbeddingService 필요)
+5. **Intelligent**: ML 기반 최적화
+6. **MemoryOptimized**: 84% 메모리 절감
+
+## 🔧 파이프라인 사용 패턴
+
+### 패턴 1: 전체 파이프라인 실행
 
 ```csharp
-public class ChunkingStageProcessor
+// 모든 단계 실행: Extract → Analyze → Reconstruct → Chunk
+var pipeline = new WebContentPipeline(
+    extractorFactory,
+    analyzer,
+    reconstructor,
+    chunker
+);
+
+await foreach (var chunk in pipeline.ProcessAsync(url, options))
 {
-    private readonly IChunkingStrategyFactory _strategyFactory;
-    private readonly IChunkingQualityEvaluator _qualityEvaluator;
-    private readonly ILogger<ChunkingStageProcessor> _logger;
-
-    public async Task<IEnumerable<WebContentChunk>> ExecuteAsync(
-        ParsedWebContent parsedContent,
-        ChunkingOptions? options,
-        PipelineContext context)
-    {
-        options ??= new ChunkingOptions();
-
-        try
-        {
-            // 1. 최적 전략 선택 또는 지정된 전략 사용
-            var strategy = options.Strategy == "Auto"
-                ? _strategyFactory.CreateOptimalStrategy(parsedContent, options)
-                : _strategyFactory.CreateStrategy(options.Strategy);
-
-            // 2. 청킹 실행
-            var chunks = await strategy.ChunkAsync(parsedContent, options, context.CancellationToken);
-
-            // 3. 품질 평가
-            var quality = _qualityEvaluator.EvaluateQuality(chunks, parsedContent);
-
-            // 4. 품질 기준 미달 시 대안 전략 시도
-            if (quality.OverallQuality < 0.7 && options.Strategy == "Auto")
-            {
-                _logger.LogWarning("Chunking quality below threshold ({Quality}) for {Url}, trying alternative strategy",
-                    quality.OverallQuality, parsedContent.Url);
-
-                var alternativeStrategy = SelectAlternativeStrategy(strategy.StrategyName, parsedContent);
-                chunks = await alternativeStrategy.ChunkAsync(parsedContent, options, context.CancellationToken);
-            }
-
-            // 5. 메타데이터 보강
-            return EnrichChunkMetadata(chunks, parsedContent, quality);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Chunking failed for {Url}, falling back to FixedSize strategy", parsedContent.Url);
-
-            // 실패 시 FixedSize 전략으로 폴백
-            var fallbackStrategy = _strategyFactory.CreateStrategy("FixedSize");
-            return await fallbackStrategy.ChunkAsync(parsedContent, options, context.CancellationToken);
-        }
-    }
+    // RAG에 바로 사용 가능한 청크
+    await vectorDb.AddAsync(chunk);
 }
 ```
 
-## 🔄 병렬 처리 및 성능 최적화
-
-### Threading.Channels 기반 파이프라인
+### 패턴 2: 단계별 독립 실행
 
 ```csharp
-public class PipelineConfiguration
+// Stage 1: Extract만 실행
+var extractor = extractorFactory.CreateExtractor(url);
+var rawContent = await extractor.ExtractAsync(url);
+
+// Stage 2: Analyze만 실행 (나중에)
+var analyzer = new ContentAnalyzer();
+var analyzedContent = await analyzer.AnalyzeAsync(rawContent, options);
+
+// Stage 3: Reconstruct (LLM 서비스 있을 때)
+var factory = new ReconstructStrategyFactory(llmService, logger);
+var strategy = factory.CreateOptimalStrategy(analyzedContent, options);
+var reconstructed = await strategy.ApplyAsync(analyzedContent, options);
+
+// Stage 4: Chunk
+var chunker = chunkingFactory.CreateStrategy("Smart");
+var chunks = await chunker.ChunkAsync(reconstructed, chunkOptions);
+```
+
+### 패턴 3: 선택적 단계 실행
+
+```csharp
+// PipelineStageFlags로 단계 선택
+var options = new PipelineOptions
 {
-    // 채널 용량 설정
-    public int CrawlChannelCapacity { get; set; } = 100;
-    public int ExtractChannelCapacity { get; set; } = 50;
-    public int ParseChannelCapacity { get; set; } = 25;
+    EnabledStages = PipelineStageFlags.Extract |
+                   PipelineStageFlags.Analyze |
+                   PipelineStageFlags.Chunk,  // Reconstruct 생략
 
-    // 동시성 설정
-    public int CrawlingConcurrency { get; set; } = Environment.ProcessorCount;
-    public int ExtractionConcurrency { get; set; } = Environment.ProcessorCount * 2;
-    public int ParsingConcurrency { get; set; } = Environment.ProcessorCount;
+    ReconstructOptions = new ReconstructOptions
+    {
+        Strategy = "None"  // 재구성 없음
+    }
+};
 
-    // 메모리 관리
-    public long MaxMemoryUsage { get; set; } = 1024 * 1024 * 1024; // 1GB
-    public int MemoryCheckInterval { get; set; } = 10; // 10개 처리마다 체크
-
-    // 품질 관리
-    public double MinContentQuality { get; set; } = 0.5;
-    public bool EnableLLMEnhancement { get; set; } = false;
-}
-
-public class PipelineContext : IDisposable
+// Extract → Analyze → Chunk (Reconstruct 생략)
+await foreach (var chunk in pipeline.ProcessAsync(url, options))
 {
-    public CancellationToken CancellationToken { get; }
-    public PipelineConfiguration Config { get; }
-    public IHttpClientFactory HttpClientFactory { get; }
-    public Stopwatch Stopwatch { get; }
-
-    private ProcessingProgress _progress;
-    private readonly object _progressLock = new();
-
-    public PipelineContext(PipelineConfiguration config)
-    {
-        Config = config;
-        Stopwatch = Stopwatch.StartNew();
-        _progress = new ProcessingProgress();
-    }
-
-    public void UpdateProgress(int processed, string phase, string? currentUrl = null)
-    {
-        lock (_progressLock)
-        {
-            _progress.PagesProcessed = processed;
-            _progress.CurrentPhase = phase;
-            _progress.CurrentUrl = currentUrl;
-            _progress.ElapsedTime = Stopwatch.Elapsed;
-        }
-    }
-
-    public ProcessingProgress GetCurrentProgress()
-    {
-        lock (_progressLock)
-        {
-            return new ProcessingProgress
-            {
-                TotalPages = _progress.TotalPages,
-                PagesProcessed = _progress.PagesProcessed,
-                ChunksGenerated = _progress.ChunksGenerated,
-                ElapsedTime = Stopwatch.Elapsed,
-                CurrentPhase = _progress.CurrentPhase,
-                CurrentUrl = _progress.CurrentUrl
-            };
-        }
-    }
-
-    public void Dispose()
-    {
-        Stopwatch?.Stop();
-        GC.SuppressFinalize(this);
-    }
+    // 빠른 처리, LLM 비용 0
 }
 ```
 
-### 메모리 백프레셔 제어
+### 패턴 4: LLM 없이 실행
 
 ```csharp
-public class MemoryPressureController
+// ITextCompletionService 등록하지 않음
+var services = new ServiceCollection();
+services.AddWebFlux(options =>
 {
-    private readonly PipelineConfiguration _config;
-    private readonly ILogger<MemoryPressureController> _logger;
+    // LLM 서비스 등록 안함 (optional)
+    // options.AddTextCompletionService<MyLLMService>();
+});
 
-    public async Task<bool> ShouldThrottleAsync()
-    {
-        var currentMemory = GC.GetTotalMemory(false);
-        var memoryPressure = (double)currentMemory / _config.MaxMemoryUsage;
+// None 전략 자동 선택
+var options = new ReconstructOptions { Strategy = "Auto" };
+// LOG INFO: "ITextCompletionService not available. Using 'None' strategy."
 
-        if (memoryPressure > 0.8)
-        {
-            _logger.LogWarning("High memory pressure detected: {MemoryUsage}MB ({Percentage}%)",
-                currentMemory / (1024 * 1024), memoryPressure * 100);
-
-            // 메모리 압박 시 처리 지연
-            await Task.Delay(100);
-
-            // 가비지 컬렉션 수행
-            GC.Collect(0, GCCollectionMode.Optimized);
-            GC.WaitForPendingFinalizers();
-
-            return true;
-        }
-
-        return false;
-    }
-
-    public void OptimizeMemoryUsage()
-    {
-        // Gen 0, 1 정리
-        GC.Collect(1, GCCollectionMode.Optimized);
-
-        // 대형 객체 힙 정리 (필요시)
-        var gen2Collections = GC.CollectionCount(2);
-        if (gen2Collections == 0) // Gen2 컬렉션이 없었다면 수행
-        {
-            GC.Collect(2, GCCollectionMode.Optimized);
-        }
-    }
-}
+var reconstructor = factory.CreateOptimalStrategy(content, options);
+// None 전략 사용, 원본 품질 유지
 ```
 
-## 📊 모니터링 및 메트릭
+## 📊 품질 및 성능 추적
 
-### 파이프라인 모니터링
+### 단계별 메트릭
 
 ```csharp
-public interface IPipelineMonitor
-{
-    void RecordStageMetrics(string stageName, TimeSpan duration, bool success);
-    void RecordThroughputMetrics(string stageName, int itemsProcessed);
-    void RecordErrorMetrics(string stageName, string errorType);
-    PipelineMetrics GetCurrentMetrics();
-}
-
 public class PipelineMetrics
 {
-    public Dictionary<string, StageMetrics> StageMetrics { get; set; } = new();
-    public TimeSpan TotalProcessingTime { get; set; }
-    public int TotalItemsProcessed { get; set; }
-    public double OverallThroughput { get; set; }
-    public Dictionary<string, int> ErrorCounts { get; set; } = new();
-}
+    // Extract 메트릭
+    public int ExtractedBytes { get; set; }
+    public int ImageCount { get; set; }
+    public int LinkCount { get; set; }
 
-public class StageMetrics
-{
-    public string StageName { get; set; } = string.Empty;
-    public TimeSpan AverageProcessingTime { get; set; }
-    public TimeSpan TotalProcessingTime { get; set; }
-    public int ItemsProcessed { get; set; }
-    public int ErrorCount { get; set; }
-    public double ThroughputPerSecond { get; set; }
-    public double SuccessRate { get; set; }
+    // Analyze 메트릭
+    public double ContentQuality { get; set; }
+    public int SectionCount { get; set; }
+    public int NoiseRemovedBytes { get; set; }
+
+    // Reconstruct 메트릭
+    public string StrategyUsed { get; set; }
+    public bool UsedLLM { get; set; }
+    public int LLMCallCount { get; set; }
+    public int TokensUsed { get; set; }
+    public double CompressionRatio { get; set; }
+
+    // Chunk 메트릭
+    public int ChunkCount { get; set; }
+    public int AvgChunkSize { get; set; }
+    public double SemanticCoherence { get; set; }
+
+    // 전체 파이프라인
+    public long TotalProcessingTimeMs { get; set; }
+    public long MemoryUsedBytes { get; set; }
 }
 ```
 
-### 실시간 진행률 추적
+## 🎛️ 구성 옵션
+
+### PipelineOptions
 
 ```csharp
-public class ProgressTracker
+public class PipelineOptions
 {
-    private readonly IProgress<ProcessingProgress>? _progress;
-    private ProcessingProgress _currentProgress;
+    // 단계 제어
+    public PipelineStageFlags EnabledStages { get; set; } = PipelineStageFlags.All;
 
-    public ProgressTracker(IProgress<ProcessingProgress>? progress = null)
-    {
-        _progress = progress;
-        _currentProgress = new ProcessingProgress();
-    }
+    // 단계별 옵션
+    public ExtractionOptions? ExtractionOptions { get; set; }
+    public AnalysisOptions? AnalysisOptions { get; set; }
+    public ReconstructOptions? ReconstructOptions { get; set; }
+    public ChunkingOptions? ChunkingOptions { get; set; }
 
-    public void UpdateProgress(string phase, int processed, int total = 0, string? currentItem = null)
-    {
-        _currentProgress.CurrentPhase = phase;
-        _currentProgress.PagesProcessed = processed;
+    // 성능 제어
+    public int MaxParallelism { get; set; } = Environment.ProcessorCount;
+    public int BufferSize { get; set; } = 100;
+    public TimeSpan Timeout { get; set; } = TimeSpan.FromMinutes(5);
+}
 
-        if (total > 0)
-            _currentProgress.TotalPages = total;
-
-        _currentProgress.CurrentUrl = currentItem;
-        _currentProgress.ElapsedTime = DateTime.UtcNow - _currentProgress.StartTime;
-
-        // 남은 시간 추정
-        if (_currentProgress.PagesProcessed > 0 && _currentProgress.TotalPages > 0)
-        {
-            var avgTimePerPage = _currentProgress.ElapsedTime.TotalSeconds / _currentProgress.PagesProcessed;
-            var remainingPages = _currentProgress.TotalPages - _currentProgress.PagesProcessed;
-            _currentProgress.EstimatedTimeRemaining = TimeSpan.FromSeconds(avgTimePerPage * remainingPages);
-        }
-
-        _progress?.Report(_currentProgress);
-    }
+[Flags]
+public enum PipelineStageFlags
+{
+    None = 0,
+    Extract = 1,
+    Analyze = 2,
+    Reconstruct = 4,
+    Chunk = 8,
+    All = Extract | Analyze | Reconstruct | Chunk
 }
 ```
 
-## 🔧 오류 처리 및 복구
+## 🔐 오류 처리 및 복구
 
-### 재시도 메커니즘
+### 오류 레벨
+
+**EXCEPTION (즉시 실패)**:
+- 필수 파라미터 null/invalid
+- 서비스 없이 LLM 전략 호출
+- 복구 불가능한 시스템 오류
+
+**WARNING (로그 + 계속)**:
+- Optional 서비스 누락 → Fallback 전략
+- 품질 임계값 미달 → 처리 완료하지만 경고
+- 개별 이미지 처리 실패 → 이미지 스킵
+
+**INFO (정상 동작)**:
+- 전략 선택 및 생성
+- 서비스 가용성 확인
+- 처리 완료
+
+### 복구 전략
 
 ```csharp
-public class RetryPolicy
+// 단계 실패 시 Fallback
+try
 {
-    private readonly int _maxRetries;
-    private readonly TimeSpan _baseDelay;
-    private readonly double _backoffMultiplier;
-
-    public async Task<T> ExecuteAsync<T>(
-        Func<Task<T>> operation,
-        Predicate<Exception> shouldRetry,
-        CancellationToken cancellationToken = default)
-    {
-        Exception? lastException = null;
-
-        for (int attempt = 0; attempt <= _maxRetries; attempt++)
-        {
-            try
-            {
-                return await operation();
-            }
-            catch (Exception ex) when (shouldRetry(ex) && attempt < _maxRetries)
-            {
-                lastException = ex;
-                var delay = TimeSpan.FromMilliseconds(
-                    _baseDelay.TotalMilliseconds * Math.Pow(_backoffMultiplier, attempt));
-
-                await Task.Delay(delay, cancellationToken);
-            }
-        }
-
-        throw lastException ?? new InvalidOperationException("Operation failed after retries");
-    }
+    var reconstructed = await reconstructor.ApplyAsync(content, options);
+}
+catch (InvalidOperationException ex) when (ex.Message.Contains("ITextCompletionService"))
+{
+    logger.LogWarning("LLM service not available, using None strategy");
+    var none = new NoneReconstructStrategy();
+    var reconstructed = await none.ApplyAsync(content, options);
 }
 ```
 
-### Circuit Breaker 패턴
+## 🚀 성능 최적화
 
-```csharp
-public class CircuitBreaker
-{
-    private readonly int _failureThreshold;
-    private readonly TimeSpan _recoveryTimeout;
-    private int _failureCount;
-    private DateTime _lastFailureTime;
-    private CircuitState _state = CircuitState.Closed;
+### 메모리 효율
 
-    public async Task<T> ExecuteAsync<T>(Func<Task<T>> operation)
-    {
-        if (_state == CircuitState.Open)
-        {
-            if (DateTime.UtcNow - _lastFailureTime > _recoveryTimeout)
-            {
-                _state = CircuitState.HalfOpen;
-            }
-            else
-            {
-                throw new CircuitBreakerOpenException();
-            }
-        }
+- **스트리밍 처리**: `IAsyncEnumerable` 사용
+- **청크 단위 처리**: 전체 로드 방지
+- **백프레셔**: 메모리 압박 시 자동 조절
 
-        try
-        {
-            var result = await operation();
-            OnSuccess();
-            return result;
-        }
-        catch (Exception ex)
-        {
-            OnFailure();
-            throw;
-        }
-    }
+### 병렬 처리
 
-    private void OnSuccess()
-    {
-        _failureCount = 0;
-        _state = CircuitState.Closed;
-    }
+- **단계별 파이프라인**: 각 단계 동시 실행
+- **청크 병렬 생성**: 멀티코어 활용
+- **비동기 I/O**: 네트워크 대기 최소화
 
-    private void OnFailure()
-    {
-        _failureCount++;
-        _lastFailureTime = DateTime.UtcNow;
+### 캐싱 전략
 
-        if (_failureCount >= _failureThreshold)
-        {
-            _state = CircuitState.Open;
-        }
-    }
-}
+- **원본 캐싱**: RawContent 재사용
+- **분석 결과 캐싱**: AnalyzedContent 보존
+- **LLM 결과 캐싱**: 토큰 비용 절감
 
-public enum CircuitState { Closed, Open, HalfOpen }
-```
+## 📚 참고 문서
 
----
-
-이 파이프라인 설계는 연구 문서의 성능 요구사항을 만족하면서, 실제 구현 가능한 확장성 있는 아키텍처를 제공합니다. 각 단계는 독립적으로 확장 가능하며, 전체적으로 100페이지/분 목표 성능을 달성할 수 있도록 설계되었습니다.
+- [INTERFACES.md](./INTERFACES.md) - 인터페이스 상세 설명
+- [CHUNKING_STRATEGIES.md](./CHUNKING_STRATEGIES.md) - 청킹 전략 가이드
+- [MULTIMODAL_DESIGN.md](./MULTIMODAL_DESIGN.md) - 이미지 처리 설계
+- [PERFORMANCE_DESIGN.md](./PERFORMANCE_DESIGN.md) - 성능 최적화 가이드

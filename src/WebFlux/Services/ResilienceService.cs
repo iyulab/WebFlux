@@ -227,7 +227,10 @@ public class ResilienceService : IResilienceService
 
     public CircuitBreakerState GetCircuitBreakerState(string circuitBreakerName)
     {
-        ArgumentException.ThrowIfNullOrEmpty(circuitBreakerName);
+        if (circuitBreakerName == null)
+            throw new ArgumentNullException(nameof(circuitBreakerName));
+        if (string.IsNullOrEmpty(circuitBreakerName))
+            throw new ArgumentException("Circuit breaker name cannot be empty", nameof(circuitBreakerName));
 
         return _circuitBreakerStates.TryGetValue(circuitBreakerName, out var info)
             ? info.State
@@ -246,7 +249,10 @@ public class ResilienceService : IResilienceService
 
     public double GetBulkheadUtilization(string bulkheadName)
     {
-        ArgumentException.ThrowIfNullOrEmpty(bulkheadName);
+        if (bulkheadName == null)
+            throw new ArgumentNullException(nameof(bulkheadName));
+        if (string.IsNullOrEmpty(bulkheadName))
+            throw new ArgumentException("Bulkhead name cannot be empty", nameof(bulkheadName));
 
         return _bulkheadStates.TryGetValue(bulkheadName, out var info)
             ? info.Utilization
