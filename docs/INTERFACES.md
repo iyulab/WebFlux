@@ -1,1119 +1,525 @@
-# WebFlux SDK 인터페이스 설계
+# WebFlux SDK 인터페이스
 
-> 확장 가능하고 AI 공급자 중립적인 인터페이스 계약 정의
+> 확장 가능하고 AI 공급자 중립적인 인터페이스 설계 (Phase 1 구현)
 
-## 🎯 인터페이스 설계 원칙
+## 설계 원칙
 
-### 1. 인터페이스 제공자 패턴
-WebFlux SDK는 핵심 기능의 **인터페이스만 정의**하고, 구체적인 구현체는 소비 애플리케이션이 제공하는 패턴을 채택합니다.
+WebFlux SDK는 **인터페이스 제공자 패턴**을 따릅니다:
 
-#### ✅ WebFlux가 제공하는 인터페이스
-- `ITextCompletionService` - LLM 텍스트 완성
-- `IImageToTextService` - 이미지-텍스트 변환
-- `IEmbeddingService` - 텍스트 임베딩 생성 (선택적)
+**WebFlux가 정의하는 인터페이스** (소비자가 구현):
+- `ITextCompletionService`: LLM 텍스트 완성 서비스
 
-#### ✅ WebFlux가 구현하는 인터페이스
-- `IWebContentProcessor` - 메인 처리 파이프라인
-- `ICrawler` - 웹 크롤링 전략
-- `IContentExtractor` - 콘텐츠 추출
-- `IChunkingStrategy` - 청킹 전략
+**WebFlux가 제공하는 인터페이스**:
+- `IWebContentProcessor`: 메인 처리 파이프라인
+- `ICrawler`: 웹 크롤링 전략
+- `IAiEnhancementService`: AI 콘텐츠 증강
+- `IChunkingStrategy`: 청킹 전략
+- `IEventPublisher`: 이벤트 시스템
 
-### 2. 설계 원칙
-- **단일 책임**: 각 인터페이스는 하나의 명확한 역할
-- **확장성**: 새로운 구현체 추가 용이
-- **테스트 용이성**: Mock 구현체 제공
-- **비동기 최우선**: 모든 I/O 작업은 비동기
-
-## 🤖 AI 서비스 인터페이스 (Consumer Implementation)
+## AI 서비스 인터페이스 (소비자 구현)
 
 ### ITextCompletionService
 
+LLM 텍스트 완성을 위한 인터페이스입니다. 소비자가 OpenAI, Anthropic, Azure, Ollama 등으로 구현합니다.
+
 ```csharp
-namespace WebFlux.Core.Interfaces
+public interface ITextCompletionService
 {
     /// <summary>
-    /// LLM 텍스트 완성 서비스 인터페이스
-    /// 소비 애플리케이션에서 OpenAI, Anthropic, Azure, Ollama 등의 구현체 제공
+    /// 텍스트 완성을 수행합니다.
     /// </summary>
-    public interface ITextCompletionService
-    {
-        /// <summary>
-        /// 주어진 프롬프트에 대한 텍스트 완성을 수행합니다.
-        /// </summary>
-        /// <param name="prompt">완성을 요청할 프롬프트</param>
-        /// <param name="options">완성 옵션 (토큰 수, 온도 등)</param>
-        /// <param name="cancellationToken">취소 토큰</param>
-        /// <returns>완성된 텍스트</returns>
-        Task<string> CompleteAsync(
-            string prompt,
-            TextCompletionOptions? options = null,
-            CancellationToken cancellationToken = default);
-
-        /// <summary>
-        /// 스트리밍 텍스트 완성을 수행합니다.
-        /// </summary>
-        /// <param name="prompt">완성을 요청할 프롬프트</param>
-        /// <param name="options">완성 옵션</param>
-        /// <param name="cancellationToken">취소 토큰</param>
-        /// <returns>스트리밍 텍스트 청크</returns>
-        IAsyncEnumerable<string> CompleteStreamAsync(
-            string prompt,
-            TextCompletionOptions? options = null,
-            CancellationToken cancellationToken = default);
-
-        /// <summary>
-        /// 서비스가 현재 사용 가능한지 확인합니다.
-        /// </summary>
-        /// <returns>사용 가능 여부</returns>
-        Task<bool> IsAvailableAsync();
-
-        /// <summary>
-        /// 지원하는 모델 목록을 반환합니다.
-        /// </summary>
-        /// <returns>모델 목록</returns>
-        Task<IEnumerable<string>> GetAvailableModelsAsync();
-    }
+    Task<string> CompleteAsync(
+        string prompt,
+        TextCompletionOptions? options = null,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// 텍스트 완성 옵션
+    /// 스트리밍 텍스트 완성을 수행합니다.
     /// </summary>
-    public class TextCompletionOptions
+    IAsyncEnumerable<string> CompleteStreamAsync(
+        string prompt,
+        TextCompletionOptions? options = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 서비스 상태 및 정보를 반환합니다.
+    /// </summary>
+    HealthInfo GetHealthInfo();
+}
+
+public class TextCompletionOptions
+{
+    public int? MaxTokens { get; set; } = 2000;
+    public float? Temperature { get; set; } = 0.3f;
+    public string? Model { get; set; }
+    public string? SystemPrompt { get; set; }
+    public Dictionary<string, object> AdditionalParameters { get; set; } = new();
+}
+```
+
+**구현 예제** (OpenAI):
+
+```csharp
+public class OpenAiTextCompletionService : ITextCompletionService
+{
+    private readonly string _model;
+    private readonly string _apiKey;
+
+    public OpenAiTextCompletionService(string model, string apiKey)
     {
-        /// <summary>최대 토큰 수</summary>
-        public int? MaxTokens { get; set; } = 2000;
+        _model = model;
+        _apiKey = apiKey;
+    }
 
-        /// <summary>온도 (창의성 조절)</summary>
-        public float? Temperature { get; set; } = 0.3f;
+    public async Task<string> CompleteAsync(
+        string prompt,
+        TextCompletionOptions? options = null,
+        CancellationToken cancellationToken = default)
+    {
+        // OpenAI API 호출 구현
+        // ...
+    }
 
-        /// <summary>사용할 모델 이름</summary>
-        public string? Model { get; set; }
-
-        /// <summary>시스템 프롬프트</summary>
-        public string? SystemPrompt { get; set; }
-
-        /// <summary>응답 형식 (JSON, Markdown 등)</summary>
-        public string? ResponseFormat { get; set; }
-
-        /// <summary>추가 매개변수</summary>
-        public Dictionary<string, object> AdditionalParameters { get; set; } = new();
+    public HealthInfo GetHealthInfo()
+    {
+        return new HealthInfo
+        {
+            Status = "Healthy",
+            Metadata = new Dictionary<string, object>
+            {
+                ["Provider"] = "OpenAI",
+                ["Model"] = _model
+            }
+        };
     }
 }
 ```
 
-### IImageToTextService
-
-```csharp
-namespace WebFlux.Core.Interfaces
-{
-    /// <summary>
-    /// 이미지-텍스트 변환 서비스 인터페이스
-    /// 멀티모달 RAG를 위한 이미지 설명 생성
-    /// </summary>
-    public interface IImageToTextService
-    {
-        /// <summary>
-        /// 웹 이미지 URL에서 텍스트 설명을 추출합니다.
-        /// </summary>
-        /// <param name="imageUrl">이미지 URL</param>
-        /// <param name="options">추출 옵션</param>
-        /// <param name="cancellationToken">취소 토큰</param>
-        /// <returns>추출된 텍스트 결과</returns>
-        Task<ImageToTextResult> ExtractTextFromWebImageAsync(
-            string imageUrl,
-            ImageToTextOptions? options = null,
-            CancellationToken cancellationToken = default);
-
-        /// <summary>
-        /// 이미지 바이트 데이터에서 텍스트 설명을 추출합니다.
-        /// </summary>
-        /// <param name="imageData">이미지 바이트 데이터</param>
-        /// <param name="contentType">이미지 MIME 타입</param>
-        /// <param name="options">추출 옵션</param>
-        /// <param name="cancellationToken">취소 토큰</param>
-        /// <returns>추출된 텍스트 결과</returns>
-        Task<ImageToTextResult> ExtractTextFromImageDataAsync(
-            byte[] imageData,
-            string contentType,
-            ImageToTextOptions? options = null,
-            CancellationToken cancellationToken = default);
-
-        /// <summary>
-        /// 지원하는 이미지 형식 목록을 반환합니다.
-        /// </summary>
-        /// <returns>지원 형식 목록</returns>
-        IEnumerable<string> GetSupportedImageFormats();
-    }
-
-    /// <summary>
-    /// 이미지-텍스트 변환 결과
-    /// </summary>
-    public class ImageToTextResult
-    {
-        /// <summary>추출된 텍스트</summary>
-        public string ExtractedText { get; set; } = string.Empty;
-
-        /// <summary>신뢰도 점수 (0.0 ~ 1.0)</summary>
-        public double Confidence { get; set; }
-
-        /// <summary>성공 여부</summary>
-        public bool IsSuccess { get; set; }
-
-        /// <summary>오류 메시지</summary>
-        public string? ErrorMessage { get; set; }
-
-        /// <summary>원본 이미지 URL</summary>
-        public string? SourceUrl { get; set; }
-
-        /// <summary>이미지 메타데이터</summary>
-        public Dictionary<string, object> Metadata { get; set; } = new();
-    }
-
-    /// <summary>
-    /// 이미지-텍스트 변환 옵션
-    /// </summary>
-    public class ImageToTextOptions
-    {
-        /// <summary>추출 유형 (OCR, Description, Detailed 등)</summary>
-        public string ExtractionType { get; set; } = "Description";
-
-        /// <summary>언어 설정</summary>
-        public string Language { get; set; } = "en";
-
-        /// <summary>세부 수준 (Brief, Detailed, Comprehensive)</summary>
-        public string DetailLevel { get; set; } = "Detailed";
-
-        /// <summary>컨텍스트 프롬프트 (이미지 설명에 추가할 맥락)</summary>
-        public string? ContextPrompt { get; set; }
-
-        /// <summary>최대 텍스트 길이</summary>
-        public int MaxTextLength { get; set; } = 1000;
-    }
-}
-```
-
-### IEmbeddingService (선택적)
-
-```csharp
-namespace WebFlux.Core.Interfaces
-{
-    /// <summary>
-    /// 텍스트 임베딩 생성 서비스 인터페이스 (선택적)
-    /// 의미론적 청킹에서 사용
-    /// </summary>
-    public interface IEmbeddingService
-    {
-        /// <summary>
-        /// 텍스트에 대한 임베딩 벡터를 생성합니다.
-        /// </summary>
-        /// <param name="text">임베딩할 텍스트</param>
-        /// <param name="options">임베딩 옵션</param>
-        /// <param name="cancellationToken">취소 토큰</param>
-        /// <returns>임베딩 벡터</returns>
-        Task<float[]> GenerateAsync(
-            string text,
-            EmbeddingOptions? options = null,
-            CancellationToken cancellationToken = default);
-
-        /// <summary>
-        /// 여러 텍스트에 대한 임베딩을 배치 생성합니다.
-        /// </summary>
-        /// <param name="texts">임베딩할 텍스트 목록</param>
-        /// <param name="options">임베딩 옵션</param>
-        /// <param name="cancellationToken">취소 토큰</param>
-        /// <returns>임베딩 벡터 목록</returns>
-        Task<IEnumerable<float[]>> GenerateBatchAsync(
-            IEnumerable<string> texts,
-            EmbeddingOptions? options = null,
-            CancellationToken cancellationToken = default);
-
-        /// <summary>
-        /// 임베딩 벡터의 차원 수를 반환합니다.
-        /// </summary>
-        /// <returns>벡터 차원</returns>
-        int GetDimensions();
-    }
-
-    /// <summary>
-    /// 임베딩 옵션
-    /// </summary>
-    public class EmbeddingOptions
-    {
-        /// <summary>사용할 모델 이름</summary>
-        public string? Model { get; set; }
-
-        /// <summary>정규화 여부</summary>
-        public bool Normalize { get; set; } = true;
-
-        /// <summary>추가 매개변수</summary>
-        public Dictionary<string, object> AdditionalParameters { get; set; } = new();
-    }
-}
-```
-
-## 🚀 WebFlux 핵심 인터페이스 (WebFlux Implementation)
+## WebFlux 핵심 인터페이스
 
 ### IWebContentProcessor
 
+웹 콘텐츠 처리 파이프라인의 메인 인터페이스입니다.
+
 ```csharp
-namespace WebFlux.Core.Interfaces
+public interface IWebContentProcessor
 {
     /// <summary>
-    /// 웹 콘텐츠 처리의 메인 인터페이스
-    /// 크롤링 → 추출 → 파싱 → 청킹의 전체 파이프라인 오케스트레이션
+    /// 단일 URL을 처리하여 청크를 생성합니다.
     /// </summary>
-    public interface IWebContentProcessor
-    {
-        /// <summary>
-        /// 스트리밍 방식으로 웹 콘텐츠를 처리합니다 (권장).
-        /// 메모리 효율적이며 실시간 진행률 제공
-        /// </summary>
-        /// <param name="baseUrl">처리할 기본 URL</param>
-        /// <param name="crawlOptions">크롤링 옵션</param>
-        /// <param name="chunkingOptions">청킹 옵션</param>
-        /// <param name="cancellationToken">취소 토큰</param>
-        /// <returns>처리 결과 스트림</returns>
-        IAsyncEnumerable<ProcessingResult<IEnumerable<WebContentChunk>>> ProcessWithProgressAsync(
-            string baseUrl,
-            CrawlOptions? crawlOptions = null,
-            ChunkingOptions? chunkingOptions = null,
-            CancellationToken cancellationToken = default);
-
-        /// <summary>
-        /// 전체 프로세스를 한 번에 실행합니다.
-        /// 작은 규모의 처리에 적합
-        /// </summary>
-        /// <param name="baseUrl">처리할 기본 URL</param>
-        /// <param name="crawlOptions">크롤링 옵션</param>
-        /// <param name="chunkingOptions">청킹 옵션</param>
-        /// <param name="cancellationToken">취소 토큰</param>
-        /// <returns>모든 청크 목록</returns>
-        Task<ProcessingResult<IEnumerable<WebContentChunk>>> ProcessAsync(
-            string baseUrl,
-            CrawlOptions? crawlOptions = null,
-            ChunkingOptions? chunkingOptions = null,
-            CancellationToken cancellationToken = default);
-
-        // 단계별 처리 메서드 (고급 사용자용)
-
-        /// <summary>
-        /// 1단계: 웹 크롤링을 수행합니다.
-        /// </summary>
-        Task<IEnumerable<CrawlResult>> CrawlAsync(
-            string baseUrl,
-            CrawlOptions? options = null,
-            CancellationToken cancellationToken = default);
-
-        /// <summary>
-        /// 2단계: URL에서 원시 콘텐츠를 추출합니다.
-        /// </summary>
-        Task<RawWebContent> ExtractAsync(
-            string url,
-            CancellationToken cancellationToken = default);
-
-        /// <summary>
-        /// 3단계: 원시 콘텐츠를 파싱하여 구조화합니다.
-        /// </summary>
-        Task<ParsedWebContent> ParseAsync(
-            RawWebContent rawContent,
-            CancellationToken cancellationToken = default);
-
-        /// <summary>
-        /// 4단계: 파싱된 콘텐츠를 청킹합니다.
-        /// </summary>
-        Task<IEnumerable<WebContentChunk>> ChunkAsync(
-            ParsedWebContent parsedContent,
-            ChunkingOptions? options = null,
-            CancellationToken cancellationToken = default);
-
-        /// <summary>
-        /// 처리 통계를 반환합니다.
-        /// </summary>
-        Task<ProcessingStatistics> GetStatisticsAsync();
-    }
+    Task<IReadOnlyList<WebContentChunk>> ProcessUrlAsync(
+        string url,
+        ChunkingOptions? chunkingOptions = null,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// 처리 결과 래퍼
+    /// 여러 URL을 배치 처리합니다.
     /// </summary>
-    public class ProcessingResult<T>
-    {
-        public bool IsSuccess { get; set; }
-        public T? Result { get; set; }
-        public string? ErrorMessage { get; set; }
-        public ProcessingProgress? Progress { get; set; }
-        public TimeSpan ElapsedTime { get; set; }
-
-        public static ProcessingResult<T> Success(T result, ProcessingProgress? progress = null)
-        {
-            return new ProcessingResult<T>
-            {
-                IsSuccess = true,
-                Result = result,
-                Progress = progress
-            };
-        }
-
-        public static ProcessingResult<T> Failure(string errorMessage)
-        {
-            return new ProcessingResult<T>
-            {
-                IsSuccess = false,
-                ErrorMessage = errorMessage
-            };
-        }
-    }
+    Task<IReadOnlyDictionary<string, IReadOnlyList<WebContentChunk>>> ProcessUrlsBatchAsync(
+        IEnumerable<string> urls,
+        ChunkingOptions? chunkingOptions = null,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// 처리 진행률 정보
+    /// 웹사이트 전체를 크롤링하여 처리합니다.
     /// </summary>
-    public class ProcessingProgress
-    {
-        public int TotalPages { get; set; }
-        public int PagesProcessed { get; set; }
-        public int ChunksGenerated { get; set; }
-        public double PercentComplete => TotalPages > 0 ? (double)PagesProcessed / TotalPages * 100 : 0;
-        public TimeSpan ElapsedTime { get; set; }
-        public TimeSpan? EstimatedTimeRemaining { get; set; }
-        public string CurrentPhase { get; set; } = string.Empty;
-        public string? CurrentUrl { get; set; }
-    }
+    IAsyncEnumerable<WebContentChunk> ProcessWebsiteAsync(
+        string startUrl,
+        CrawlOptions? crawlOptions = null,
+        ChunkingOptions? chunkingOptions = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// HTML 문자열을 직접 처리합니다.
+    /// </summary>
+    Task<IReadOnlyList<WebContentChunk>> ProcessHtmlAsync(
+        string htmlContent,
+        string sourceUrl,
+        ChunkingOptions? chunkingOptions = null,
+        CancellationToken cancellationToken = default);
+}
+```
+
+**사용 예제**:
+
+```csharp
+var processor = serviceProvider.GetRequiredService<IWebContentProcessor>();
+
+var chunkingOptions = new ChunkingOptions
+{
+    Strategy = ChunkingStrategyType.Paragraph,
+    MaxChunkSize = 1000,
+    MinChunkSize = 100
+};
+
+var chunks = await processor.ProcessUrlAsync(url, chunkingOptions);
+
+foreach (var chunk in chunks)
+{
+    Console.WriteLine($"청크 {chunk.ChunkIndex}: {chunk.Content.Length}자");
 }
 ```
 
 ### ICrawler
 
+웹 크롤링 전략 인터페이스입니다.
+
 ```csharp
-namespace WebFlux.Core.Interfaces
+public interface ICrawler : IDisposable
 {
     /// <summary>
-    /// 웹 크롤링 전략 인터페이스
-    /// 다양한 크롤링 알고리즘을 지원
+    /// 단일 URL을 크롤링합니다.
     /// </summary>
-    public interface ICrawler
-    {
-        /// <summary>전략 이름</summary>
-        string StrategyName { get; }
-
-        /// <summary>전략 설명</summary>
-        string Description { get; }
-
-        /// <summary>이 전략이 주어진 URL과 옵션에 적합한지 확인</summary>
-        bool IsApplicable(string baseUrl, CrawlOptions options);
-
-        /// <summary>
-        /// 웹 크롤링을 수행합니다.
-        /// </summary>
-        /// <param name="baseUrl">시작 URL</param>
-        /// <param name="options">크롤링 옵션</param>
-        /// <param name="cancellationToken">취소 토큰</param>
-        /// <returns>크롤링 결과 목록</returns>
-        Task<IEnumerable<CrawlResult>> CrawlAsync(
-            string baseUrl,
-            CrawlOptions options,
-            CancellationToken cancellationToken = default);
-
-        /// <summary>
-        /// 스트리밍 방식으로 크롤링을 수행합니다.
-        /// </summary>
-        /// <param name="baseUrl">시작 URL</param>
-        /// <param name="options">크롤링 옵션</param>
-        /// <param name="cancellationToken">취소 토큰</param>
-        /// <returns>크롤링 결과 스트림</returns>
-        IAsyncEnumerable<CrawlResult> CrawlStreamAsync(
-            string baseUrl,
-            CrawlOptions options,
-            CancellationToken cancellationToken = default);
-
-        /// <summary>
-        /// 크롤링 전 예상 페이지 수를 추정합니다.
-        /// </summary>
-        Task<int> EstimatePageCountAsync(string baseUrl, CrawlOptions options);
-    }
+    Task<CrawlResult> CrawlAsync(
+        string url,
+        CrawlOptions? options = null,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// 크롤링 결과
+    /// 여러 페이지를 크롤링합니다.
     /// </summary>
-    public class CrawlResult
-    {
-        public string Url { get; set; } = string.Empty;
-        public int Depth { get; set; }
-        public DateTime CrawledAt { get; set; } = DateTime.UtcNow;
-        public TimeSpan ResponseTime { get; set; }
-        public int StatusCode { get; set; }
-        public string ContentType { get; set; } = string.Empty;
-        public long ContentLength { get; set; }
-        public string? ParentUrl { get; set; }
-        public Dictionary<string, string> Headers { get; set; } = new();
-        public List<string> ExtractedLinks { get; set; } = new();
-        public CrawlError? Error { get; set; }
-    }
+    IAsyncEnumerable<CrawlResult> CrawlWebsiteAsync(
+        string baseUrl,
+        CrawlOptions? options = null,
+        CancellationToken cancellationToken = default);
+}
 
-    /// <summary>
-    /// 크롤링 오류 정보
-    /// </summary>
-    public class CrawlError
-    {
-        public string ErrorType { get; set; } = string.Empty;
-        public string Message { get; set; } = string.Empty;
-        public string? StackTrace { get; set; }
-        public DateTime OccurredAt { get; set; } = DateTime.UtcNow;
-    }
+public class CrawlResult
+{
+    public string Url { get; set; }
+    public string FinalUrl { get; set; }
+    public string Content { get; set; }             // 렌더링된 HTML
+    public bool IsSuccess { get; set; }
+    public int StatusCode { get; set; }
+    public long ResponseTimeMs { get; set; }
+    public List<string> ImageUrls { get; set; }
+    public List<string> DiscoveredLinks { get; set; }
 }
 ```
 
-### IContentExtractor
+**구현 크롤러**:
+- `PlaywrightCrawler`: Chromium 기반 동적 렌더링 (Phase 1 구현)
+
+### IAiEnhancementService
+
+AI를 활용한 콘텐츠 증강 서비스입니다.
 
 ```csharp
-namespace WebFlux.Core.Interfaces
+public interface IAiEnhancementService
 {
     /// <summary>
-    /// 콘텐츠 추출 인터페이스
-    /// 다양한 웹 콘텐츠 형식에서 구조화된 텍스트 추출
+    /// 콘텐츠를 요약합니다.
     /// </summary>
-    public interface IContentExtractor
-    {
-        /// <summary>추출기 타입 이름</summary>
-        string ExtractorType { get; }
-
-        /// <summary>지원하는 콘텐츠 타입 목록</summary>
-        IEnumerable<string> SupportedContentTypes { get; }
-
-        /// <summary>
-        /// 주어진 콘텐츠 타입과 URL을 처리할 수 있는지 확인
-        /// </summary>
-        /// <param name="contentType">MIME 타입</param>
-        /// <param name="url">URL</param>
-        /// <returns>처리 가능 여부</returns>
-        bool CanExtract(string contentType, string url);
-
-        /// <summary>
-        /// HTTP 응답에서 콘텐츠를 추출합니다.
-        /// </summary>
-        /// <param name="url">원본 URL</param>
-        /// <param name="response">HTTP 응답</param>
-        /// <param name="cancellationToken">취소 토큰</param>
-        /// <returns>추출된 원시 콘텐츠</returns>
-        Task<RawWebContent> ExtractAsync(
-            string url,
-            HttpResponseMessage response,
-            CancellationToken cancellationToken = default);
-
-        /// <summary>
-        /// 추출 품질을 평가합니다.
-        /// </summary>
-        /// <param name="content">추출된 콘텐츠</param>
-        /// <returns>품질 점수 (0.0 ~ 1.0)</returns>
-        double EvaluateQuality(RawWebContent content);
-    }
+    Task<string> SummarizeAsync(
+        string content,
+        SummaryOptions? options = null,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// 원시 웹 콘텐츠
+    /// 메타데이터를 추출합니다.
     /// </summary>
-    public class RawWebContent
-    {
-        public string Url { get; set; } = string.Empty;
-        public string Content { get; set; } = string.Empty;
-        public string ContentType { get; set; } = string.Empty;
-        public WebContentMetadata Metadata { get; set; } = new();
-        public DateTime ExtractedAt { get; set; } = DateTime.UtcNow;
-        public string ExtractorType { get; set; } = string.Empty;
-        public List<string> ImageUrls { get; set; } = new();
-        public List<string> Links { get; set; } = new();
-        public Dictionary<string, object> Properties { get; set; } = new();
-    }
+    Task<AiMetadata> ExtractMetadataAsync(
+        string content,
+        MetadataExtractionOptions? options = null,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// 파싱된 웹 콘텐츠
+    /// 통합 증강을 수행합니다 (요약 + 메타데이터).
     /// </summary>
-    public class ParsedWebContent
-    {
-        public string Url { get; set; } = string.Empty;
-        public string Title { get; set; } = string.Empty;
-        public string MainContent { get; set; } = string.Empty;
-        public List<ContentSection> Sections { get; set; } = new();
-        public List<TableData> Tables { get; set; } = new();
-        public List<ImageData> Images { get; set; } = new();
-        public WebContentMetadata Metadata { get; set; } = new();
-        public StructureInfo Structure { get; set; } = new();
-        public DateTime ParsedAt { get; set; } = DateTime.UtcNow;
-    }
+    Task<EnhancedContent> EnhanceAsync(
+        string content,
+        EnhancementOptions? options = null,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// 콘텐츠 섹션
+    /// 서비스 가용성을 확인합니다.
     /// </summary>
-    public class ContentSection
-    {
-        public string Id { get; set; } = Guid.NewGuid().ToString();
-        public string Heading { get; set; } = string.Empty;
-        public int Level { get; set; } // H1=1, H2=2, etc.
-        public string Content { get; set; } = string.Empty;
-        public int StartPosition { get; set; }
-        public int EndPosition { get; set; }
-        public List<ContentSection> SubSections { get; set; } = new();
-    }
+    Task<bool> IsAvailableAsync(CancellationToken cancellationToken = default);
+}
+
+public class EnhancedContent
+{
+    public string OriginalContent { get; set; }
+    public string? Summary { get; set; }
+    public string? RewrittenContent { get; set; }
+    public AiMetadata Metadata { get; set; }
+    public long ProcessingTimeMs { get; set; }
+}
+
+public class AiMetadata
+{
+    public string? Title { get; set; }
+    public string? Description { get; set; }
+    public IReadOnlyList<string> Keywords { get; set; }
+    public IReadOnlyList<string> Topics { get; set; }
+    public string? MainTopic { get; set; }
+    public string? Sentiment { get; set; }
+    public string? DifficultyLevel { get; set; }
+    public string? Language { get; set; }
 }
 ```
+
+**구현 서비스**:
+- `BasicAiEnhancementService`: ITextCompletionService 기반 (Phase 1 구현)
 
 ### IChunkingStrategy
 
+청킹 전략 인터페이스입니다.
+
 ```csharp
-namespace WebFlux.Core.Interfaces
+public interface IChunkingStrategy
 {
-    /// <summary>
-    /// 청킹 전략 인터페이스
-    /// RAG 최적화를 위한 다양한 청킹 알고리즘 지원
-    /// </summary>
-    public interface IChunkingStrategy
-    {
-        /// <summary>전략 이름</summary>
-        string StrategyName { get; }
-
-        /// <summary>전략 설명</summary>
-        string Description { get; }
-
-        /// <summary>권장 사용 사례</summary>
-        IEnumerable<string> RecommendedUseCases { get; }
-
-        /// <summary>이 전략이 주어진 콘텐츠에 적합한지 확인</summary>
-        bool IsApplicable(ParsedWebContent content, ChunkingOptions options);
-
-        /// <summary>
-        /// 콘텐츠를 청킹합니다.
-        /// </summary>
-        /// <param name="content">파싱된 콘텐츠</param>
-        /// <param name="options">청킹 옵션</param>
-        /// <param name="cancellationToken">취소 토큰</param>
-        /// <returns>청크 목록</returns>
-        Task<IEnumerable<WebContentChunk>> ChunkAsync(
-            ParsedWebContent content,
-            ChunkingOptions options,
-            CancellationToken cancellationToken = default);
-
-        /// <summary>
-        /// 청킹 품질을 평가합니다.
-        /// </summary>
-        /// <param name="chunks">생성된 청크</param>
-        /// <param name="originalContent">원본 콘텐츠</param>
-        /// <returns>품질 점수 (0.0 ~ 1.0)</returns>
-        double EvaluateQuality(IEnumerable<WebContentChunk> chunks, ParsedWebContent originalContent);
-
-        /// <summary>
-        /// 예상 청킹 시간을 추정합니다.
-        /// </summary>
-        TimeSpan EstimateProcessingTime(ParsedWebContent content, ChunkingOptions options);
-    }
+    string Name { get; }
+    string Description { get; }
 
     /// <summary>
-    /// 청킹 품질 메트릭
+    /// 콘텐츠를 청킹합니다.
     /// </summary>
-    public class ChunkingQualityMetrics
-    {
-        public double CompletionScore { get; set; } // 청크 완성도
-        public double ContextPreservationScore { get; set; } // 컨텍스트 보존
-        public double SemanticConsistencyScore { get; set; } // 의미론적 일관성
-        public double OptimalSizeScore { get; set; } // 최적 크기
-        public double OverallQuality => (CompletionScore + ContextPreservationScore +
-                                        SemanticConsistencyScore + OptimalSizeScore) / 4.0;
-    }
+    Task<IReadOnlyList<WebContentChunk>> ChunkAsync(
+        ExtractedContent content,
+        ChunkingOptions options,
+        CancellationToken cancellationToken = default);
+}
+
+public class WebContentChunk
+{
+    public string ChunkId { get; set; }
+    public int ChunkIndex { get; set; }
+    public string Content { get; set; }
+    public string SourceUrl { get; set; }
+    public int StartPosition { get; set; }
+    public int EndPosition { get; set; }
+    public Dictionary<string, object> AdditionalMetadata { get; set; }
+}
+
+public class ChunkingOptions
+{
+    public ChunkingStrategyType Strategy { get; set; } = ChunkingStrategyType.Paragraph;
+    public int MaxChunkSize { get; set; } = 1000;
+    public int MinChunkSize { get; set; } = 100;
+    public int ChunkOverlap { get; set; } = 50;
+}
+
+public enum ChunkingStrategyType
+{
+    FixedSize,
+    Paragraph,
+    Smart,          // Phase 2 계획
+    Semantic,       // Phase 2 계획
+    Auto
 }
 ```
 
-## 🏭 팩토리 인터페이스
+**구현 전략** (Phase 1):
+- `ParagraphChunkingStrategy`: 단락 경계 기준
+- `FixedSizeChunkingStrategy`: 고정 크기
 
-### ICrawlerFactory
+### IEventPublisher
+
+이벤트 발행 및 구독 시스템입니다.
 
 ```csharp
-namespace WebFlux.Core.Interfaces
+public interface IEventPublisher
 {
     /// <summary>
-    /// 크롤러 팩토리 인터페이스
-    /// 크롤링 전략 선택 및 생성
+    /// 이벤트를 발행합니다.
     /// </summary>
-    public interface ICrawlerFactory
-    {
-        /// <summary>
-        /// 지원하는 모든 크롤링 전략을 반환합니다.
-        /// </summary>
-        IEnumerable<string> GetAvailableStrategies();
+    Task PublishAsync<TEvent>(TEvent @event, CancellationToken cancellationToken = default)
+        where TEvent : ProcessingEvent;
 
-        /// <summary>
-        /// 특정 전략의 크롤러를 생성합니다.
-        /// </summary>
-        ICrawler CreateCrawler(string strategyName);
+    /// <summary>
+    /// 이벤트를 구독합니다.
+    /// </summary>
+    void Subscribe<TEvent>(Func<TEvent, Task> handler)
+        where TEvent : ProcessingEvent;
+}
 
-        /// <summary>
-        /// URL과 옵션에 가장 적합한 크롤러를 자동 선택합니다.
-        /// </summary>
-        ICrawler CreateOptimalCrawler(string baseUrl, CrawlOptions options);
+public abstract class ProcessingEvent
+{
+    public abstract string EventType { get; }
+    public string Message { get; set; }
+    public DateTimeOffset Timestamp { get; set; }
+}
 
-        /// <summary>
-        /// 전략별 추천 사용 사례를 반환합니다.
-        /// </summary>
-        Dictionary<string, IEnumerable<string>> GetStrategyRecommendations();
-    }
+public class ProcessingProgressEvent : ProcessingEvent
+{
+    public override string EventType => "ProcessingProgress";
+    public int ProcessedCount { get; set; }
+    public string CurrentStage { get; set; }
 }
 ```
 
-### IChunkingStrategyFactory
+**사용 예제**:
 
 ```csharp
-namespace WebFlux.Core.Interfaces
+eventPublisher.Subscribe<ProcessingEvent>(evt =>
 {
-    /// <summary>
-    /// 청킹 전략 팩토리 인터페이스
-    /// 청킹 전략 선택 및 생성
-    /// </summary>
-    public interface IChunkingStrategyFactory
+    if (evt.EventType == "ProcessingProgress")
     {
-        /// <summary>
-        /// 지원하는 모든 청킹 전략을 반환합니다.
-        /// </summary>
-        IEnumerable<string> GetAvailableStrategies();
-
-        /// <summary>
-        /// 특정 전략의 청킹기를 생성합니다.
-        /// </summary>
-        IChunkingStrategy CreateStrategy(string strategyName);
-
-        /// <summary>
-        /// 콘텐츠와 옵션에 가장 적합한 전략을 자동 선택합니다 (Auto 전략).
-        /// </summary>
-        IChunkingStrategy CreateOptimalStrategy(ParsedWebContent content, ChunkingOptions options);
-
-        /// <summary>
-        /// 전략별 성능 특성을 반환합니다.
-        /// </summary>
-        Dictionary<string, StrategyCharacteristics> GetStrategyCharacteristics();
+        var progressEvt = evt as ProcessingProgressEvent;
+        Console.WriteLine($"→ {progressEvt.CurrentStage}: {progressEvt.ProcessedCount} 처리됨");
     }
-
-    /// <summary>
-    /// 전략 특성 정보
-    /// </summary>
-    public class StrategyCharacteristics
-    {
-        public string Name { get; set; } = string.Empty;
-        public string Description { get; set; } = string.Empty;
-        public QualityLevel QualityLevel { get; set; }
-        public MemoryUsage MemoryUsage { get; set; }
-        public ComputationCost ComputationCost { get; set; }
-        public IEnumerable<string> OptimalContentTypes { get; set; } = new List<string>();
-        public IEnumerable<string> RecommendedUseCases { get; set; } = new List<string>();
-    }
-
-    public enum QualityLevel { Low, Medium, High, VeryHigh }
-    public enum MemoryUsage { Low, Medium, High }
-    public enum ComputationCost { Low, Medium, High, VeryHigh }
-}
-```
-
-## 🧪 Mock 서비스 구현
-
-### MockTextCompletionService
-
-```csharp
-namespace WebFlux.Testing.Mocks
-{
-    /// <summary>
-    /// 테스트용 Mock LLM 서비스
-    /// 실제 AI 서비스 없이 테스트 가능
-    /// </summary>
-    public class MockTextCompletionService : ITextCompletionService
-    {
-        private readonly Dictionary<string, string> _responses;
-        private readonly Random _random = new();
-
-        public MockTextCompletionService()
-        {
-            _responses = new Dictionary<string, string>
-            {
-                ["summarize"] = "This is a test summary of the web content.",
-                ["chunk boundary"] = "Split at paragraph breaks and section headers.",
-                ["analyze structure"] = "The content has a hierarchical structure with clear sections.",
-                ["extract keywords"] = "web, content, processing, RAG, chunking, extraction"
-            };
-        }
-
-        public async Task<string> CompleteAsync(
-            string prompt,
-            TextCompletionOptions? options = null,
-            CancellationToken cancellationToken = default)
-        {
-            // 간단한 지연 시뮬레이션
-            await Task.Delay(_random.Next(100, 500), cancellationToken);
-
-            // 키워드 기반 응답 매칭
-            foreach (var kvp in _responses)
-            {
-                if (prompt.ToLower().Contains(kvp.Key))
-                    return kvp.Value;
-            }
-
-            return "Mock LLM response for testing purposes.";
-        }
-
-        public async IAsyncEnumerable<string> CompleteStreamAsync(
-            string prompt,
-            TextCompletionOptions? options = null,
-            [EnumeratorCancellation] CancellationToken cancellationToken = default)
-        {
-            var response = await CompleteAsync(prompt, options, cancellationToken);
-            var words = response.Split(' ');
-
-            foreach (var word in words)
-            {
-                await Task.Delay(50, cancellationToken);
-                yield return word + " ";
-            }
-        }
-
-        public Task<bool> IsAvailableAsync() => Task.FromResult(true);
-
-        public Task<IEnumerable<string>> GetAvailableModelsAsync() =>
-            Task.FromResult<IEnumerable<string>>(new[] { "mock-gpt-4", "mock-claude-3" });
-    }
-}
-```
-
-## 📋 사용 예제
-
-### 기본 사용법
-
-```csharp
-// DI 컨테이너 설정
-var services = new ServiceCollection();
-
-// 필수 서비스 등록 (소비 애플리케이션에서 구현)
-services.AddScoped<ITextCompletionService, OpenAiTextCompletionService>();
-services.AddScoped<IImageToTextService, OpenAiImageToTextService>();
-
-// WebFlux 서비스 등록
-services.AddWebFlux();
-
-var provider = services.BuildServiceProvider();
-var processor = provider.GetRequiredService<IWebContentProcessor>();
-
-// 스트리밍 처리
-await foreach (var result in processor.ProcessWithProgressAsync("https://docs.example.com"))
-{
-    if (result.IsSuccess && result.Result != null)
-    {
-        foreach (var chunk in result.Result)
-        {
-            Console.WriteLine($"청크 {chunk.ChunkIndex}: {chunk.Content.Length}자");
-        }
-    }
-}
-```
-
-### 고급 사용법 (단계별 제어)
-
-```csharp
-// 1단계: 크롤링
-var crawlResults = await processor.CrawlAsync("https://docs.example.com", new CrawlOptions
-{
-    MaxDepth = 3,
-    Strategy = "Intelligent"
+    return Task.CompletedTask;
 });
-
-// 2단계: 콘텐츠 추출
-foreach (var crawlResult in crawlResults)
-{
-    var rawContent = await processor.ExtractAsync(crawlResult.Url);
-    var parsedContent = await processor.ParseAsync(rawContent);
-
-    // 3단계: 청킹
-    var chunks = await processor.ChunkAsync(parsedContent, new ChunkingOptions
-    {
-        Strategy = "Auto",
-        MaxChunkSize = 512
-    });
-}
 ```
 
-## ✨ 재구성 (Reconstruct) 인터페이스 (v0.2 신규)
+## 통합 사용 예제
 
-### IContentAnalyzer
-
-```csharp
-namespace WebFlux.Core.Interfaces
-{
-    /// <summary>
-    /// 콘텐츠 분석 인터페이스
-    /// Stage 2: 원본 콘텐츠를 분석하여 구조화하고 품질 평가
-    /// </summary>
-    public interface IContentAnalyzer
-    {
-        /// <summary>분석기 이름</summary>
-        string Name { get; }
-
-        /// <summary>분석기 설명</summary>
-        string Description { get; }
-
-        /// <summary>
-        /// 원본 콘텐츠를 분석합니다.
-        /// </summary>
-        /// <param name="rawContent">원본 콘텐츠</param>
-        /// <param name="options">분석 옵션</param>
-        /// <param name="cancellationToken">취소 토큰</param>
-        /// <returns>분석된 콘텐츠</returns>
-        Task<AnalyzedContent> AnalyzeAsync(
-            RawContent rawContent,
-            AnalysisOptions? options = null,
-            CancellationToken cancellationToken = default);
-
-        /// <summary>
-        /// 스트리밍 방식으로 여러 콘텐츠를 분석합니다.
-        /// </summary>
-        IAsyncEnumerable<AnalyzedContent> AnalyzeStreamAsync(
-            IAsyncEnumerable<RawContent> rawContents,
-            AnalysisOptions? options = null,
-            CancellationToken cancellationToken = default);
-
-        /// <summary>
-        /// 분석된 콘텐츠의 품질을 평가합니다.
-        /// </summary>
-        double EvaluateQuality(AnalyzedContent analyzedContent);
-    }
-}
-```
-
-### IContentReconstructor
-
-```csharp
-namespace WebFlux.Core.Interfaces
-{
-    /// <summary>
-    /// 콘텐츠 재구성 인터페이스
-    /// Stage 3: 분석된 콘텐츠를 전략에 따라 재구성
-    /// </summary>
-    public interface IContentReconstructor
-    {
-        /// <summary>재구성기 이름</summary>
-        string Name { get; }
-
-        /// <summary>재구성기 설명</summary>
-        string Description { get; }
-
-        /// <summary>
-        /// 콘텐츠를 재구성합니다.
-        /// </summary>
-        /// <param name="analyzedContent">분석된 콘텐츠</param>
-        /// <param name="options">재구성 옵션</param>
-        /// <param name="cancellationToken">취소 토큰</param>
-        /// <returns>재구성된 콘텐츠</returns>
-        Task<ReconstructedContent> ReconstructAsync(
-            AnalyzedContent analyzedContent,
-            ReconstructOptions? options = null,
-            CancellationToken cancellationToken = default);
-
-        /// <summary>
-        /// 스트리밍 방식으로 여러 콘텐츠를 재구성합니다.
-        /// </summary>
-        IAsyncEnumerable<ReconstructedContent> ReconstructStreamAsync(
-            IAsyncEnumerable<AnalyzedContent> analyzedContents,
-            ReconstructOptions? options = null,
-            CancellationToken cancellationToken = default);
-
-        /// <summary>
-        /// 재구성된 콘텐츠의 품질을 평가합니다.
-        /// </summary>
-        double EvaluateQuality(ReconstructedContent reconstructedContent);
-    }
-}
-```
-
-### IReconstructStrategy
-
-```csharp
-namespace WebFlux.Core.Interfaces
-{
-    /// <summary>
-    /// 재구성 전략 인터페이스
-    /// 다양한 재구성 알고리즘 지원: None, Summarize, Expand, Rewrite, Enrich
-    /// </summary>
-    public interface IReconstructStrategy
-    {
-        /// <summary>전략 이름</summary>
-        string Name { get; }
-
-        /// <summary>전략 설명</summary>
-        string Description { get; }
-
-        /// <summary>권장 사용 사례</summary>
-        IEnumerable<string> RecommendedUseCases { get; }
-
-        /// <summary>
-        /// 이 전략이 주어진 콘텐츠와 옵션에 적합한지 확인
-        /// </summary>
-        bool IsApplicable(AnalyzedContent content, ReconstructOptions options);
-
-        /// <summary>
-        /// 재구성 전략을 적용합니다.
-        /// </summary>
-        /// <param name="content">분석된 콘텐츠</param>
-        /// <param name="options">재구성 옵션</param>
-        /// <param name="cancellationToken">취소 토큰</param>
-        /// <returns>재구성된 콘텐츠</returns>
-        Task<ReconstructedContent> ApplyAsync(
-            AnalyzedContent content,
-            ReconstructOptions options,
-            CancellationToken cancellationToken = default);
-
-        /// <summary>
-        /// 예상 처리 시간을 추정합니다.
-        /// </summary>
-        TimeSpan EstimateProcessingTime(AnalyzedContent content, ReconstructOptions options);
-    }
-}
-```
-
-### IReconstructStrategyFactory
-
-```csharp
-namespace WebFlux.Core.Interfaces
-{
-    /// <summary>
-    /// 재구성 전략 팩토리 인터페이스
-    /// 전략 선택 및 생성, Auto 전략 지원
-    /// </summary>
-    public interface IReconstructStrategyFactory
-    {
-        /// <summary>
-        /// 지원하는 모든 재구성 전략을 반환합니다.
-        /// </summary>
-        IEnumerable<string> GetAvailableStrategies();
-
-        /// <summary>
-        /// 특정 전략의 재구성기를 생성합니다.
-        /// </summary>
-        /// <param name="strategyName">전략 이름 (None, Summarize, Expand, Rewrite, Enrich)</param>
-        IReconstructStrategy CreateStrategy(string strategyName);
-
-        /// <summary>
-        /// 콘텐츠와 옵션에 가장 적합한 전략을 자동 선택합니다 (Auto).
-        /// LLM 서비스 가용성을 고려하여 최적 전략을 선택합니다.
-        /// </summary>
-        IReconstructStrategy CreateOptimalStrategy(AnalyzedContent content, ReconstructOptions options);
-
-        /// <summary>
-        /// 전략별 특성 정보를 반환합니다.
-        /// </summary>
-        Dictionary<string, ReconstructStrategyCharacteristics> GetStrategyCharacteristics();
-    }
-
-    /// <summary>
-    /// 재구성 전략 특성 정보
-    /// </summary>
-    public class ReconstructStrategyCharacteristics
-    {
-        /// <summary>전략 이름</summary>
-        public string Name { get; set; } = string.Empty;
-
-        /// <summary>전략 설명</summary>
-        public string Description { get; set; } = string.Empty;
-
-        /// <summary>품질 수준</summary>
-        public QualityLevel QualityLevel { get; set; }
-
-        /// <summary>메모리 사용량</summary>
-        public MemoryUsage MemoryUsage { get; set; }
-
-        /// <summary>연산 비용</summary>
-        public ComputationCost ComputationCost { get; set; }
-
-        /// <summary>LLM 필요 여부</summary>
-        public bool RequiresLLM { get; set; }
-
-        /// <summary>권장 사용 사례</summary>
-        public IEnumerable<string> RecommendedUseCases { get; set; } = new List<string>();
-    }
-}
-```
-
-## 📘 Optional 서비스 사용 가이드
-
-### 서비스 등록 (Optional)
+### 기본 설정 (SimpleOpenAITest 패턴)
 
 ```csharp
 using Microsoft.Extensions.DependencyInjection;
-using WebFlux.Core.Interfaces;
+using WebFlux.Extensions;
 
-// LLM 서비스 등록 (Optional)
-services.AddScoped<ITextCompletionService, YourLLMService>();
-
-// 이미지-텍스트 서비스 등록 (Optional)
-services.AddScoped<IImageToTextService, YourImageService>();
-
-// 임베딩 서비스 등록 (Optional)
-services.AddScoped<IEmbeddingService, YourEmbeddingService>();
-```
-
-### 서비스 없이 사용하기
-
-```csharp
-// ITextCompletionService 등록 안함
 var services = new ServiceCollection();
-services.AddWebFlux();  // 기본 서비스만 등록
 
-var factory = services.BuildServiceProvider()
-    .GetRequiredService<IReconstructStrategyFactory>();
-
-// Auto 전략 → 자동으로 None 선택
-var options = new ReconstructOptions { Strategy = "Auto" };
-var strategy = factory.CreateOptimalStrategy(content, options);
-
-// LOG INFO: "ITextCompletionService not available. Using 'None' strategy."
-// 원본 콘텐츠 유지, 품질 저하 없음
-```
-
-### 서비스 가용성 경고
-
-**Factory 생성 시**:
-```csharp
-var factory = new ReconstructStrategyFactory(
-    llmService: null,  // 서비스 미등록
-    logger
-);
-// LOG INFO: "ITextCompletionService not registered.
-//            LLM-based strategies will not be available.
-//            Only 'None' strategy will work without quality degradation."
-```
-
-**LLM 전략 선택 시**:
-```csharp
-var strategy = factory.CreateStrategy("Summarize");
-// LOG WARNING: "Strategy 'Summarize' requires ITextCompletionService,
-//               but it is not registered. This strategy will fail if used.
-//               Consider registering ITextCompletionService or using 'None' strategy."
-```
-
-**잘못된 사용 시 명확한 예외**:
-```csharp
-try
+// 로깅 설정
+services.AddLogging(builder =>
 {
-    var result = await strategy.ApplyAsync(content, options);
-}
-catch (InvalidOperationException ex)
+    builder.AddSimpleConsole(options =>
+    {
+        options.SingleLine = true;
+        options.IncludeScopes = false;
+        options.TimestampFormat = "";
+    });
+    builder.SetMinimumLevel(LogLevel.Information);
+});
+
+// WebFlux SDK 등록
+services.AddWebFlux(config =>
 {
-    // "ITextCompletionService is required for Summarize strategy.
-    //  Please register ITextCompletionService in your DI container,
-    //  or use ReconstructOptions.Strategy = \"None\"."
+    config.Crawling.Strategy = "Dynamic";
+    config.Crawling.DefaultTimeoutSeconds = 30;
+    config.Crawling.DefaultDelayMs = 500;
+
+    config.AiEnhancement.Enabled = true;
+    config.AiEnhancement.EnableSummary = true;
+    config.AiEnhancement.EnableMetadata = true;
+    config.AiEnhancement.EnableParallelProcessing = true;
+
+    config.Chunking.DefaultStrategy = "Paragraph";
+    config.Chunking.MaxChunkSize = 1000;
+    config.Chunking.MinChunkSize = 100;
+});
+
+// AI 서비스 구현체 등록 (소비자가 제공)
+services.AddSingleton<ITextCompletionService>(sp =>
+    new OpenAiTextCompletionService(model, apiKey));
+
+// AI 증강 서비스 등록
+services.AddWebFluxAIEnhancement();
+
+var serviceProvider = services.BuildServiceProvider();
+```
+
+### URL 처리
+
+```csharp
+var processor = serviceProvider.GetRequiredService<IWebContentProcessor>();
+var eventPublisher = serviceProvider.GetRequiredService<IEventPublisher>();
+
+// 이벤트 구독
+eventPublisher.Subscribe<ProcessingEvent>(evt =>
+{
+    if (evt.EventType == "ProcessingProgress")
+    {
+        var progressEvt = evt as ProcessingProgressEvent;
+        Console.WriteLine($"  → {progressEvt.CurrentStage}: {progressEvt.ProcessedCount} 처리됨");
+    }
+    return Task.CompletedTask;
+});
+
+// 청킹 옵션 설정
+var chunkingOptions = new ChunkingOptions
+{
+    Strategy = ChunkingStrategyType.Paragraph,
+    MaxChunkSize = 1000,
+    MinChunkSize = 100,
+    ChunkOverlap = 50
+};
+
+// URL 처리
+var chunks = await processor.ProcessUrlAsync(url, chunkingOptions);
+
+// 결과 출력
+Console.WriteLine($"✓ Completed: {chunks.Count} chunks generated");
+
+// 메타데이터 확인
+if (chunks.Count > 0)
+{
+    var firstChunk = chunks[0];
+
+    var aiSummary = firstChunk.AdditionalMetadata.ContainsKey("ai_summary")
+        ? firstChunk.AdditionalMetadata["ai_summary"]?.ToString()
+        : null;
+
+    if (!string.IsNullOrEmpty(aiSummary))
+    {
+        Console.WriteLine($"→ Summary: {aiSummary}");
+    }
 }
 ```
 
-### 전략별 서비스 요구사항
+### AI 증강 없이 사용
 
-| 전략 | ITextCompletionService | IImageToTextService | IEmbeddingService |
-|------|----------------------|-------------------|------------------|
-| **None** | ❌ 불필요 | ❌ 불필요 | ❌ 불필요 |
-| **Summarize** | ✅ 필수 | ❌ 불필요 | ❌ 불필요 |
-| **Expand** | ✅ 필수 | ❌ 불필요 | ❌ 불필요 |
-| **Rewrite** | ✅ 필수 | ❌ 불필요 | ❌ 불필요 |
-| **Enrich** | ✅ 필수 | ❌ 불필요 | ❌ 불필요 |
+```csharp
+// ITextCompletionService 등록 생략
+services.AddWebFlux(config =>
+{
+    config.Crawling.Strategy = "Dynamic";
+    config.AiEnhancement.Enabled = false;  // AI 증강 비활성화
+    config.Chunking.DefaultStrategy = "Paragraph";
+});
 
-**청킹 전략**:
-- **Semantic**: `IEmbeddingService` 필수
-- **나머지 전략**: Optional 서비스 불필요
+// AI 증강 서비스 등록 안함
+// services.AddWebFluxAIEnhancement(); // 호출하지 않음
 
----
+var serviceProvider = services.BuildServiceProvider();
+var processor = serviceProvider.GetRequiredService<IWebContentProcessor>();
 
-이 인터페이스 설계는 확장성과 테스트 용이성을 고려하여 작성되었으며, Optional 서비스 누락 시에도 명확한 가이드와 Fallback을 제공하여 실제 구현 시 단계적으로 발전시킬 수 있는 구조로 되어 있습니다.
+// 파이프라인 실행: Crawling → Extraction → Chunking
+var chunks = await processor.ProcessUrlAsync(url, chunkingOptions);
+```
+
+## 향후 계획 인터페이스
+
+다음 인터페이스들은 향후 Phase에서 구현 예정입니다:
+
+### Phase 3: Multimodal
+
+**IImageToTextService** - 이미지-텍스트 변환
+```csharp
+public interface IImageToTextService
+{
+    Task<ImageToTextResult> ExtractTextFromWebImageAsync(
+        string imageUrl,
+        ImageToTextOptions? options = null,
+        CancellationToken cancellationToken = default);
+}
+```
+
+### Phase 2+: Advanced Features
+
+**IEmbeddingService** - 텍스트 임베딩 (Semantic 청킹용)
+```csharp
+public interface IEmbeddingService
+{
+    Task<float[]> GenerateAsync(
+        string text,
+        EmbeddingOptions? options = null,
+        CancellationToken cancellationToken = default);
+
+    int GetDimensions();
+}
+```
+
+**ICacheManager** - 캐싱 시스템
+**IPerformanceOptimizer** - 성능 최적화
+**IQualityAnalyzer** - 품질 분석
+
+## 참고 문서
+
+- [PIPELINE_DESIGN.md](./PIPELINE_DESIGN.md) - 파이프라인 설계
+- [ARCHITECTURE.md](./ARCHITECTURE.md) - 시스템 아키텍처
+- [CHUNKING_STRATEGIES.md](./CHUNKING_STRATEGIES.md) - 청킹 전략
+- [TUTORIAL.md](./TUTORIAL.md) - 사용 가이드

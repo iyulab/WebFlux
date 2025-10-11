@@ -1,23 +1,31 @@
 using System;
 using System.IO;
 using System.Threading.Tasks;
-using System.Text.Json;
-using System.Net.Http;
-using System.Text.RegularExpressions;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using WebFlux.Core.Interfaces;
+using WebFlux.Core.Models;
+using WebFlux.Core.Options;
+using WebFlux.Extensions;
+using WebFlux.Services;
+using WebFlux.SimpleTest.Services;
+using ProcessingResult = WebFlux.SimpleTest.Models.ProcessingResult;
 
 namespace WebFlux.SimpleTest;
 
 /// <summary>
-/// OpenAI API와 실제 웹 사이트에 대한 간단한 통합 테스트
-/// 복잡한 인터페이스 구현 없이 핵심 기능 검증
+/// WebFlux SDK의 통합 파이프라인을 사용한 테스트 (Phase 1: Dynamic Rendering + AI Enhancement)
+/// target-urls.txt 파일에서 URL 목록을 로드하여 순차 처리
+/// Playwright 크롤러와 AI 증강 서비스를 활용한 고급 웹 콘텐츠 처리
 /// </summary>
 public class SimpleOpenAITest
 {
-    private static readonly HttpClient httpClient = new();
 
     public static async Task Main(string[] args)
     {
-        Console.WriteLine("🚀 WebFlux SDK - OpenAI API 실제 테스트 시작");
+        var sessionStart = DateTime.UtcNow;
+        Console.WriteLine("WebFlux SDK - Phase 1 Integration Test");
+        Console.WriteLine("Dynamic Rendering (Playwright) + AI Enhancement\n");
 
         try
         {
@@ -29,34 +37,134 @@ public class SimpleOpenAITest
 
             if (string.IsNullOrEmpty(apiKey))
             {
-                throw new InvalidOperationException("OPENAI_API_KEY가 설정되지 않았습니다.");
+                throw new InvalidOperationException("OPENAI_API_KEY not found");
             }
 
-            Console.WriteLine($"✅ 환경 설정 로드 완료 - Model: {model}");
+            Console.WriteLine($"→ Model: {model}");
 
-            // HTTP 클라이언트 설정
-            httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
-            httpClient.DefaultRequestHeaders.Add("User-Agent", "WebFlux-SDK/1.0");
-            httpClient.Timeout = TimeSpan.FromMinutes(2);
+            // 출력 디렉토리 설정
+            var outputBaseDir = Path.Combine(AppContext.BaseDirectory, "output");
+            var outputManager = new OutputManager(outputBaseDir);
+
+            // DI 컨테이너 설정 - WebFlux SDK 등록
+            var services = new ServiceCollection();
+
+            // 콘솔 로깅 추가 (간결한 포맷)
+            services.AddLogging(builder =>
+            {
+                builder.AddSimpleConsole(options =>
+                {
+                    options.SingleLine = true;
+                    options.IncludeScopes = false;
+                    options.TimestampFormat = "";
+                });
+                builder.SetMinimumLevel(LogLevel.Information);
+
+                // Playwright 크롤러는 Warning 레벨만 출력
+                builder.AddFilter("WebFlux.Services.Crawlers.PlaywrightCrawler", LogLevel.Warning);
+
+                // AI Enhancement는 Warning 레벨만 출력
+                builder.AddFilter("WebFlux.Services.AiEnhancement", LogLevel.Warning);
+            });
+
+            // WebFlux SDK 등록 (Phase 1: Dynamic Rendering + AI Enhancement)
+            services.AddWebFlux(config =>
+            {
+                config.Crawling.Strategy = "Dynamic";
+                config.Crawling.DefaultTimeoutSeconds = 30;
+                config.Crawling.DefaultDelayMs = 500;
+
+                config.AiEnhancement.Enabled = true;
+                config.AiEnhancement.EnableSummary = true;
+                config.AiEnhancement.EnableMetadata = true;
+                config.AiEnhancement.EnableRewrite = false;
+                config.AiEnhancement.EnableParallelProcessing = true;
+
+                config.Chunking.DefaultStrategy = "Paragraph";
+                config.Chunking.MaxChunkSize = 1000;
+                config.Chunking.MinChunkSize = 100;
+            });
+
+            // AI 서비스 구현체 등록 (OpenAI)
+            services.AddSingleton<ITextCompletionService>(sp => new OpenAiTextCompletionService(model, apiKey));
+
+            // AI 증강 서비스 등록
+            services.AddWebFluxAIEnhancement();
+
+            // 서비스 프로바이더 빌드
+            var serviceProvider = services.BuildServiceProvider();
+
+            // WebFlux 처리기 가져오기
+            var processor = serviceProvider.GetRequiredService<IWebContentProcessor>();
+            var llmService = serviceProvider.GetRequiredService<ITextCompletionService>();
+            var eventPublisher = serviceProvider.GetRequiredService<IEventPublisher>();
+
+            // 실시간 진행 상황 이벤트 구독
+            SubscribeToProgressEvents(eventPublisher);
+
+            // 서비스 상태 확인
+            var healthInfo = llmService.GetHealthInfo();
+            Console.WriteLine($"→ AI Service: {healthInfo.Status} ({healthInfo.Metadata["Provider"]})\n");
 
             // 테스트 URL 로드
             var testUrls = await LoadTestUrls();
-            Console.WriteLine($"📋 테스트 URL {testUrls.Count}개 로드됨");
+            Console.WriteLine($"Processing {testUrls.Count} URL(s)\n");
 
-            // 각 URL에 대해 테스트 수행
-            for (int i = 0; i < Math.Min(testUrls.Count, 2); i++) // 처음 2개만 테스트
+            // 모든 URL을 순회하면서 테스트하고 결과 수집
+            var results = new List<ProcessingResult>();
+            int urlIndex = 1;
+
+            foreach (var url in testUrls)
             {
-                var url = testUrls[i];
-                Console.WriteLine($"\n🔗 테스트 {i + 1}: {url}");
-                await TestWebsiteProcessing(url, apiKey, model);
+                var urlId = $"url-{urlIndex:D3}";
+                Console.WriteLine($"[{urlId}] {url}");
+
+                try
+                {
+                    var result = await TestWebsiteProcessing(url, urlId, processor);
+                    results.Add(result);
+                    await outputManager.SaveProcessingResultAsync(result);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"  ✗ Failed: {ex.Message}");
+
+                    var errorResult = new ProcessingResult
+                    {
+                        Url = url,
+                        UrlId = urlId,
+                        StartTime = DateTime.UtcNow,
+                        EndTime = DateTime.UtcNow,
+                        OriginalHtml = "",
+                        ExtractedText = "",
+                        TruncatedText = "",
+                        ErrorMessage = ex.ToString()
+                    };
+                    results.Add(errorResult);
+                    await outputManager.SaveProcessingResultAsync(errorResult);
+                }
+
+                Console.WriteLine();
+                urlIndex++;
             }
 
-            Console.WriteLine("\n🎉 모든 테스트 완료!");
+            var sessionEnd = DateTime.UtcNow;
+
+            // 세션 전체 요약 저장
+            await outputManager.SaveSessionSummaryAsync(results, model, sessionStart, sessionEnd);
+
+            // 콘솔 결과 요약
+            var successCount = results.Count(r => r.IsSuccess);
+            var failureCount = results.Count - successCount;
+
+            Console.WriteLine("Summary");
+            Console.WriteLine($"  Success: {successCount}/{testUrls.Count} ({(testUrls.Count > 0 ? (double)successCount / testUrls.Count * 100 : 0):F0}%)");
+            Console.WriteLine($"  Duration: {(sessionEnd - sessionStart).TotalSeconds:F1}s");
+            Console.WriteLine($"  Output: {outputManager.GetSessionDirectory()}");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ 테스트 실패: {ex.Message}");
-            Console.WriteLine($"상세 오류: {ex}");
+            Console.WriteLine($"✗ Test failed: {ex.Message}");
             Environment.Exit(1);
         }
     }
@@ -96,183 +204,134 @@ public class SimpleOpenAITest
                     }
                 }
             }
-            Console.WriteLine($"✅ 환경 변수 파일 로드: {envPath}");
-        }
-        else
-        {
-            Console.WriteLine($"⚠️ 환경 변수 파일을 찾을 수 없음: .env.local");
-            Console.WriteLine($"현재 디렉토리: {Directory.GetCurrentDirectory()}");
         }
     }
 
     private static async Task<List<string>> LoadTestUrls()
     {
-        var urlsPath = Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "..", "..", "test", "target-urls.txt");
-
-        // 상위 디렉토리에서 target-urls.txt 파일 찾기
-        for (int i = 0; i < 5; i++)
+        var possiblePaths = new[]
         {
-            if (File.Exists(urlsPath))
+            Path.Combine(Directory.GetCurrentDirectory(), "target-urls.txt"),
+            Path.Combine(AppContext.BaseDirectory, "target-urls.txt"),
+            Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "..", "target-urls.txt"),
+        };
+
+        string? urlsPath = null;
+        foreach (var path in possiblePaths)
+        {
+            var normalizedPath = Path.GetFullPath(path);
+            if (File.Exists(normalizedPath))
             {
+                urlsPath = normalizedPath;
                 break;
             }
-            urlsPath = Path.Combine(Path.GetDirectoryName(urlsPath)!, "..", "target-urls.txt");
         }
 
-        if (File.Exists(urlsPath))
+        if (urlsPath != null)
         {
             var lines = await File.ReadAllLinesAsync(urlsPath);
-            return lines.Where(line => !string.IsNullOrWhiteSpace(line) && line.StartsWith("http"))
-                       .ToList();
-        }
-        else
-        {
-            Console.WriteLine($"⚠️ 테스트 URL 파일을 찾을 수 없음, 기본 URL 사용");
-            return new List<string>
+            var urls = lines
+                .Where(line => !string.IsNullOrWhiteSpace(line) && !line.TrimStart().StartsWith("#") && line.StartsWith("http"))
+                .ToList();
+
+            if (urls.Count > 0)
             {
-                "https://learn.microsoft.com/ko-kr/windows-server"
-            };
+                return urls;
+            }
         }
+
+        return new List<string> { "https://learn.microsoft.com/ko-kr/windows-server" };
     }
 
-    private static async Task TestWebsiteProcessing(string url, string apiKey, string model)
+    private static void SubscribeToProgressEvents(IEventPublisher eventPublisher)
+    {
+        eventPublisher.Subscribe<ProcessingEvent>(evt =>
+        {
+            if (evt.EventType == "ProcessingProgress")
+            {
+                var progressEvt = evt as ProcessingProgressEvent;
+                if (progressEvt != null)
+                {
+                    Console.WriteLine($"  → {progressEvt.CurrentStage}: {progressEvt.ProcessedCount} processed");
+                }
+            }
+
+            return Task.CompletedTask;
+        });
+    }
+
+    private static async Task<ProcessingResult> TestWebsiteProcessing(string url, string urlId, IWebContentProcessor processor)
     {
         var startTime = DateTime.UtcNow;
 
-        try
+        // 청킹 옵션 설정
+        var chunkingOptions = new ChunkingOptions
         {
-            Console.WriteLine($"  📥 웹 페이지 가져오는 중...");
+            Strategy = ChunkingStrategyType.Paragraph,
+            MaxChunkSize = 1000,
+            MinChunkSize = 100,
+            ChunkOverlap = 50
+        };
 
-            // 1단계: 웹 페이지 크롤링
-            var webContent = await httpClient.GetStringAsync(url);
-            Console.WriteLine($"  ✅ 페이지 로드 완료 ({webContent.Length:N0} 문자)");
+        // WebFlux 통합 파이프라인 실행: ProcessUrlAsync
+        // Crawling → Extraction → AI Enhancement → Chunking
+        var chunks = await processor.ProcessUrlAsync(url, chunkingOptions);
 
-            // 2단계: 콘텐츠 추출 (간단한 HTML 태그 제거)
-            var cleanContent = ExtractTextFromHtml(webContent);
-            var truncatedContent = cleanContent.Length > 3000
-                ? cleanContent.Substring(0, 3000) + "..."
-                : cleanContent;
+        var endTime = DateTime.UtcNow;
+        var processingTime = endTime - startTime;
 
-            Console.WriteLine($"  🧹 텍스트 추출 완료 ({cleanContent.Length:N0} 문자 → {truncatedContent.Length:N0} 문자)");
+        // 메타데이터에서 정보 추출
+        string? extractedText = null;
+        string? aiSummary = null;
+        string? originalHtml = null;
 
-            // 3단계: AI 요약 수행
-            var summary = await SummarizeWithOpenAI(truncatedContent, apiKey, model);
-            Console.WriteLine($"  🤖 AI 요약 완료 ({summary.Length:N0} 문자)");
+        if (chunks.Count > 0)
+        {
+            var firstChunk = chunks[0];
 
-            var processingTime = DateTime.UtcNow - startTime;
+            extractedText = firstChunk.AdditionalMetadata.ContainsKey("extracted_text")
+                ? firstChunk.AdditionalMetadata["extracted_text"]?.ToString()
+                : string.Join("\n\n", chunks.Select(c => c.Content));
 
-            // 결과 출력
-            Console.WriteLine($"  ⏱️ 처리 시간: {processingTime.TotalSeconds:F1}초");
-            Console.WriteLine($"  📝 요약 내용:");
-            Console.WriteLine($"     {summary.Replace("\n", " ").Substring(0, Math.Min(200, summary.Length))}...");
+            aiSummary = firstChunk.AdditionalMetadata.ContainsKey("ai_summary")
+                ? firstChunk.AdditionalMetadata["ai_summary"]?.ToString()
+                : null;
 
-            // 성능 평가
-            var processingRate = cleanContent.Length / processingTime.TotalMinutes;
-            Console.WriteLine($"  📊 처리 속도: {processingRate:F0} 문자/분");
+            originalHtml = firstChunk.AdditionalMetadata.ContainsKey("original_html")
+                ? firstChunk.AdditionalMetadata["original_html"]?.ToString()
+                : null;
         }
-        catch (Exception ex)
+
+        // 간결한 결과 출력
+        Console.WriteLine($"  ✓ Completed: {chunks.Count} chunks, {extractedText?.Length ?? 0:N0} chars in {processingTime.TotalSeconds:F1}s");
+
+        if (!string.IsNullOrEmpty(aiSummary))
         {
-            Console.WriteLine($"  ❌ 처리 실패: {ex.Message}");
-        }
-    }
-
-    private static string ExtractTextFromHtml(string html)
-    {
-        // 간단한 HTML 태그 제거
-        var text = html;
-
-        // Script, style 태그 내용 제거
-        text = Regex.Replace(text, @"<script[^>]*?>.*?</script>", "", RegexOptions.IgnoreCase | RegexOptions.Singleline);
-        text = Regex.Replace(text, @"<style[^>]*?>.*?</style>", "", RegexOptions.IgnoreCase | RegexOptions.Singleline);
-
-        // HTML 태그 제거
-        text = Regex.Replace(text, @"<[^>]+>", " ");
-
-        // HTML 엔티티 디코딩
-        text = System.Net.WebUtility.HtmlDecode(text);
-
-        // 공백 정규화
-        text = Regex.Replace(text, @"\s+", " ");
-
-        return text.Trim();
-    }
-
-    private static async Task<string> SummarizeWithOpenAI(string content, string apiKey, string model)
-    {
-        var prompt = $"다음 웹 페이지 내용을 한국어로 간결하게 요약해 주세요. 주요 내용과 키워드를 포함하여 200자 내외로 요약하세요:\n\n{content}";
-
-        object requestData;
-
-        if (model.Contains("gpt-5"))
-        {
-            // gpt-5 모델은 특별한 파라미터 요구사항이 있음
-            requestData = new
+            var summaryPreview = aiSummary.Replace("\n", " ");
+            if (summaryPreview.Length > 120)
             {
-                model = model,
-                messages = new[]
-                {
-                    new { role = "system", content = "당신은 웹 콘텐츠 요약 전문가입니다. 주어진 내용을 간결하고 정확하게 요약합니다." },
-                    new { role = "user", content = prompt }
-                },
-                max_completion_tokens = 300
-                // temperature는 기본값 1만 지원
-            };
-        }
-        else if (model.Contains("gpt-4o"))
-        {
-            requestData = new
-            {
-                model = model,
-                messages = new[]
-                {
-                    new { role = "system", content = "당신은 웹 콘텐츠 요약 전문가입니다. 주어진 내용을 간결하고 정확하게 요약합니다." },
-                    new { role = "user", content = prompt }
-                },
-                max_completion_tokens = 300,
-                temperature = 0.3
-            };
-        }
-        else
-        {
-            // 기존 모델들 (gpt-5-nano, gpt-4 등)
-            requestData = new
-            {
-                model = model,
-                messages = new[]
-                {
-                    new { role = "system", content = "당신은 웹 콘텐츠 요약 전문가입니다. 주어진 내용을 간결하고 정확하게 요약합니다." },
-                    new { role = "user", content = prompt }
-                },
-                max_tokens = 300,
-                temperature = 0.3
-            };
-        }
-
-        var json = JsonSerializer.Serialize(requestData);
-        var httpContent = new StringContent(json, System.Text.Encoding.UTF8, System.Net.Mime.MediaTypeNames.Application.Json);
-
-        var response = await httpClient.PostAsync("https://api.openai.com/v1/chat/completions", httpContent);
-
-        if (!response.IsSuccessStatusCode)
-        {
-            var errorContent = await response.Content.ReadAsStringAsync();
-            throw new HttpRequestException($"OpenAI API 오류: {response.StatusCode} - {errorContent}");
-        }
-
-        var responseJson = await response.Content.ReadAsStringAsync();
-        var responseData = JsonSerializer.Deserialize<JsonElement>(responseJson);
-
-        if (responseData.TryGetProperty("choices", out var choices) &&
-            choices.GetArrayLength() > 0)
-        {
-            var choice = choices[0];
-            if (choice.TryGetProperty("message", out var message) &&
-                message.TryGetProperty("content", out var responseContent))
-            {
-                return responseContent.GetString() ?? "요약을 생성할 수 없습니다.";
+                summaryPreview = summaryPreview.Substring(0, 120) + "...";
             }
+            Console.WriteLine($"  → Summary: {summaryPreview}");
         }
 
-        throw new InvalidOperationException("OpenAI API 응답 형식이 올바르지 않습니다.");
+        // ProcessingResult 생성 및 반환
+        var truncatedText = extractedText?.Length > 3000
+            ? extractedText.Substring(0, 3000) + "..."
+            : extractedText ?? "";
+
+        return new ProcessingResult
+        {
+            Url = url,
+            UrlId = urlId,
+            StartTime = startTime,
+            EndTime = endTime,
+            HttpStatusCode = 200,
+            OriginalHtml = originalHtml ?? "",
+            ExtractedText = extractedText ?? "",
+            TruncatedText = truncatedText,
+            Summary = aiSummary ?? ""
+        };
     }
+
 }

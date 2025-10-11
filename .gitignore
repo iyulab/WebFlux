@@ -364,10 +364,12 @@ FodyWeavers.xsd
 
 .env.local
 CLAUDE.local.md
+claudedocs/
 .playwright-mcp/
 
 # WebFlux Samples - CI/CD에서 제외
 samples/*/bin/
 samples/*/obj/
+samples/*/output/
 samples/**/appsettings.Development.json
 samples/**/launchSettings.json

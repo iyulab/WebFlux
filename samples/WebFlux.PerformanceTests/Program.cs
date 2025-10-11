@@ -31,7 +31,7 @@ class Program
         LoadEnvironmentVariables(".env.local");
 
         var openAiApiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
-        var openAiModel = Environment.GetEnvironmentVariable("OPENAI_MODEL") ?? "gpt-4o-mini";
+        var openAiModel = Environment.GetEnvironmentVariable("OPENAI_MODEL") ?? "gpt-5-nano";
 
         if (string.IsNullOrEmpty(openAiApiKey))
         {

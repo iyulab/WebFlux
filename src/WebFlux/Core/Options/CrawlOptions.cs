@@ -168,6 +168,28 @@ public class CrawlOptions
     /// 커스텀 헤더
     /// </summary>
     public IDictionary<string, string> CustomHeaders { get; set; } = new Dictionary<string, string>();
+
+    /// <summary>
+    /// 동적 렌더링 사용 여부 (Playwright 사용, 기본값: false)
+    /// JavaScript로 렌더링되는 SPA (React, Vue, Angular) 처리
+    /// </summary>
+    public bool UseDynamicRendering { get; set; } = false;
+
+    /// <summary>
+    /// 동적 렌더링 시 대기할 CSS 셀렉터
+    /// 특정 요소가 로드될 때까지 대기
+    /// </summary>
+    public string? WaitForSelector { get; set; }
+
+    /// <summary>
+    /// 자동 스크롤 활성화 (Lazy Loading 콘텐츠, 기본값: true)
+    /// </summary>
+    public bool EnableScrolling { get; set; } = true;
+
+    /// <summary>
+    /// 요청 타임아웃 (밀리초, 기본값: 30000)
+    /// </summary>
+    public int TimeoutMs { get; set; } = 30000;
 }
 
 /// <summary>
@@ -184,5 +206,7 @@ public enum CrawlStrategy
     /// <summary>우선순위 기반</summary>
     Priority,
     /// <summary>llms.txt 메타데이터 기반 지능형 크롤링</summary>
-    Intelligent
+    Intelligent,
+    /// <summary>Playwright 기반 동적 렌더링 크롤링 (SPA 지원)</summary>
+    Dynamic
 }

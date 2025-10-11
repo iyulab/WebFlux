@@ -48,7 +48,7 @@
     <PackageReference Include="System.Text.Json" Version="9.0.9" />
 
     <!-- HTML DOM 분석 (15개 메타데이터 표준 추출) -->
-    <PackageReference Include="HtmlAgilityPack" Version="1.12.3" />
+    <PackageReference Include="HtmlAgilityPack" Version="1.12.4" />
 
     <!-- 마크다운 문서 처리 -->
     <PackageReference Include="Markdig" Version="0.42.0" />
@@ -57,7 +57,7 @@
     <PackageReference Include="YamlDotNet" Version="16.3.0" />
 
     <!-- HTTP 재시도 및 회로차단기 -->
-    <PackageReference Include="Polly" Version="8.6.3" />
+    <PackageReference Include="Polly" Version="8.6.4" />
     <PackageReference Include="Polly.Extensions.Http" Version="3.0.0" />
   </ItemGroup>
 

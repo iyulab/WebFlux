@@ -7,9 +7,10 @@ using WebFlux.Configuration;
 using WebFlux.Core.Interfaces;
 using WebFlux.Core.Models;
 using WebFlux.Services;
+using WebFlux.Services.AiEnhancement;
 using WebFlux.Services.ChunkingStrategies;
-using WebFlux.Services.Crawlers;
 using WebFlux.Services.ContentExtractors;
+using WebFlux.Services.Crawlers;
 
 namespace WebFlux.Extensions;
 
@@ -141,11 +142,15 @@ public static class ServiceCollectionExtensions
         services.TryAddTransient<SitemapCrawler>();
         services.TryAddTransient<IntelligentCrawler>();
 
+        // PlaywrightCrawler 등록 추가 (Phase 1)
+        services.TryAddTransient<PlaywrightCrawler>();
+
         // 키드 서비스로 크롤러 등록
         services.AddKeyedTransient<ICrawler, BreadthFirstCrawler>("BreadthFirst");
         services.AddKeyedTransient<ICrawler, DepthFirstCrawler>("DepthFirst");
         services.AddKeyedTransient<ICrawler, SitemapCrawler>("Sitemap");
         services.AddKeyedTransient<ICrawler, IntelligentCrawler>("Intelligent");
+        services.AddKeyedTransient<ICrawler, PlaywrightCrawler>("Dynamic"); // Phase 1
 
         // 크롤러 팩토리 등록
         services.TryAddSingleton<ICrawlerFactory, CrawlerFactory>();
@@ -163,8 +168,16 @@ public static class ServiceCollectionExtensions
     /// <returns>서비스 컬렉션</returns>
     public static IServiceCollection AddWebFluxContentExtraction(this IServiceCollection services)
     {
-        // 콘텐츠 추출기들은 Interface Provider 패턴으로 소비자가 구현
-        // services.TryAddTransient<구현체>(); // 구현체는 소비자가 제공
+        // 기본 콘텐츠 추출기 등록 (BasicContentExtractor)
+        services.TryAddTransient<BasicContentExtractor>();
+
+        // 키드 서비스로 콘텐츠 추출기 등록 (모든 콘텐츠 타입에 BasicContentExtractor 사용)
+        services.AddKeyedTransient<IContentExtractor, BasicContentExtractor>("Html");
+        services.AddKeyedTransient<IContentExtractor, BasicContentExtractor>("Text");
+        services.AddKeyedTransient<IContentExtractor, BasicContentExtractor>("Json");
+        services.AddKeyedTransient<IContentExtractor, BasicContentExtractor>("Markdown");
+        services.AddKeyedTransient<IContentExtractor, BasicContentExtractor>("Xml");
+        services.AddKeyedTransient<IContentExtractor, BasicContentExtractor>("Default");
 
         // 콘텐츠 추출기 팩토리 등록
         services.TryAddSingleton<IContentExtractorFactory, ContentExtractorFactory>();
@@ -174,8 +187,6 @@ public static class ServiceCollectionExtensions
 
         // Phase 5C Week 2: 마크다운 구조 분석기 등록
         services.TryAddScoped<IMarkdownStructureAnalyzer, MarkdownStructureAnalyzer>();
-
-        // 메타데이터 추출 서비스는 소비자가 구현 (Interface Provider 패턴)
 
         return services;
     }
@@ -236,6 +247,9 @@ public static class ServiceCollectionExtensions
         services.TryAddScoped<IImageToTextService, TImageToText>();
         services.TryAddScoped<ITextEmbeddingService, TTextEmbedding>();
 
+        // Phase 1: AI 증강 서비스 자동 등록
+        services.AddWebFluxAIEnhancement();
+
         return services;
     }
 
@@ -253,6 +267,9 @@ public static class ServiceCollectionExtensions
     {
         services.TryAddScoped<ITextCompletionService, TTextCompletion>();
         services.TryAddScoped<IImageToTextService, TImageToText>();
+
+        // Phase 1: AI 증강 서비스 자동 등록
+        services.AddWebFluxAIEnhancement();
 
         return services;
     }
@@ -387,6 +404,21 @@ public static class ServiceCollectionExtensions
         // services.TryAddSingleton<IPerformanceMonitor, 구현체>();    // 성능 모니터링
         // services.TryAddSingleton<ITokenCountService, 구현체>();     // 토큰 계산
         // services.TryAddSingleton<ICacheService, 구현체>();          // 캐시 서비스
+
+        return services;
+    }
+
+    /// <summary>
+    /// AI 증강 서비스를 등록합니다. (Phase 1)
+    /// ITextCompletionService가 등록된 경우에만 BasicAiEnhancementService를 등록합니다.
+    /// </summary>
+    /// <param name="services">서비스 컬렉션</param>
+    /// <returns>서비스 컬렉션</returns>
+    public static IServiceCollection AddWebFluxAIEnhancement(this IServiceCollection services)
+    {
+        // BasicAiEnhancementService 등록 (Scoped - ITextCompletionService 의존성)
+        // ITextCompletionService가 등록되어 있어야 작동
+        services.TryAddScoped<IAiEnhancementService, BasicAiEnhancementService>();
 
         return services;
     }

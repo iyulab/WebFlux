@@ -40,6 +40,7 @@ public class ServiceFactory : IServiceFactory
             CrawlStrategy.DepthFirst => _serviceProvider.GetRequiredKeyedService<ICrawler>("DepthFirst"),
             CrawlStrategy.Intelligent => _serviceProvider.GetRequiredKeyedService<ICrawler>("Intelligent"),
             CrawlStrategy.Sitemap => _serviceProvider.GetRequiredKeyedService<ICrawler>("Sitemap"),
+            CrawlStrategy.Dynamic => _serviceProvider.GetRequiredKeyedService<ICrawler>("Dynamic"),
             _ => throw new ArgumentException($"Unknown crawl strategy: {strategy}")
         };
     }
@@ -60,5 +61,11 @@ public class ServiceFactory : IServiceFactory
     public IChunkingStrategy CreateChunkingStrategy(string strategyType)
     {
         return _serviceProvider.GetRequiredKeyedService<IChunkingStrategy>(strategyType);
+    }
+
+    public IAiEnhancementService? CreateAiEnhancementService()
+    {
+        // AI 증강 서비스는 선택적이므로 GetService 사용 (등록되지 않은 경우 null 반환)
+        return _serviceProvider.GetService<IAiEnhancementService>();
     }
 }

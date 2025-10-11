@@ -1,8 +1,8 @@
-# WebFlux SDK 아키텍처 설계
+# WebFlux SDK 아키텍처
 
-> RAG 최적화 웹 콘텐츠 처리를 위한 Clean Architecture 기반 SDK
+> RAG 최적화 웹 콘텐츠 처리를 위한 Clean Architecture 기반 SDK (Phase 1 구현)
 
-## 🏗️ 아키텍처 개요
+## 아키텍처 개요
 
 WebFlux는 **인터페이스 제공자(Interface Provider)** 패턴을 채택하여, 핵심 기능의 인터페이스를 정의하고 소비 애플리케이션이 구현체를 선택할 수 있도록 설계되었습니다.
 
@@ -13,7 +13,7 @@ WebFlux는 **인터페이스 제공자(Interface Provider)** 패턴을 채택하
 3. **개방-폐쇄 원칙**: 확장에는 열려있고 수정에는 닫혀있음
 4. **AI 공급자 중립**: 특정 AI 서비스에 종속되지 않음
 
-## 📦 레이어 구조
+## 레이어 구조
 
 ```
 ┌─────────────────────────────────────────┐
@@ -44,9 +44,9 @@ WebFlux는 **인터페이스 제공자(Interface Provider)** 패턴을 채택하
 └─────────────────────────────────────────┘
 ```
 
-## 🔌 핵심 인터페이스 정의
+## 핵심 인터페이스
 
-### 1. AI 서비스 인터페이스 (Consumer Implementation)
+### 1. AI 서비스 인터페이스 (소비자 구현)
 
 ```csharp
 namespace WebFlux.Core.Interfaces
@@ -61,91 +61,125 @@ namespace WebFlux.Core.Interfaces
             string prompt,
             TextCompletionOptions? options = null,
             CancellationToken cancellationToken = default);
-    }
 
-    /// <summary>
-    /// 이미지-텍스트 변환 서비스 인터페이스 (멀티모달 처리용)
-    /// GPT-4V, GPT-4o, LLaVA 등의 구현체 지원
-    /// </summary>
-    public interface IImageToTextService
-    {
-        Task<ImageToTextResult> ExtractTextFromWebImageAsync(
-            string imageUrl,
-            ImageToTextOptions? options = null,
+        IAsyncEnumerable<string> CompleteStreamAsync(
+            string prompt,
+            TextCompletionOptions? options = null,
             CancellationToken cancellationToken = default);
+
+        HealthInfo GetHealthInfo();
     }
 }
 ```
 
-### 2. 웹플럭스 핵심 인터페이스 (WebFlux Implementation)
+**구현 예제**:
+- `OpenAiTextCompletionService`: SimpleOpenAITest 예제 참조
+
+### 2. WebFlux 핵심 인터페이스 (WebFlux 구현)
 
 ```csharp
 namespace WebFlux.Core.Interfaces
 {
     /// <summary>
     /// 웹 콘텐츠 처리의 메인 인터페이스
-    /// 크롤링 → 추출 → 파싱 → 청킹의 전체 파이프라인 오케스트레이션
+    /// Crawling → Extraction → AI Enhancement → Chunking 파이프라인 오케스트레이션
     /// </summary>
     public interface IWebContentProcessor
     {
-        // 스트리밍 처리 (권장 - 메모리 효율적)
-        IAsyncEnumerable<ProcessingResult<IEnumerable<WebContentChunk>>> ProcessWithProgressAsync(
-            string baseUrl,
+        Task<IReadOnlyList<WebContentChunk>> ProcessUrlAsync(
+            string url,
+            ChunkingOptions? chunkingOptions = null,
+            CancellationToken cancellationToken = default);
+
+        Task<IReadOnlyDictionary<string, IReadOnlyList<WebContentChunk>>> ProcessUrlsBatchAsync(
+            IEnumerable<string> urls,
+            ChunkingOptions? chunkingOptions = null,
+            CancellationToken cancellationToken = default);
+
+        IAsyncEnumerable<WebContentChunk> ProcessWebsiteAsync(
+            string startUrl,
             CrawlOptions? crawlOptions = null,
             ChunkingOptions? chunkingOptions = null,
             CancellationToken cancellationToken = default);
 
-        // 단계별 처리
-        Task<IEnumerable<CrawlResult>> CrawlAsync(string baseUrl, CrawlOptions? options = null);
-        Task<RawWebContent> ExtractAsync(string url);
-        Task<ParsedWebContent> ParseAsync(RawWebContent rawContent);
-        Task<IEnumerable<WebContentChunk>> ChunkAsync(ParsedWebContent parsedContent, ChunkingOptions? options = null);
+        Task<IReadOnlyList<WebContentChunk>> ProcessHtmlAsync(
+            string htmlContent,
+            string sourceUrl,
+            ChunkingOptions? chunkingOptions = null,
+            CancellationToken cancellationToken = default);
     }
 
     /// <summary>
     /// 웹 크롤링 인터페이스
-    /// 다양한 크롤링 전략 지원 (BreadthFirst, DepthFirst, Sitemap, Intelligent)
+    /// Phase 1: PlaywrightCrawler (동적 렌더링)
     /// </summary>
-    public interface ICrawler
+    public interface ICrawler : IDisposable
     {
-        string StrategyName { get; }
-        Task<IEnumerable<CrawlResult>> CrawlAsync(
+        Task<CrawlResult> CrawlAsync(
+            string url,
+            CrawlOptions? options = null,
+            CancellationToken cancellationToken = default);
+
+        IAsyncEnumerable<CrawlResult> CrawlWebsiteAsync(
             string baseUrl,
-            CrawlOptions options,
+            CrawlOptions? options = null,
             CancellationToken cancellationToken = default);
     }
 
     /// <summary>
-    /// 콘텐츠 추출 인터페이스
-    /// HTML, Markdown, JSON, XML 등 다양한 형식 지원
+    /// AI 증강 서비스 인터페이스
+    /// Phase 1: BasicAiEnhancementService (요약 + 메타데이터)
     /// </summary>
-    public interface IContentExtractor
+    public interface IAiEnhancementService
     {
-        string ExtractorType { get; }
-        IEnumerable<string> SupportedContentTypes { get; }
-        bool CanExtract(string contentType, string url);
-        Task<RawWebContent> ExtractAsync(
-            string url,
-            HttpResponseMessage response,
+        Task<string> SummarizeAsync(
+            string content,
+            SummaryOptions? options = null,
             CancellationToken cancellationToken = default);
+
+        Task<AiMetadata> ExtractMetadataAsync(
+            string content,
+            MetadataExtractionOptions? options = null,
+            CancellationToken cancellationToken = default);
+
+        Task<EnhancedContent> EnhanceAsync(
+            string content,
+            EnhancementOptions? options = null,
+            CancellationToken cancellationToken = default);
+
+        Task<bool> IsAvailableAsync(CancellationToken cancellationToken = default);
     }
 
     /// <summary>
     /// 청킹 전략 인터페이스
-    /// 7가지 전략: Auto, Smart, Intelligent, MemoryOptimized, Semantic, Paragraph, FixedSize
+    /// Phase 1: Paragraph, FixedSize
     /// </summary>
     public interface IChunkingStrategy
     {
-        string StrategyName { get; }
-        Task<IEnumerable<WebContentChunk>> ChunkAsync(
-            ParsedWebContent content,
+        string Name { get; }
+        string Description { get; }
+
+        Task<IReadOnlyList<WebContentChunk>> ChunkAsync(
+            ExtractedContent content,
             ChunkingOptions options,
             CancellationToken cancellationToken = default);
+    }
+
+    /// <summary>
+    /// 이벤트 발행 시스템
+    /// </summary>
+    public interface IEventPublisher
+    {
+        Task PublishAsync<TEvent>(TEvent @event, CancellationToken cancellationToken = default)
+            where TEvent : ProcessingEvent;
+
+        void Subscribe<TEvent>(Func<TEvent, Task> handler)
+            where TEvent : ProcessingEvent;
     }
 }
 ```
 
-## 🎯 도메인 모델
+## 도메인 모델
 
 ### 핵심 데이터 모델
 
@@ -157,52 +191,28 @@ namespace WebFlux.Core.Models
     /// </summary>
     public class WebContentChunk
     {
-        public string Id { get; set; } = Guid.NewGuid().ToString();
-        public string Content { get; set; } = string.Empty;
-        public string SourceUrl { get; set; } = string.Empty;
+        public string ChunkId { get; set; }
         public int ChunkIndex { get; set; }
-        public WebContentMetadata Metadata { get; set; } = new();
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-
-        // 청킹 관련 정보
-        public string ChunkingStrategy { get; set; } = string.Empty;
+        public string Content { get; set; }
+        public string SourceUrl { get; set; }
         public int StartPosition { get; set; }
         public int EndPosition { get; set; }
-        public double ConfidenceScore { get; set; } = 1.0;
+        public Dictionary<string, object> AdditionalMetadata { get; set; }
     }
 
     /// <summary>
-    /// 웹 콘텐츠 메타데이터
+    /// 크롤링 결과
     /// </summary>
-    public class WebContentMetadata
+    public class CrawlResult
     {
-        public string Title { get; set; } = string.Empty;
-        public string Description { get; set; } = string.Empty;
-        public List<string> Keywords { get; set; } = new();
-        public DateTime? LastModified { get; set; }
-        public string Author { get; set; } = string.Empty;
-        public string Language { get; set; } = "en";
-        public int ContentLength { get; set; }
-        public Dictionary<string, object> Properties { get; set; } = new();
-    }
-
-    /// <summary>
-    /// 크롤링 옵션
-    /// </summary>
-    public class CrawlOptions
-    {
-        public int MaxDepth { get; set; } = 3;
-        public int MaxPages { get; set; } = 100;
-        public TimeSpan DelayBetweenRequests { get; set; } = TimeSpan.FromMilliseconds(500);
-        public bool RespectRobotsTxt { get; set; } = true;
-        public string UserAgent { get; set; } = "WebFlux/1.0";
-        public List<string> AllowedDomains { get; set; } = new();
-        public List<string> ExcludePatterns { get; set; } = new();
-        public List<string> IncludePatterns { get; set; } = new();
-        public int MaxConcurrentRequests { get; set; } = 5;
-        public TimeSpan Timeout { get; set; } = TimeSpan.FromSeconds(30);
-        public int RetryCount { get; set; } = 3;
-        public string Strategy { get; set; } = "BreadthFirst";
+        public string Url { get; set; }
+        public string FinalUrl { get; set; }
+        public string Content { get; set; }
+        public bool IsSuccess { get; set; }
+        public int StatusCode { get; set; }
+        public long ResponseTimeMs { get; set; }
+        public List<string> ImageUrls { get; set; }
+        public List<string> DiscoveredLinks { get; set; }
     }
 
     /// <summary>
@@ -210,346 +220,259 @@ namespace WebFlux.Core.Models
     /// </summary>
     public class ChunkingOptions
     {
-        public string Strategy { get; set; } = "Auto";
-        public int MaxChunkSize { get; set; } = 512;
-        public int OverlapSize { get; set; } = 64;
-        public bool PreserveStructure { get; set; } = true;
-        public double SemanticThreshold { get; set; } = 0.8;
-        public Dictionary<string, object> StrategyParameters { get; set; } = new();
+        public ChunkingStrategyType Strategy { get; set; } = ChunkingStrategyType.Paragraph;
+        public int MaxChunkSize { get; set; } = 1000;
+        public int MinChunkSize { get; set; } = 100;
+        public int ChunkOverlap { get; set; } = 50;
+    }
+
+    public enum ChunkingStrategyType
+    {
+        FixedSize,
+        Paragraph,
+        Smart,          // Phase 2 계획
+        Semantic,       // Phase 2 계획
+        Auto
     }
 }
 ```
 
-## 🔄 파이프라인 아키텍처
+## 처리 파이프라인 아키텍처
 
-### 처리 파이프라인 플로우
+### Phase 1: 4단계 파이프라인
 
 ```
 ┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-│   Crawler   │───▶│  Extractor  │───▶│   Parser    │───▶│  Chunking   │
-│             │    │             │    │             │    │  Strategy   │
+│  Crawling   │───▶│ Extraction  │───▶│AI Enhancement│───▶│  Chunking   │
+│ (Playwright)│    │   (HTML)    │    │  (Optional) │    │(Paragraph)  │
 └─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
        │                   │                   │                   │
        ▼                   ▼                   ▼                   ▼
 ┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-│ CrawlResult │    │RawWebContent│    │ParsedContent│    │WebContentChunk│
+│ CrawlResult │    │  Extracted  │    │  Enhanced   │    │WebContentChunk│
+│             │    │   Content   │    │   Content   │    │   (List)    │
 └─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
 ```
 
-### 스트리밍 처리 아키텍처
+### 스트리밍 처리 (IAsyncEnumerable)
 
 ```csharp
-public async IAsyncEnumerable<ProcessingResult<IEnumerable<WebContentChunk>>>
-    ProcessWithProgressAsync(
-        string baseUrl,
-        CrawlOptions? crawlOptions = null,
-        ChunkingOptions? chunkingOptions = null,
-        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+// WebContentProcessor 내부 파이프라인 구조
+private async IAsyncEnumerable<WebContentChunk> ProcessAsync(
+    CrawlOptions crawlOptions,
+    ChunkingOptions chunkingOptions,
+    [EnumeratorCancellation] CancellationToken cancellationToken)
 {
-    // Threading.Channels 기반 파이프라인
-    var crawlChannel = Channel.CreateUnbounded<CrawlResult>();
-    var extractChannel = Channel.CreateUnbounded<RawWebContent>();
-    var parseChannel = Channel.CreateUnbounded<ParsedWebContent>();
+    // 1. Crawling
+    var crawlResults = CrawlWebContent(crawlOptions, cancellationToken);
 
-    // 병렬 파이프라인 실행
-    var crawlTask = CrawlAsync(baseUrl, crawlOptions, crawlChannel.Writer);
-    var extractTask = ExtractAsync(crawlChannel.Reader, extractChannel.Writer);
-    var parseTask = ParseAsync(extractChannel.Reader, parseChannel.Reader);
+    // 2. Extraction (병렬 처리)
+    var extractionResults = ExtractContent(crawlResults, cancellationToken);
 
-    // 스트리밍 청킹 결과 반환
-    await foreach (var parsedContent in parseChannel.Reader.ReadAllAsync(cancellationToken))
+    // 3. AI Enhancement (선택적, 병렬 처리)
+    var enhancedResults = EnhanceContent(extractionResults, cancellationToken);
+
+    // 4. Chunking (스트리밍 반환)
+    await foreach (var chunk in ChunkContent(enhancedResults, chunkingOptions, cancellationToken))
     {
-        var chunks = await ChunkAsync(parsedContent, chunkingOptions);
-        yield return ProcessingResult<IEnumerable<WebContentChunk>>.Success(chunks);
+        yield return chunk;
     }
 }
 ```
 
-## 🚀 성능 최적화 아키텍처
+## 의존성 주입 구성
 
-### 1. 병렬 처리 엔진
-
-```csharp
-public class ParallelProcessingEngine
-{
-    private readonly SemaphoreSlim _concurrencySemaphore;
-    private readonly Channel<WorkItem> _workQueue;
-    private readonly int _maxConcurrency;
-
-    public ParallelProcessingEngine(int maxConcurrency = Environment.ProcessorCount)
-    {
-        _maxConcurrency = maxConcurrency;
-        _concurrencySemaphore = new SemaphoreSlim(maxConcurrency);
-        _workQueue = Channel.CreateUnbounded<WorkItem>();
-
-        // 워커 태스크 시작
-        for (int i = 0; i < maxConcurrency; i++)
-        {
-            _ = Task.Run(WorkerLoop);
-        }
-    }
-
-    private async Task WorkerLoop()
-    {
-        await foreach (var workItem in _workQueue.Reader.ReadAllAsync())
-        {
-            await _concurrencySemaphore.WaitAsync();
-            try
-            {
-                await ProcessWorkItem(workItem);
-            }
-            finally
-            {
-                _concurrencySemaphore.Release();
-            }
-        }
-    }
-}
-```
-
-### 2. 메모리 백프레셔 제어
-
-```csharp
-public class MemoryPressureController
-{
-    private readonly MemoryPressureOptions _options;
-    private long _currentMemoryUsage;
-
-    public async Task<bool> ShouldThrottleAsync()
-    {
-        var memoryUsage = GC.GetTotalMemory(false);
-        var memoryPressure = (double)memoryUsage / _options.MaxMemoryThreshold;
-
-        if (memoryPressure > 0.8)
-        {
-            // 메모리 압박 시 지연
-            await Task.Delay(TimeSpan.FromMilliseconds(100));
-            GC.Collect(0, GCCollectionMode.Optimized);
-            return true;
-        }
-
-        return false;
-    }
-}
-```
-
-### 3. 지능형 캐시 시스템
-
-```csharp
-public class LRUWebContentCache
-{
-    private readonly Dictionary<string, CacheItem> _cache;
-    private readonly LinkedList<string> _accessOrder;
-    private readonly int _maxItems;
-
-    public async Task<T?> GetAsync<T>(string key)
-    {
-        if (_cache.TryGetValue(key, out var item))
-        {
-            // LRU 순서 업데이트
-            _accessOrder.Remove(item.Node);
-            _accessOrder.AddFirst(item.Node);
-            return (T)item.Value;
-        }
-        return default(T);
-    }
-
-    public async Task SetAsync<T>(string key, T value, TimeSpan? expiry = null)
-    {
-        // 캐시 크기 관리
-        while (_cache.Count >= _maxItems)
-        {
-            var lastKey = _accessOrder.Last!.Value;
-            _cache.Remove(lastKey);
-            _accessOrder.RemoveLast();
-        }
-
-        var node = _accessOrder.AddFirst(key);
-        _cache[key] = new CacheItem(value, node, expiry);
-    }
-}
-```
-
-## 🧪 테스트 아키텍처
-
-### 1. Mock 서비스 구현
-
-```csharp
-public class MockTextCompletionService : ITextCompletionService
-{
-    public async Task<string> CompleteAsync(
-        string prompt,
-        TextCompletionOptions? options = null,
-        CancellationToken cancellationToken = default)
-    {
-        // 실제 LLM 호출 대신 규칙 기반 응답
-        if (prompt.Contains("summarize"))
-            return "This is a test summary of the content.";
-
-        if (prompt.Contains("chunk boundary"))
-            return "Split at paragraph breaks.";
-
-        return "Mock LLM response for testing purposes.";
-    }
-}
-
-public class MockImageToTextService : IImageToTextService
-{
-    public async Task<ImageToTextResult> ExtractTextFromWebImageAsync(
-        string imageUrl,
-        ImageToTextOptions? options = null,
-        CancellationToken cancellationToken = default)
-    {
-        return new ImageToTextResult
-        {
-            ExtractedText = $"Mock description for image: {imageUrl}",
-            Confidence = 0.95,
-            IsSuccess = true,
-            SourceUrl = imageUrl
-        };
-    }
-}
-```
-
-### 2. 테스트 전략
-
-```csharp
-[TestClass]
-public class WebContentProcessorTests
-{
-    [TestMethod]
-    public async Task ProcessWithProgressAsync_Should_ReturnChunks()
-    {
-        // Arrange
-        var mockLLM = new MockTextCompletionService();
-        var processor = new WebContentProcessor(mockLLM, ...);
-
-        // Act
-        var results = new List<WebContentChunk>();
-        await foreach (var result in processor.ProcessWithProgressAsync("https://example.com"))
-        {
-            if (result.IsSuccess)
-                results.AddRange(result.Result!);
-        }
-
-        // Assert
-        Assert.IsTrue(results.Count > 0);
-        Assert.IsTrue(results.All(c => !string.IsNullOrEmpty(c.Content)));
-    }
-}
-```
-
-## 🔧 의존성 주입 구성
-
-### ServiceCollection 확장
+### ServiceCollection 확장 (Phase 1)
 
 ```csharp
 public static class ServiceCollectionExtensions
 {
-    public static IServiceCollection AddWebFlux(this IServiceCollection services)
+    public static IServiceCollection AddWebFlux(
+        this IServiceCollection services,
+        Action<WebFluxConfiguration>? configureOptions = null)
     {
-        // 핵심 서비스 등록
+        // 설정
+        var config = new WebFluxConfiguration();
+        configureOptions?.Invoke(config);
+        services.AddSingleton(config);
+
+        // 핵심 서비스
         services.AddScoped<IWebContentProcessor, WebContentProcessor>();
+        services.AddScoped<IEventPublisher, BasicEventPublisher>();
 
-        // 크롤러 등록
-        services.AddTransient<ICrawler, BreadthFirstCrawler>();
-        services.AddTransient<ICrawler, DepthFirstCrawler>();
-        services.AddTransient<ICrawler, SitemapCrawler>();
-        services.AddTransient<ICrawler, IntelligentCrawler>();
+        // 크롤러 (Phase 1: Playwright만 구현)
+        services.AddScoped<ICrawler, PlaywrightCrawler>();
 
-        // 콘텐츠 추출기 등록
-        services.AddTransient<IContentExtractor, HtmlContentExtractor>();
-        services.AddTransient<IContentExtractor, MarkdownContentExtractor>();
-        services.AddTransient<IContentExtractor, JsonContentExtractor>();
+        // 추출기
+        services.AddScoped<IContentExtractor, HtmlExtractor>();
 
-        // 청킹 전략 등록
-        services.AddTransient<IChunkingStrategy, FixedSizeChunkingStrategy>();
-        services.AddTransient<IChunkingStrategy, ParagraphChunkingStrategy>();
-        services.AddTransient<IChunkingStrategy, SmartChunkingStrategy>();
-        services.AddTransient<IChunkingStrategy, SemanticChunkingStrategy>();
-        services.AddTransient<IChunkingStrategy, IntelligentChunkingStrategy>();
-        services.AddTransient<IChunkingStrategy, MemoryOptimizedChunkingStrategy>();
-        services.AddTransient<IChunkingStrategy, AutoChunkingStrategy>();
-
-        // 팩토리 서비스
-        services.AddScoped<ICrawlerFactory, CrawlerFactory>();
+        // 청킹 전략 (Phase 1: Paragraph, FixedSize)
+        services.AddScoped<IChunkingStrategy, ParagraphChunkingStrategy>();
+        services.AddScoped<IChunkingStrategy, FixedSizeChunkingStrategy>();
         services.AddScoped<IChunkingStrategyFactory, ChunkingStrategyFactory>();
 
-        // 유틸리티 서비스
-        services.AddScoped<IParallelProcessingEngine, ParallelProcessingEngine>();
-        services.AddSingleton<ILRUWebContentCache, LRUWebContentCache>();
+        return services;
+    }
 
+    public static IServiceCollection AddWebFluxAIEnhancement(this IServiceCollection services)
+    {
+        // AI 증강 서비스 (ITextCompletionService 필요)
+        services.AddScoped<IAiEnhancementService, BasicAiEnhancementService>();
         return services;
     }
 }
 ```
 
-## 📊 모니터링 및 메트릭
+## 사용 예제
 
-### 성능 메트릭 수집
+### 기본 설정 (SimpleOpenAITest 패턴)
 
 ```csharp
-public class WebFluxMetrics
+using Microsoft.Extensions.DependencyInjection;
+using WebFlux.Extensions;
+
+var services = new ServiceCollection();
+
+// 로깅
+services.AddLogging(builder =>
 {
-    private static readonly Counter CrawledPagesCount =
-        Metrics.CreateCounter("webflux_crawled_pages_total", "Total crawled pages");
-
-    private static readonly Histogram ChunkingDuration =
-        Metrics.CreateHistogram("webflux_chunking_duration_seconds", "Chunking duration");
-
-    private static readonly Gauge MemoryUsage =
-        Metrics.CreateGauge("webflux_memory_usage_bytes", "Current memory usage");
-
-    public void RecordCrawledPage(string strategy)
+    builder.AddSimpleConsole(options =>
     {
-        CrawledPagesCount.WithLabels(strategy).Inc();
+        options.SingleLine = true;
+        options.IncludeScopes = false;
+    });
+    builder.SetMinimumLevel(LogLevel.Information);
+});
+
+// WebFlux SDK 등록
+services.AddWebFlux(config =>
+{
+    config.Crawling.Strategy = "Dynamic";
+    config.Crawling.DefaultTimeoutSeconds = 30;
+
+    config.AiEnhancement.Enabled = true;
+    config.AiEnhancement.EnableSummary = true;
+    config.AiEnhancement.EnableMetadata = true;
+
+    config.Chunking.DefaultStrategy = "Paragraph";
+    config.Chunking.MaxChunkSize = 1000;
+});
+
+// AI 서비스 구현체 등록 (소비자가 제공)
+services.AddSingleton<ITextCompletionService>(sp =>
+    new OpenAiTextCompletionService(model, apiKey));
+
+// AI 증강 서비스 등록
+services.AddWebFluxAIEnhancement();
+
+var serviceProvider = services.BuildServiceProvider();
+```
+
+### URL 처리
+
+```csharp
+var processor = serviceProvider.GetRequiredService<IWebContentProcessor>();
+var eventPublisher = serviceProvider.GetRequiredService<IEventPublisher>();
+
+// 이벤트 구독
+eventPublisher.Subscribe<ProcessingEvent>(evt =>
+{
+    if (evt.EventType == "ProcessingProgress")
+    {
+        var progressEvt = evt as ProcessingProgressEvent;
+        Console.WriteLine($"  → {progressEvt.CurrentStage}: {progressEvt.ProcessedCount} processed");
     }
+    return Task.CompletedTask;
+});
 
-    public void RecordChunkingDuration(string strategy, double duration)
+// 청킹 옵션
+var chunkingOptions = new ChunkingOptions
+{
+    Strategy = ChunkingStrategyType.Paragraph,
+    MaxChunkSize = 1000,
+    MinChunkSize = 100,
+    ChunkOverlap = 50
+};
+
+// URL 처리
+var chunks = await processor.ProcessUrlAsync(url, chunkingOptions);
+
+Console.WriteLine($"✓ Completed: {chunks.Count} chunks generated");
+
+// 메타데이터 확인
+if (chunks.Count > 0)
+{
+    var aiSummary = chunks[0].AdditionalMetadata.ContainsKey("ai_summary")
+        ? chunks[0].AdditionalMetadata["ai_summary"]?.ToString()
+        : null;
+
+    if (!string.IsNullOrEmpty(aiSummary))
     {
-        ChunkingDuration.WithLabels(strategy).Observe(duration);
+        Console.WriteLine($"→ Summary: {aiSummary}");
     }
 }
 ```
 
-## 🔐 보안 고려사항
+## 병렬 처리 최적화
 
-### 1. 안전한 웹 크롤링
-
-```csharp
-public class SecurityConfig
-{
-    public List<string> AllowedSchemes { get; set; } = new() { "https", "http" };
-    public List<string> BlockedDomains { get; set; } = new();
-    public int MaxRedirects { get; set; } = 5;
-    public TimeSpan MaxRequestDuration { get; set; } = TimeSpan.FromMinutes(2);
-    public long MaxContentLength { get; set; } = 50 * 1024 * 1024; // 50MB
-}
-```
-
-### 2. 입력 검증
+### Channels 기반 파이프라인
 
 ```csharp
-public class UrlValidator
+// ExtractContent 내부 구현 (병렬 처리)
+private async IAsyncEnumerable<ExtractedContent> ExtractContent(
+    IAsyncEnumerable<CrawlResult> crawlResults,
+    [EnumeratorCancellation] CancellationToken cancellationToken)
 {
-    public static bool IsValidUrl(string url)
+    var semaphore = new SemaphoreSlim(_config.Performance.MaxDegreeOfParallelism);
+    var channel = Channel.CreateUnbounded<ExtractedContent>();
+
+    var processingTask = Task.Run(async () =>
     {
-        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
-            return false;
+        await foreach (var crawlResult in crawlResults.WithCancellation(cancellationToken))
+        {
+            await semaphore.WaitAsync(cancellationToken);
 
-        if (!uri.Scheme.Equals("http", StringComparison.OrdinalIgnoreCase) &&
-            !uri.Scheme.Equals("https", StringComparison.OrdinalIgnoreCase))
-            return false;
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    var extracted = await _extractor.ExtractAutoAsync(crawlResult.Content);
+                    await channel.Writer.WriteAsync(extracted, cancellationToken);
+                }
+                finally
+                {
+                    semaphore.Release();
+                }
+            }, cancellationToken);
+        }
+    }, cancellationToken);
 
-        // IP 주소 차단 (내부 네트워크 보호)
-        if (IPAddress.TryParse(uri.Host, out var ip) && IsPrivateIP(ip))
-            return false;
-
-        return true;
+    await foreach (var extracted in channel.Reader.ReadAllAsync(cancellationToken))
+    {
+        yield return extracted;
     }
 }
 ```
 
----
+## 향후 계획
 
-이 아키텍처 설계는 연구 문서의 인사이트를 바탕으로 실제 구현 가능한 Clean Architecture 기반의 확장 가능한 설계를 제공합니다. 다음 단계에서는 각 컴포넌트의 상세 설계 문서를 작성하겠습니다.
+### Phase 2: Advanced Chunking
+- Smart 전략: 의미 경계 인식
+- Semantic 전략: 임베딩 기반 청킹
+
+### Phase 3: Multimodal
+- IImageToTextService 인터페이스
+- 이미지-텍스트 변환 통합
+
+### Phase 4: Performance
+- 병렬 처리 엔진 (CPU 코어별 동적 스케일링)
+- 지능형 캐싱 시스템
+- 메모리 백프레셔 제어
+- 적응형 성능 튜닝
+
+## 참고 문서
+
+- [INTERFACES.md](./INTERFACES.md) - 인터페이스 상세 설명
+- [PIPELINE_DESIGN.md](./PIPELINE_DESIGN.md) - 파이프라인 설계
+- [CHUNKING_STRATEGIES.md](./CHUNKING_STRATEGIES.md) - 청킹 전략
+

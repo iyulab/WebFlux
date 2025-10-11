@@ -50,4 +50,10 @@ public interface IServiceFactory
     /// <param name="strategyType">청킹 전략 타입</param>
     /// <returns>청킹 전략 인스턴스</returns>
     IChunkingStrategy CreateChunkingStrategy(string strategyType);
+
+    /// <summary>
+    /// AI 증강 서비스 인스턴스를 생성합니다.
+    /// </summary>
+    /// <returns>AI 증강 서비스 인스턴스 (서비스가 등록되지 않은 경우 null)</returns>
+    IAiEnhancementService? CreateAiEnhancementService();
 }

@@ -63,6 +63,11 @@ public class WebFluxConfiguration
     public TokenizerModel? DefaultTokenizerModel { get; set; }
 
     /// <summary>
+    /// AI 증강 설정 (Phase 1)
+    /// </summary>
+    public AiEnhancementConfiguration AiEnhancement { get; set; } = new();
+
+    /// <summary>
     /// 사용자 정의 설정
     /// </summary>
     public IDictionary<string, object> CustomSettings { get; set; } = new Dictionary<string, object>();
@@ -690,4 +695,45 @@ public enum TokenizerModel
     Llama3,
     /// <summary>범용 토크나이저</summary>
     Generic
+}
+
+/// <summary>
+/// AI 증강 구성 (Phase 1)
+/// </summary>
+public class AiEnhancementConfiguration
+{
+    /// <summary>
+    /// AI 증강 활성화 여부
+    /// </summary>
+    public bool Enabled { get; set; } = false;
+
+    /// <summary>
+    /// 요약 생성 활성화
+    /// </summary>
+    public bool EnableSummary { get; set; } = true;
+
+    /// <summary>
+    /// 메타데이터 추출 활성화
+    /// </summary>
+    public bool EnableMetadata { get; set; } = true;
+
+    /// <summary>
+    /// 재작성 활성화 (기본값: false)
+    /// </summary>
+    public bool EnableRewrite { get; set; } = false;
+
+    /// <summary>
+    /// 병렬 처리 활성화
+    /// </summary>
+    public bool EnableParallelProcessing { get; set; } = true;
+
+    /// <summary>
+    /// AI 처리 타임아웃 (밀리초)
+    /// </summary>
+    public int TimeoutMs { get; set; } = 60000;
+
+    /// <summary>
+    /// 최대 재시도 횟수
+    /// </summary>
+    public int MaxRetries { get; set; } = 3;
 }

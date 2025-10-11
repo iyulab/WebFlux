@@ -70,6 +70,12 @@ public class ExtractedContent
 
     /// <summary>처리 시간 (밀리초)</summary>
     public int ProcessingTimeMs { get; set; }
+
+    /// <summary>AI 증강 메타데이터 (선택적)</summary>
+    public AiMetadata? AiMetadata { get; set; }
+
+    /// <summary>AI 생성 요약 (선택적)</summary>
+    public string? AiSummary { get; set; }
 }
 
 /// <summary>
