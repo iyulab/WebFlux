@@ -166,8 +166,24 @@ jobs:
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          git tag "v${{ needs.detect-version.outputs.version }}"
-          git push origin "v${{ needs.detect-version.outputs.version }}"
+
+          TAG_NAME="v${{ needs.detect-version.outputs.version }}"
+
+          # 로컬 태그가 없으면 생성
+          if ! git tag -l "$TAG_NAME" | grep -q "$TAG_NAME"; then
+            git tag "$TAG_NAME"
+            echo "Created local tag $TAG_NAME"
+          else
+            echo "Tag $TAG_NAME already exists locally"
+          fi
+
+          # 원격에 태그 push (이미 존재하면 무시)
+          if git push origin "$TAG_NAME" 2>&1 | grep -q "already exists"; then
+            echo "Tag $TAG_NAME already exists on remote, skipping"
+            exit 0
+          else
+            echo "Pushed tag $TAG_NAME to remote"
+          fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
