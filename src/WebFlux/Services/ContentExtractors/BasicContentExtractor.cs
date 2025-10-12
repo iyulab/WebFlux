@@ -25,6 +25,7 @@ public class BasicContentExtractor : IContentExtractor
         var extracted = new ExtractedContent
         {
             Text = cleanText.Trim(),
+            MainContent = cleanText.Trim(), // 주요 콘텐츠는 추출된 텍스트와 동일하게 설정
             Url = sourceUrl,
             Title = ExtractTitle(htmlContent)
         };
@@ -37,6 +38,7 @@ public class BasicContentExtractor : IContentExtractor
         var extracted = new ExtractedContent
         {
             Text = markdownContent,
+            MainContent = markdownContent, // 주요 콘텐츠는 원본 마크다운과 동일
             Url = sourceUrl,
             Title = "Markdown Content"
         };
@@ -54,6 +56,7 @@ public class BasicContentExtractor : IContentExtractor
             var extracted = new ExtractedContent
             {
                 Text = text,
+                MainContent = text, // 주요 콘텐츠는 JSON 텍스트와 동일
                 Url = sourceUrl,
                 Title = "JSON Content"
             };
@@ -65,6 +68,7 @@ public class BasicContentExtractor : IContentExtractor
             var extracted = new ExtractedContent
             {
                 Text = jsonContent,
+                MainContent = jsonContent, // 주요 콘텐츠는 원본 JSON과 동일
                 Url = sourceUrl,
                 Title = "JSON Content"
             };
@@ -78,6 +82,7 @@ public class BasicContentExtractor : IContentExtractor
         var extracted = new ExtractedContent
         {
             Text = xmlContent,
+            MainContent = xmlContent, // 주요 콘텐츠는 XML 텍스트와 동일
             Url = sourceUrl,
             Title = "XML Content"
         };
@@ -90,6 +95,7 @@ public class BasicContentExtractor : IContentExtractor
         var extracted = new ExtractedContent
         {
             Text = textContent,
+            MainContent = textContent, // 주요 콘텐츠는 원본 텍스트와 동일
             Url = sourceUrl,
             Title = "Text Content"
         };

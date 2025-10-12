@@ -472,4 +472,693 @@ public class SiteConfigurationAnalyzerTests
     }
 
     #endregion
+
+    #region 상세 설정 추출 테스트
+
+    [Fact]
+    public async Task AnalyzeConfiguration_WithComplexAuthor_ShouldExtractAllAuthorInfo()
+    {
+        // Arrange
+        var yamlContent = """
+            title: "Test Blog"
+            author:
+              name: "John Doe"
+              email: "john@example.com"
+              url: "https://johndoe.com"
+              social:
+                twitter: "@johndoe"
+                github: "johndoe"
+            """;
+
+        // Act
+        var result = await _analyzer.AnalyzeConfigurationAsync(yamlContent, "https://github.com/user/_config.yml");
+
+        // Assert
+        result.SiteInfo.Author.Should().NotBeNull();
+        result.SiteInfo.Author!.Name.Should().Be("John Doe");
+        result.SiteInfo.Author.Email.Should().Be("john@example.com");
+        result.SiteInfo.Author.Url.Should().Be("https://johndoe.com");
+        result.SiteInfo.Author.Social.Should().ContainKey("twitter");
+        result.SiteInfo.Author.Social.Should().ContainKey("github");
+    }
+
+    [Fact]
+    public async Task AnalyzeConfiguration_WithStringAuthor_ShouldExtractNameOnly()
+    {
+        // Arrange
+        var yamlContent = """
+            title: "Test Blog"
+            author: "John Doe"
+            """;
+
+        // Act
+        var result = await _analyzer.AnalyzeConfigurationAsync(yamlContent, "https://github.com/user/_config.yml");
+
+        // Assert
+        result.SiteInfo.Author.Should().NotBeNull();
+        result.SiteInfo.Author!.Name.Should().Be("John Doe");
+    }
+
+    [Fact]
+    public async Task AnalyzeConfiguration_WithBuildConfig_ShouldExtractAllFields()
+    {
+        // Arrange
+        var yamlContent = """
+            title: "Test"
+            source: "src"
+            destination: "_site"
+            exclude: ["node_modules", ".git"]
+            include: [".htaccess"]
+            environment: "production"
+            incremental: true
+            show_drafts: false
+            future: false
+            """;
+
+        // Act
+        var result = await _analyzer.AnalyzeConfigurationAsync(yamlContent, "https://github.com/user/_config.yml");
+
+        // Assert
+        result.BuildConfig.SourceDirectory.Should().Be("src");
+        result.BuildConfig.OutputDirectory.Should().Be("_site");
+        result.BuildConfig.ExcludePatterns.Should().Contain("node_modules");
+        result.BuildConfig.IncludePatterns.Should().Contain(".htaccess");
+        result.BuildConfig.Environment.Should().Be("production");
+        result.BuildConfig.IncrementalBuild.Should().BeTrue();
+        result.BuildConfig.ShowDrafts.Should().BeFalse();
+        result.BuildConfig.ShowFuture.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task AnalyzeConfiguration_WithContentConfig_ShouldExtractMarkdownSettings()
+    {
+        // Arrange
+        var yamlContent = """
+            title: "Test"
+            markdown: kramdown
+            highlighter: rouge
+            permalink: /:categories/:year/:month/:day/:title/
+            paginate: 10
+            paginate_path: "/page:num/"
+            excerpt_separator: "<!--more-->"
+            """;
+
+        // Act
+        var result = await _analyzer.AnalyzeConfigurationAsync(yamlContent, "https://github.com/user/_config.yml");
+
+        // Assert
+        result.ContentConfig.MarkdownEngine.Should().Be("kramdown");
+        result.ContentConfig.Highlighter.Should().Be("rouge");
+        result.ContentConfig.PermalinkFormat.Should().Be("/:categories/:year/:month/:day/:title/");
+        result.ContentConfig.PaginateCount.Should().Be(10);
+        result.ContentConfig.PaginatePath.Should().Be("/page:num/");
+        result.ContentConfig.ExcerptSeparator.Should().Be("<!--more-->");
+    }
+
+    [Fact]
+    public async Task AnalyzeConfiguration_WithCollections_ShouldExtractCollectionSettings()
+    {
+        // Arrange
+        var yamlContent = """
+            title: "Test"
+            collections:
+              posts:
+                output: true
+                permalink: /blog/:title/
+              projects:
+                output: true
+                permalink: /projects/:title/
+            """;
+
+        // Act
+        var result = await _analyzer.AnalyzeConfigurationAsync(yamlContent, "https://github.com/user/_config.yml");
+
+        // Assert
+        result.ContentConfig.Collections.Should().ContainKey("posts");
+        result.ContentConfig.Collections.Should().ContainKey("projects");
+        result.ContentConfig.Collections["posts"].Output.Should().BeTrue();
+        result.ContentConfig.Collections["posts"].Permalink.Should().Be("/blog/:title/");
+    }
+
+    [Fact]
+    public async Task AnalyzeConfiguration_WithPlugins_ShouldExtractPluginList()
+    {
+        // Arrange
+        var yamlContent = """
+            title: "Test"
+            plugins:
+              - jekyll-feed
+              - jekyll-sitemap
+              - jekyll-seo-tag
+            """;
+
+        // Act
+        var result = await _analyzer.AnalyzeConfigurationAsync(yamlContent, "https://github.com/user/_config.yml");
+
+        // Assert
+        result.PluginConfig.Plugins.Should().Contain("jekyll-feed");
+        result.PluginConfig.Plugins.Should().Contain("jekyll-sitemap");
+        result.PluginConfig.Plugins.Should().Contain("jekyll-seo-tag");
+    }
+
+    [Fact]
+    public async Task AnalyzeConfiguration_WithDeployment_ShouldDetectGitHubPages()
+    {
+        // Arrange
+        var yamlContent = """
+            title: "Test"
+            github:
+              branch: gh-pages
+              folder: /docs
+              custom_domain: "example.com"
+            """;
+
+        // Act
+        var result = await _analyzer.AnalyzeConfigurationAsync(yamlContent, "https://github.com/user/_config.yml");
+
+        // Assert
+        result.DeploymentConfig.Target.Should().Be("GitHub Pages");
+        result.DeploymentConfig.GitHubPages.Should().NotBeNull();
+        result.DeploymentConfig.GitHubPages!.Branch.Should().Be("gh-pages");
+        result.DeploymentConfig.GitHubPages.Folder.Should().Be("/docs");
+        result.DeploymentConfig.GitHubPages.CustomDomain.Should().Be("example.com");
+    }
+
+    [Fact]
+    public async Task AnalyzeConfiguration_WithNetlify_ShouldExtractNetlifyConfig()
+    {
+        // Arrange
+        var yamlContent = """
+            title: "Test"
+            netlify:
+              build_command: "jekyll build"
+              publish_directory: "_site"
+              environment:
+                RUBY_VERSION: "2.7"
+            """;
+
+        // Act
+        var result = await _analyzer.AnalyzeConfigurationAsync(yamlContent, "https://github.com/user/_config.yml");
+
+        // Assert
+        result.DeploymentConfig.Target.Should().Be("Netlify");
+        result.DeploymentConfig.Netlify.Should().NotBeNull();
+        result.DeploymentConfig.Netlify!.BuildCommand.Should().Be("jekyll build");
+        result.DeploymentConfig.Netlify.PublishDirectory.Should().Be("_site");
+    }
+
+    [Fact]
+    public async Task AnalyzeConfiguration_WithSeoConfig_ShouldExtractAnalyticsSettings()
+    {
+        // Arrange
+        var yamlContent = """
+            title: "Test"
+            google_analytics: "UA-12345678-1"
+            google_tag_manager: "GTM-XXXXXX"
+            sitemap: true
+            robots: "index, follow"
+            social:
+              twitter: "@site"
+              facebook: "sitepage"
+              linkedin: "company"
+              github: "orgname"
+            """;
+
+        // Act
+        var result = await _analyzer.AnalyzeConfigurationAsync(yamlContent, "https://github.com/user/_config.yml");
+
+        // Assert
+        result.SeoConfig.GoogleAnalytics.Should().Be("UA-12345678-1");
+        result.SeoConfig.GoogleTagManager.Should().Be("GTM-XXXXXX");
+        result.SeoConfig.GenerateSitemap.Should().BeTrue();
+        result.SeoConfig.RobotsConfig.Should().Be("index, follow");
+        result.SeoConfig.SocialMedia.Should().NotBeNull();
+        result.SeoConfig.SocialMedia!.Twitter.Should().Be("@site");
+        result.SeoConfig.SocialMedia.GitHub.Should().Be("orgname");
+    }
+
+    [Fact]
+    public async Task AnalyzeConfiguration_WithPerformanceConfig_ShouldExtractOptimizations()
+    {
+        // Arrange
+        var yamlContent = """
+            title: "Test"
+            compress_html: true
+            sass:
+              style: compressed
+              sass_dir: _sass
+            cache:
+              ttl_seconds: 3600
+              type: redis
+            cdn:
+              url: "https://cdn.example.com"
+              assets_url: "https://assets.example.com"
+            """;
+
+        // Act
+        var result = await _analyzer.AnalyzeConfigurationAsync(yamlContent, "https://github.com/user/_config.yml");
+
+        // Assert
+        result.PerformanceConfig.CompressHtml.Should().BeTrue();
+        result.PerformanceConfig.Sass.Should().NotBeNull();
+        result.PerformanceConfig.Sass!.Style.Should().Be("compressed");
+        result.PerformanceConfig.Cache.Should().NotBeNull();
+        result.PerformanceConfig.Cache!.TtlSeconds.Should().Be(3600);
+        result.PerformanceConfig.Cdn.Should().NotBeNull();
+        result.PerformanceConfig.Cdn!.Url.Should().Be("https://cdn.example.com");
+    }
+
+    #endregion
+
+    #region 검증 및 추천 상세 테스트
+
+    [Fact]
+    public void ValidateConfiguration_MissingTitle_ShouldReturnError()
+    {
+        // Arrange
+        var config = new SiteConfiguration
+        {
+            ConfigType = SiteConfigurationType.Jekyll,
+            SiteInfo = new SiteConfigurationInfo { Title = "" },
+            BuildConfig = new BuildConfiguration(),
+            ContentConfig = new ContentConfiguration(),
+            PluginConfig = new PluginConfiguration(),
+            DeploymentConfig = new DeploymentConfiguration(),
+            SeoConfig = new SeoConfiguration(),
+            PerformanceConfig = new SitePerformanceConfiguration()
+        };
+
+        // Act
+        var issues = _analyzer.ValidateConfiguration(config);
+
+        // Assert
+        issues.Should().Contain(i => i.AffectedKey == "title" && i.Severity == ConfigurationIssueSeverity.Error);
+    }
+
+    [Fact]
+    public void ValidateConfiguration_DevelopmentInProduction_ShouldReturnCritical()
+    {
+        // Arrange
+        var config = new SiteConfiguration
+        {
+            ConfigType = SiteConfigurationType.Jekyll,
+            SiteInfo = new SiteConfigurationInfo { Title = "Test" },
+            BuildConfig = new BuildConfiguration { Environment = "development" },
+            ContentConfig = new ContentConfiguration(),
+            PluginConfig = new PluginConfiguration(),
+            DeploymentConfig = new DeploymentConfiguration { Target = "GitHub Pages" },
+            SeoConfig = new SeoConfiguration(),
+            PerformanceConfig = new SitePerformanceConfiguration()
+        };
+
+        // Act
+        var issues = _analyzer.ValidateConfiguration(config);
+
+        // Assert
+        issues.Should().Contain(i => i.Type == ConfigurationIssueType.Security && i.Severity == ConfigurationIssueSeverity.Critical);
+    }
+
+    [Fact]
+    public void ValidateConfiguration_ShowDraftsInProduction_ShouldReturnWarning()
+    {
+        // Arrange
+        var config = new SiteConfiguration
+        {
+            ConfigType = SiteConfigurationType.Jekyll,
+            SiteInfo = new SiteConfigurationInfo { Title = "Test" },
+            BuildConfig = new BuildConfiguration { Environment = "production", ShowDrafts = true },
+            ContentConfig = new ContentConfiguration(),
+            PluginConfig = new PluginConfiguration(),
+            DeploymentConfig = new DeploymentConfiguration(),
+            SeoConfig = new SeoConfiguration(),
+            PerformanceConfig = new SitePerformanceConfiguration()
+        };
+
+        // Act
+        var issues = _analyzer.ValidateConfiguration(config);
+
+        // Assert
+        issues.Should().Contain(i => i.AffectedKey == "show_drafts" && i.Severity == ConfigurationIssueSeverity.Warning);
+    }
+
+    [Fact]
+    public void ValidateConfiguration_NoHtmlCompression_ShouldReturnInfo()
+    {
+        // Arrange
+        var config = new SiteConfiguration
+        {
+            ConfigType = SiteConfigurationType.Jekyll,
+            SiteInfo = new SiteConfigurationInfo { Title = "Test" },
+            BuildConfig = new BuildConfiguration(),
+            ContentConfig = new ContentConfiguration(),
+            PluginConfig = new PluginConfiguration(),
+            DeploymentConfig = new DeploymentConfiguration(),
+            SeoConfig = new SeoConfiguration(),
+            PerformanceConfig = new SitePerformanceConfiguration { CompressHtml = false }
+        };
+
+        // Act
+        var issues = _analyzer.ValidateConfiguration(config);
+
+        // Assert
+        issues.Should().Contain(i => i.AffectedKey == "compress_html" && i.Type == ConfigurationIssueType.Performance);
+    }
+
+    [Fact]
+    public void ValidateConfiguration_UncompressedSass_ShouldReturnPerformanceInfo()
+    {
+        // Arrange
+        var config = new SiteConfiguration
+        {
+            ConfigType = SiteConfigurationType.Jekyll,
+            SiteInfo = new SiteConfigurationInfo { Title = "Test" },
+            BuildConfig = new BuildConfiguration(),
+            ContentConfig = new ContentConfiguration(),
+            PluginConfig = new PluginConfiguration(),
+            DeploymentConfig = new DeploymentConfiguration(),
+            SeoConfig = new SeoConfiguration(),
+            PerformanceConfig = new SitePerformanceConfiguration
+            {
+                Sass = new SassConfig { Style = "expanded" }
+            }
+        };
+
+        // Act
+        var issues = _analyzer.ValidateConfiguration(config);
+
+        // Assert
+        issues.Should().Contain(i => i.AffectedKey == "sass.style" && i.Type == ConfigurationIssueType.Performance);
+    }
+
+    [Fact]
+    public void ValidateConfiguration_NoGoogleAnalytics_ShouldReturnSeoInfo()
+    {
+        // Arrange
+        var config = new SiteConfiguration
+        {
+            ConfigType = SiteConfigurationType.Jekyll,
+            SiteInfo = new SiteConfigurationInfo { Title = "Test" },
+            BuildConfig = new BuildConfiguration(),
+            ContentConfig = new ContentConfiguration(),
+            PluginConfig = new PluginConfiguration(),
+            DeploymentConfig = new DeploymentConfiguration(),
+            SeoConfig = new SeoConfiguration { GoogleAnalytics = "" },
+            PerformanceConfig = new SitePerformanceConfiguration()
+        };
+
+        // Act
+        var issues = _analyzer.ValidateConfiguration(config);
+
+        // Assert
+        issues.Should().Contain(i => i.AffectedKey == "google_analytics" && i.Type == ConfigurationIssueType.Seo);
+    }
+
+    [Fact]
+    public void ValidateConfiguration_NoSitemap_ShouldReturnWarning()
+    {
+        // Arrange
+        var config = new SiteConfiguration
+        {
+            ConfigType = SiteConfigurationType.Jekyll,
+            SiteInfo = new SiteConfigurationInfo { Title = "Test" },
+            BuildConfig = new BuildConfiguration(),
+            ContentConfig = new ContentConfiguration(),
+            PluginConfig = new PluginConfiguration(),
+            DeploymentConfig = new DeploymentConfiguration(),
+            SeoConfig = new SeoConfiguration { GenerateSitemap = false },
+            PerformanceConfig = new SitePerformanceConfiguration()
+        };
+
+        // Act
+        var issues = _analyzer.ValidateConfiguration(config);
+
+        // Assert
+        issues.Should().Contain(i => i.AffectedKey == "sitemap" && i.Severity == ConfigurationIssueSeverity.Warning);
+    }
+
+    [Fact]
+    public void ValidateConfiguration_DeprecatedPlugin_ShouldReturnWarning()
+    {
+        // Arrange
+        var config = new SiteConfiguration
+        {
+            ConfigType = SiteConfigurationType.Jekyll,
+            SiteInfo = new SiteConfigurationInfo { Title = "Test" },
+            BuildConfig = new BuildConfiguration(),
+            ContentConfig = new ContentConfiguration(),
+            PluginConfig = new PluginConfiguration { Plugins = new[] { "jekyll-paginate", "redcarpet" } },
+            DeploymentConfig = new DeploymentConfiguration(),
+            SeoConfig = new SeoConfiguration(),
+            PerformanceConfig = new SitePerformanceConfiguration()
+        };
+
+        // Act
+        var issues = _analyzer.ValidateConfiguration(config);
+
+        // Assert
+        var deprecatedIssues = issues.Where(i => i.Type == ConfigurationIssueType.Deprecated).ToList();
+        deprecatedIssues.Should().HaveCount(2);
+        deprecatedIssues.Should().Contain(i => i.Message.Contains("jekyll-paginate"));
+        deprecatedIssues.Should().Contain(i => i.Message.Contains("redcarpet"));
+    }
+
+    [Fact]
+    public void GetOptimizationRecommendations_NoCompression_ShouldRecommendCompression()
+    {
+        // Arrange
+        var config = new SiteConfiguration
+        {
+            ConfigType = SiteConfigurationType.Jekyll,
+            SiteInfo = new SiteConfigurationInfo { Title = "Test" },
+            BuildConfig = new BuildConfiguration(),
+            ContentConfig = new ContentConfiguration(),
+            PluginConfig = new PluginConfiguration(),
+            DeploymentConfig = new DeploymentConfiguration(),
+            SeoConfig = new SeoConfiguration(),
+            PerformanceConfig = new SitePerformanceConfiguration { CompressHtml = false }
+        };
+
+        // Act
+        var recommendations = _analyzer.GetOptimizationRecommendations(config);
+
+        // Assert
+        recommendations.Should().Contain(r =>
+            r.Type == ConfigurationRecommendationType.Performance &&
+            r.Title.Contains("HTML 압축"));
+    }
+
+    [Fact]
+    public void GetOptimizationRecommendations_ShowDraftsInProduction_ShouldRecommendHiding()
+    {
+        // Arrange
+        var config = new SiteConfiguration
+        {
+            ConfigType = SiteConfigurationType.Jekyll,
+            SiteInfo = new SiteConfigurationInfo { Title = "Test" },
+            BuildConfig = new BuildConfiguration { Environment = "production", ShowDrafts = true },
+            ContentConfig = new ContentConfiguration(),
+            PluginConfig = new PluginConfiguration(),
+            DeploymentConfig = new DeploymentConfiguration(),
+            SeoConfig = new SeoConfiguration(),
+            PerformanceConfig = new SitePerformanceConfiguration()
+        };
+
+        // Act
+        var recommendations = _analyzer.GetOptimizationRecommendations(config);
+
+        // Assert
+        recommendations.Should().Contain(r =>
+            r.Type == ConfigurationRecommendationType.Security &&
+            r.Priority == RecommendationPriority.High);
+    }
+
+    [Fact]
+    public void GetOptimizationRecommendations_NoAnalytics_ShouldRecommendGoogleAnalytics()
+    {
+        // Arrange
+        var config = new SiteConfiguration
+        {
+            ConfigType = SiteConfigurationType.Jekyll,
+            SiteInfo = new SiteConfigurationInfo { Title = "Test" },
+            BuildConfig = new BuildConfiguration(),
+            ContentConfig = new ContentConfiguration(),
+            PluginConfig = new PluginConfiguration(),
+            DeploymentConfig = new DeploymentConfiguration(),
+            SeoConfig = new SeoConfiguration { GoogleAnalytics = "" },
+            PerformanceConfig = new SitePerformanceConfiguration()
+        };
+
+        // Act
+        var recommendations = _analyzer.GetOptimizationRecommendations(config);
+
+        // Assert
+        recommendations.Should().Contain(r =>
+            r.Type == ConfigurationRecommendationType.Seo &&
+            r.Title.Contains("Google Analytics"));
+    }
+
+    [Fact]
+    public void GetOptimizationRecommendations_DeprecatedPlugins_ShouldRecommendModernAlternatives()
+    {
+        // Arrange
+        var config = new SiteConfiguration
+        {
+            ConfigType = SiteConfigurationType.Jekyll,
+            SiteInfo = new SiteConfigurationInfo { Title = "Test" },
+            BuildConfig = new BuildConfiguration(),
+            ContentConfig = new ContentConfiguration(),
+            PluginConfig = new PluginConfiguration { Plugins = new[] { "jekyll-paginate" } },
+            DeploymentConfig = new DeploymentConfiguration(),
+            SeoConfig = new SeoConfiguration(),
+            PerformanceConfig = new SitePerformanceConfiguration()
+        };
+
+        // Act
+        var recommendations = _analyzer.GetOptimizationRecommendations(config);
+
+        // Assert
+        recommendations.Should().Contain(r =>
+            r.Type == ConfigurationRecommendationType.BestPractice &&
+            r.RecommendedValue == "jekyll-paginate-v2");
+    }
+
+    #endregion
+
+    #region 포맷 변환 테스트
+
+    [Fact]
+    public async Task ConvertToFormat_JekyllToJekyll_ShouldReturnSameFormat()
+    {
+        // Arrange
+        var yamlContent = """
+            title: "Jekyll Blog"
+            markdown: kramdown
+            """;
+        var config = await _analyzer.AnalyzeConfigurationAsync(yamlContent, "https://github.com/user/_config.yml");
+
+        // Act
+        var converted = _analyzer.ConvertToFormat(config, SiteConfigurationType.Jekyll);
+
+        // Assert
+        converted.Should().NotBeNullOrEmpty();
+        converted.Should().Contain("markdown: kramdown");
+    }
+
+    [Fact]
+    public async Task ConvertToFormat_JekyllToHugo_ShouldMapFields()
+    {
+        // Arrange
+        var yamlContent = """
+            title: "Jekyll Blog"
+            description: "My blog"
+            url: "https://example.com"
+            lang: "en"
+            """;
+        var config = await _analyzer.AnalyzeConfigurationAsync(yamlContent, "https://github.com/user/_config.yml");
+
+        // Act
+        var converted = _analyzer.ConvertToFormat(config, SiteConfigurationType.Hugo);
+
+        // Assert
+        converted.Should().Contain("baseURL");
+        converted.Should().Contain("languageCode");
+    }
+
+    [Fact]
+    public async Task ConvertToFormat_JekyllToGitBook_ShouldAddStructure()
+    {
+        // Arrange
+        var yamlContent = """
+            title: "Jekyll Documentation"
+            description: "Docs site"
+            """;
+        var config = await _analyzer.AnalyzeConfigurationAsync(yamlContent, "https://github.com/user/_config.yml");
+
+        // Act
+        var converted = _analyzer.ConvertToFormat(config, SiteConfigurationType.GitBook);
+
+        // Assert
+        converted.Should().Contain("structure");
+        converted.Should().Contain("readme");
+        converted.Should().Contain("summary");
+    }
+
+    #endregion
+
+    #region 마이그레이션 상세 테스트
+
+    [Fact]
+    public void GenerateMigrationGuide_SameType_ShouldHavePerfectCompatibility()
+    {
+        // Arrange
+        var config = new SiteConfiguration
+        {
+            ConfigType = SiteConfigurationType.Jekyll,
+            SiteInfo = new SiteConfigurationInfo { Title = "Test" },
+            BuildConfig = new BuildConfiguration(),
+            ContentConfig = new ContentConfiguration(),
+            PluginConfig = new PluginConfiguration(),
+            DeploymentConfig = new DeploymentConfiguration(),
+            SeoConfig = new SeoConfiguration(),
+            PerformanceConfig = new SitePerformanceConfiguration()
+        };
+
+        // Act
+        var guide = _analyzer.GenerateMigrationGuide(config, SiteConfigurationType.Jekyll);
+
+        // Assert
+        guide.CompatibilityScore.Should().Be(1.0);
+    }
+
+    [Fact]
+    public void GenerateMigrationGuide_JekyllToHugo_ShouldProvideSteps()
+    {
+        // Arrange
+        var config = new SiteConfiguration
+        {
+            ConfigType = SiteConfigurationType.Jekyll,
+            SiteInfo = new SiteConfigurationInfo { Title = "Test" },
+            BuildConfig = new BuildConfiguration(),
+            ContentConfig = new ContentConfiguration(),
+            PluginConfig = new PluginConfiguration(),
+            DeploymentConfig = new DeploymentConfiguration(),
+            SeoConfig = new SeoConfiguration(),
+            PerformanceConfig = new SitePerformanceConfiguration()
+        };
+
+        // Act
+        var guide = _analyzer.GenerateMigrationGuide(config, SiteConfigurationType.Hugo);
+
+        // Assert
+        guide.Steps.Should().HaveCountGreaterThan(0);
+        guide.Steps[0].Title.Should().Contain("Hugo");
+        guide.AdditionalTasks.Should().NotBeEmpty();
+    }
+
+    [Fact]
+    public void GenerateMigrationGuide_WithJekyllPaginate_ShouldFindIncompatibility()
+    {
+        // Arrange
+        var config = new SiteConfiguration
+        {
+            ConfigType = SiteConfigurationType.Jekyll,
+            SiteInfo = new SiteConfigurationInfo { Title = "Test" },
+            BuildConfig = new BuildConfiguration(),
+            ContentConfig = new ContentConfiguration { PermalinkFormat = "/:title/" },
+            PluginConfig = new PluginConfiguration { Plugins = new[] { "jekyll-paginate" } },
+            DeploymentConfig = new DeploymentConfiguration(),
+            SeoConfig = new SeoConfiguration(),
+            PerformanceConfig = new SitePerformanceConfiguration()
+        };
+
+        // Act
+        var guide = _analyzer.GenerateMigrationGuide(config, SiteConfigurationType.Hugo);
+
+        // Assert
+        guide.IncompatibleSettings.Should().NotBeEmpty();
+        guide.IncompatibleSettings.Should().Contain(i => i.Key.Contains("jekyll-paginate"));
+        guide.IncompatibleSettings.Should().Contain(i => i.Key.Contains("permalink"));
+    }
+
+    #endregion
 }

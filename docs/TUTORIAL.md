@@ -1,1042 +1,571 @@
-# WebFlux Tutorial
+# WebFlux 튜토리얼
 
-This tutorial guides you through installing and using WebFlux for RAG content preprocessing.
+실전 예제로 배우는 WebFlux SDK 완벽 가이드
 
-## Table of Contents
+## 목차
 
-- [Installation](#installation)
-- [Basic Usage](#basic-usage)
-- [Processing Pipeline](#processing-pipeline)
-- [Chunking Strategies](#chunking-strategies)
-- [Reconstruction Strategies](#reconstruction-strategies)
-- [Web Crawling](#web-crawling)
-- [Service Implementation](#service-implementation)
-- [Advanced Scenarios](#advanced-scenarios)
-- [Performance Optimization](#performance-optimization)
-- [Troubleshooting](#troubleshooting)
+1. [설치](#설치)
+2. [첫 번째 프로젝트](#첫-번째-프로젝트)
+3. [기본 사용법](#기본-사용법)
+4. [고급 사용법](#고급-사용법)
+5. [실전 시나리오](#실전-시나리오)
+6. [문제 해결](#문제-해결)
 
-## Installation
+---
 
-### Prerequisites
+## 설치
 
-- .NET 8.0 or .NET 9.0 SDK
-- An LLM service (OpenAI, Anthropic, Azure OpenAI, or local model)
-- A vector database for storing chunks
+### 요구사항
 
-### Install WebFlux
+- .NET 8 이상 또는 .NET 9
+- AI 서비스 (OpenAI, Azure OpenAI, Anthropic 등)
 
-**Using NuGet Package Manager Console:**
-```powershell
-Install-Package WebFlux
-```
+### NuGet 패키지 설치
 
-**Using dotnet CLI:**
 ```bash
 dotnet add package WebFlux
 ```
 
-**Using .csproj file:**
-```xml
-<ItemGroup>
-  <PackageReference Include="WebFlux" Version="0.1.0" />
-</ItemGroup>
+### AI 서비스 준비
+
+WebFlux는 임베딩 생성을 위한 AI 서비스가 필요합니다. 지원하는 서비스:
+
+- OpenAI (GPT-4, GPT-3.5, text-embedding-3-small/large)
+- Azure OpenAI
+- Anthropic Claude
+- Local models (Ollama, LM Studio 등)
+- Custom implementations
+
+---
+
+## 첫 번째 프로젝트
+
+### 1단계: 프로젝트 생성
+
+```bash
+mkdir MyWebFluxApp
+cd MyWebFluxApp
+dotnet new console
+dotnet add package WebFlux
+dotnet add package OpenAI  # 또는 선호하는 AI SDK
 ```
 
-### Verify Installation
+### 2단계: AI 서비스 구현
 
-Create a simple console application to verify installation:
-
-```csharp
-using WebFlux;
-using Microsoft.Extensions.DependencyInjection;
-
-var services = new ServiceCollection();
-services.AddWebFlux();
-var provider = services.BuildServiceProvider();
-
-Console.WriteLine("WebFlux installed successfully!");
-```
-
-## Basic Usage
-
-### Minimal Setup
+OpenAI를 사용하는 경우:
 
 ```csharp
-using WebFlux;
-using Microsoft.Extensions.DependencyInjection;
-
-var services = new ServiceCollection();
-
-// Register your AI service implementations
-services.AddScoped<ITextCompletionService, YourLLMService>();
-services.AddScoped<ITextEmbeddingService, YourEmbeddingService>();
-
-// Register WebFlux
-services.AddWebFlux();
-
-var provider = services.BuildServiceProvider();
-var processor = provider.GetRequiredService<IWebContentProcessor>();
-```
-
-### Process a Single Page
-
-```csharp
-var chunks = await processor.ChunkAsync(
-    "https://example.com/article",
-    new ChunkingOptions
-    {
-        Strategy = "Auto",
-        MaxChunkSize = 512,
-        OverlapSize = 64
-    }
-);
-
-foreach (var chunk in chunks)
-{
-    Console.WriteLine($"Chunk {chunk.ChunkIndex}:");
-    Console.WriteLine($"  Content: {chunk.Content.Substring(0, 100)}...");
-    Console.WriteLine($"  Metadata: {chunk.Metadata.Title}");
-}
-```
-
-### Process Multiple Pages
-
-```csharp
-var options = new CrawlOptions
-{
-    MaxDepth = 2,
-    MaxPages = 50,
-    RespectRobotsTxt = true
-};
-
-await foreach (var result in processor.ProcessWithProgressAsync(
-    "https://docs.example.com",
-    options))
-{
-    if (result.IsSuccess && result.Result != null)
-    {
-        foreach (var chunk in result.Result)
-        {
-            await ProcessChunk(chunk);
-        }
-    }
-
-    if (result.Progress != null)
-    {
-        Console.WriteLine(
-            $"Progress: {result.Progress.PercentComplete:F1}% " +
-            $"({result.Progress.PagesProcessed}/{result.Progress.TotalPages})");
-    }
-}
-```
-
-## Processing Pipeline
-
-WebFlux processes content through four stages:
-
-### Stage 1: Extract
-
-Extract raw content from a URL:
-
-```csharp
-var extractor = provider.GetRequiredService<IContentExtractor>();
-var rawContent = await extractor.ExtractAsync("https://example.com/page");
-
-Console.WriteLine($"Title: {rawContent.Metadata.Title}");
-Console.WriteLine($"Content Length: {rawContent.Content.Length}");
-Console.WriteLine($"Content Type: {rawContent.ContentType}");
-```
-
-### Stage 2: Analyze
-
-Analyze content structure and quality:
-
-```csharp
-var analyzer = provider.GetRequiredService<IContentAnalyzer>();
-var analyzedContent = await analyzer.AnalyzeAsync(rawContent);
-
-Console.WriteLine($"Quality Score: {analyzedContent.Metrics?.ContentQuality:F2}");
-Console.WriteLine($"Sections: {analyzedContent.Sections?.Count}");
-Console.WriteLine($"Images: {analyzedContent.Images?.Count}");
-```
-
-### Stage 3: Reconstruct
-
-Optionally enhance content with LLM:
-
-```csharp
-var reconstructor = provider.GetRequiredService<IContentReconstructor>();
-
-var reconstructOptions = new ReconstructOptions
-{
-    Strategy = "Auto",
-    UseLLM = true,
-    Temperature = 0.3,
-    MaxTokens = 2000
-};
-
-var reconstructedContent = await reconstructor.ReconstructAsync(
-    analyzedContent,
-    reconstructOptions);
-
-Console.WriteLine($"Strategy Used: {reconstructedContent.StrategyUsed}");
-Console.WriteLine($"Used LLM: {reconstructedContent.UsedLLM}");
-```
-
-### Stage 4: Chunk
-
-Split content into semantic chunks:
-
-```csharp
-var chunker = provider.GetRequiredService<IContentChunker>();
-
-var chunkingOptions = new ChunkingOptions
-{
-    Strategy = "Auto",
-    MaxChunkSize = 512,
-    OverlapSize = 64
-};
-
-var chunks = await chunker.ChunkAsync(
-    reconstructedContent,
-    chunkingOptions);
-
-foreach (var chunk in chunks)
-{
-    Console.WriteLine($"Chunk {chunk.ChunkIndex}: {chunk.Content.Length} chars");
-}
-```
-
-## Chunking Strategies
-
-### Auto Strategy (Recommended)
-
-Automatically selects the best strategy based on content analysis:
-
-```csharp
-var options = new ChunkingOptions
-{
-    Strategy = "Auto",
-    MaxChunkSize = 512,
-    OverlapSize = 64
-};
-
-var chunks = await processor.ChunkAsync(url, options);
-```
-
-### Smart Strategy
-
-Best for HTML documentation and structured content:
-
-```csharp
-var options = new ChunkingOptions
-{
-    Strategy = "Smart",
-    MaxChunkSize = 512,
-    OverlapSize = 64,
-    PreserveStructure = true
-};
-```
-
-### Semantic Strategy
-
-Preserves semantic meaning across chunks:
-
-```csharp
-var options = new ChunkingOptions
-{
-    Strategy = "Semantic",
-    MaxChunkSize = 512,
-    OverlapSize = 64,
-    UseEmbeddings = true  // Requires IEmbeddingService
-};
-```
-
-### Intelligent Strategy
-
-Uses LLM for intelligent chunk boundaries:
-
-```csharp
-var options = new ChunkingOptions
-{
-    Strategy = "Intelligent",
-    MaxChunkSize = 512,
-    OverlapSize = 64,
-    UseLLM = true  // Requires ITextCompletionService
-};
-```
-
-### MemoryOptimized Strategy
-
-Minimizes memory usage for large documents:
-
-```csharp
-var options = new ChunkingOptions
-{
-    Strategy = "MemoryOptimized",
-    MaxChunkSize = 512,
-    OverlapSize = 64,
-    StreamingMode = true
-};
-```
-
-### Paragraph Strategy
-
-Chunks at natural paragraph boundaries:
-
-```csharp
-var options = new ChunkingOptions
-{
-    Strategy = "Paragraph",
-    MinChunkSize = 100,
-    MaxChunkSize = 1000
-};
-```
-
-### FixedSize Strategy
-
-Simple fixed-size chunking:
-
-```csharp
-var options = new ChunkingOptions
-{
-    Strategy = "FixedSize",
-    MaxChunkSize = 512,
-    OverlapSize = 64
-};
-```
-
-## Reconstruction Strategies
-
-### None Strategy
-
-Use original content without modification:
-
-```csharp
-var options = new ReconstructOptions
-{
-    Strategy = "None"
-};
-
-var result = await processor.ReconstructAsync(analyzedContent, options);
-// No LLM calls, preserves original content
-```
-
-### Summarize Strategy
-
-Create condensed version of content:
-
-```csharp
-var options = new ReconstructOptions
-{
-    Strategy = "Summarize",
-    UseLLM = true,
-    Temperature = 0.3,
-    MaxTokens = 1000
-};
-
-var result = await processor.ReconstructAsync(analyzedContent, options);
-```
-
-### Expand Strategy
-
-Add detailed explanations and examples:
-
-```csharp
-var options = new ReconstructOptions
-{
-    Strategy = "Expand",
-    UseLLM = true,
-    Temperature = 0.5,
-    MaxTokens = 3000,
-    ContextPrompt = "Focus on technical details"
-};
-
-var result = await processor.ReconstructAsync(analyzedContent, options);
-```
-
-### Rewrite Strategy
-
-Improve clarity and consistency:
-
-```csharp
-var options = new ReconstructOptions
-{
-    Strategy = "Rewrite",
-    UseLLM = true,
-    Temperature = 0.3,
-    RewriteStyle = "Technical",  // "Technical", "Formal", "Casual", "Simple"
-    MaxTokens = 2000
-};
-
-var result = await processor.ReconstructAsync(analyzedContent, options);
-```
-
-### Enrich Strategy
-
-Add context and metadata:
-
-```csharp
-var options = new ReconstructOptions
-{
-    Strategy = "Enrich",
-    UseLLM = true,
-    Temperature = 0.3,
-    EnrichmentTypes = new[] { "Context", "Definitions", "Examples", "RelatedInfo" },
-    MaxTokens = 2000
-};
-
-var result = await processor.ReconstructAsync(analyzedContent, options);
-```
-
-### Auto Strategy
-
-Automatically selects the best reconstruction strategy:
-
-```csharp
-var options = new ReconstructOptions
-{
-    Strategy = "Auto",
-    UseLLM = true,
-    Temperature = 0.3
-};
-
-var result = await processor.ReconstructAsync(analyzedContent, options);
-// Logs which strategy was selected and why
-```
-
-## Web Crawling
-
-### Basic Crawling
-
-```csharp
-var options = new CrawlOptions
-{
-    MaxDepth = 3,
-    MaxPages = 100,
-    RespectRobotsTxt = true,
-    DelayBetweenRequests = TimeSpan.FromMilliseconds(500)
-};
-
-var pages = await processor.CrawlAsync("https://example.com", options);
-```
-
-### Filtered Crawling
-
-```csharp
-var options = new CrawlOptions
-{
-    MaxDepth = 3,
-    MaxPages = 100,
-    AllowedDomains = new[] { "docs.example.com", "help.example.com" },
-    IncludePatterns = new[] { "/docs/", "/api/", "/guide/" },
-    ExcludePatterns = new[] { "/admin/", "*.pdf", "/archive/" }
-};
-```
-
-### Concurrent Crawling
-
-```csharp
-var options = new CrawlOptions
-{
-    MaxDepth = 3,
-    MaxPages = 500,
-    MaxConcurrentRequests = 5,  // Parallel requests
-    Timeout = TimeSpan.FromSeconds(30),
-    RetryCount = 3
-};
-```
-
-### Crawling Strategies
-
-```csharp
-// Breadth-first (default)
-var options = new CrawlOptions
-{
-    Strategy = CrawlStrategy.BreadthFirst
-};
-
-// Depth-first
-var options = new CrawlOptions
-{
-    Strategy = CrawlStrategy.DepthFirst
-};
-
-// Intelligent (LLM-based prioritization)
-var options = new CrawlOptions
-{
-    Strategy = CrawlStrategy.Intelligent,
-    UseLLM = true  // Requires ITextCompletionService
-};
-
-// Sitemap-based
-var options = new CrawlOptions
-{
-    Strategy = CrawlStrategy.Sitemap,
-    PreferSitemap = true
-};
-```
-
-## Service Implementation
-
-### Implementing ITextCompletionService
-
-```csharp
+using OpenAI;
+using OpenAI.Embeddings;
 using WebFlux.Core.Interfaces;
-using WebFlux.Core.Options;
 
-public class OpenAICompletionService : ITextCompletionService
-{
-    private readonly OpenAIClient _client;
-
-    public OpenAICompletionService(string apiKey)
-    {
-        _client = new OpenAIClient(apiKey);
-    }
-
-    public async Task<string> CompleteAsync(
-        string prompt,
-        TextCompletionOptions? options = null,
-        CancellationToken cancellationToken = default)
-    {
-        var chatClient = _client.GetChatClient("gpt-4");
-
-        var response = await chatClient.CompleteChatAsync(
-            new[] { new UserChatMessage(prompt) },
-            new ChatCompletionOptions
-            {
-                MaxOutputTokenCount = options?.MaxTokens ?? 2000,
-                Temperature = options?.Temperature ?? 0.3f
-            },
-            cancellationToken);
-
-        return response.Value.Content[0].Text;
-    }
-}
-
-// Registration
-services.AddScoped<ITextCompletionService>(sp =>
-    new OpenAICompletionService(Environment.GetEnvironmentVariable("OPENAI_API_KEY")!));
-```
-
-### Implementing ITextEmbeddingService
-
-```csharp
 public class OpenAIEmbeddingService : ITextEmbeddingService
 {
-    private readonly OpenAIClient _client;
+    private readonly EmbeddingClient _client;
 
     public OpenAIEmbeddingService(string apiKey)
     {
-        _client = new OpenAIClient(apiKey);
+        _client = new EmbeddingClient("text-embedding-3-small", apiKey);
     }
 
-    public async Task<float[]> GenerateAsync(
+    public async Task<double[]> GetEmbeddingAsync(
         string text,
-        EmbeddingOptions? options = null,
         CancellationToken cancellationToken = default)
     {
-        var embeddingClient = _client.GetEmbeddingClient("text-embedding-3-small");
-
-        var response = await embeddingClient.GenerateEmbeddingAsync(
-            text,
-            cancellationToken);
-
-        return response.Value.Vector.ToArray();
-    }
-
-    public async Task<IEnumerable<float[]>> GenerateBatchAsync(
-        IEnumerable<string> texts,
-        EmbeddingOptions? options = null,
-        CancellationToken cancellationToken = default)
-    {
-        var embeddingClient = _client.GetEmbeddingClient("text-embedding-3-small");
-
-        var response = await embeddingClient.GenerateEmbeddingsAsync(
-            texts.ToList(),
-            cancellationToken);
-
-        return response.Value.Select(e => e.Vector.ToArray());
+        var response = await _client.GenerateEmbeddingAsync(text, cancellationToken);
+        return response.Value.ToFloats().Select(f => (double)f).ToArray();
     }
 }
-
-// Registration
-services.AddScoped<ITextEmbeddingService>(sp =>
-    new OpenAIEmbeddingService(Environment.GetEnvironmentVariable("OPENAI_API_KEY")!));
 ```
 
-### Implementing IImageToTextService
+### 3단계: WebFlux 설정 및 실행
 
 ```csharp
-public class OpenAIImageToTextService : IImageToTextService
-{
-    private readonly OpenAIClient _client;
-    private readonly HttpClient _httpClient;
+using Microsoft.Extensions.DependencyInjection;
+using WebFlux;
 
-    public OpenAIImageToTextService(string apiKey, HttpClient httpClient)
-    {
-        _client = new OpenAIClient(apiKey);
-        _httpClient = httpClient;
-    }
-
-    public async Task<ImageToTextResult> ExtractTextFromWebImageAsync(
-        string imageUrl,
-        ImageToTextOptions? options = null,
-        CancellationToken cancellationToken = default)
-    {
-        var imageData = await _httpClient.GetByteArrayAsync(imageUrl, cancellationToken);
-        var chatClient = _client.GetChatClient("gpt-4o");
-
-        var messages = new[]
-        {
-            new SystemChatMessage("Extract all text from this image accurately."),
-            new UserChatMessage(
-                ChatMessageContentPart.CreateImagePart(
-                    BinaryData.FromBytes(imageData),
-                    "image/jpeg"))
-        };
-
-        var response = await chatClient.CompleteChatAsync(
-            messages,
-            new ChatCompletionOptions
-            {
-                MaxOutputTokenCount = 1000,
-                Temperature = 0.1f
-            },
-            cancellationToken);
-
-        return new ImageToTextResult
-        {
-            ExtractedText = response.Value.Content[0].Text,
-            Confidence = 0.95,
-            IsSuccess = true,
-            SourceUrl = imageUrl
-        };
-    }
-}
-
-// Registration
-services.AddScoped<IImageToTextService>(sp =>
-    new OpenAIImageToTextService(
-        Environment.GetEnvironmentVariable("OPENAI_API_KEY")!,
-        sp.GetRequiredService<HttpClient>()));
-```
-
-### Using Without Optional Services
-
-WebFlux handles missing optional services gracefully:
-
-```csharp
 var services = new ServiceCollection();
 
-// Only register required services
-services.AddScoped<ITextEmbeddingService, YourEmbeddingService>();
+// AI 서비스 등록
+var apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
+services.AddScoped<ITextEmbeddingService>(
+    sp => new OpenAIEmbeddingService(apiKey));
 
-// DO NOT register ITextCompletionService or IImageToTextService
-
+// WebFlux 등록
 services.AddWebFlux();
 
 var provider = services.BuildServiceProvider();
 var processor = provider.GetRequiredService<IWebContentProcessor>();
 
-// This works - Auto strategy falls back to "None"
-var options = new ReconstructOptions { Strategy = "Auto" };
-var result = await processor.ReconstructAsync(content, options);
-// Logs: "ITextCompletionService not available. Using 'None' strategy."
+// URL 처리
+var chunks = await processor.ProcessUrlAsync("https://example.com");
 
-// This will throw InvalidOperationException with helpful message
-var options2 = new ReconstructOptions { Strategy = "Rewrite", UseLLM = true };
-var result2 = await processor.ReconstructAsync(content, options2);
-// Exception: "ITextCompletionService is required for Rewrite strategy.
-//            Please register ITextCompletionService in your DI container,
-//            or use ReconstructOptions.Strategy = 'None' for basic reconstruction."
+foreach (var chunk in chunks)
+{
+    Console.WriteLine($"청크 {chunk.ChunkIndex}:");
+    Console.WriteLine($"  내용: {chunk.Content.Substring(0, Math.Min(100, chunk.Content.Length))}...");
+    Console.WriteLine($"  길이: {chunk.Content.Length} 문자");
+    Console.WriteLine();
+}
 ```
 
-## Advanced Scenarios
+---
 
-### RAG Pipeline Integration
+## 기본 사용법
+
+### 단일 URL 처리
 
 ```csharp
-public class RagIndexingService
+var processor = provider.GetRequiredService<IWebContentProcessor>();
+
+// 기본 옵션으로 처리
+var chunks = await processor.ProcessUrlAsync("https://docs.microsoft.com");
+
+Console.WriteLine($"생성된 청크 수: {chunks.Count}");
+```
+
+### 청킹 전략 선택
+
+```csharp
+// Auto 전략 (권장 - 자동 선택)
+var autoChunks = await processor.ProcessUrlAsync(
+    url,
+    new ChunkingOptions { Strategy = "Auto" }
+);
+
+// Smart 전략 (HTML 구조 기반)
+var smartChunks = await processor.ProcessUrlAsync(
+    url,
+    new ChunkingOptions { Strategy = "Smart" }
+);
+
+// Semantic 전략 (의미 기반 - 임베딩 사용)
+var semanticChunks = await processor.ProcessUrlAsync(
+    url,
+    new ChunkingOptions { Strategy = "Semantic" }
+);
+```
+
+### 청크 크기 조정
+
+```csharp
+var options = new ChunkingOptions
+{
+    Strategy = "Auto",
+    MaxChunkSize = 1000,    // 최대 1000 토큰
+    MinChunkSize = 200,     // 최소 200 토큰
+    OverlapSize = 100       // 100 토큰 오버랩
+};
+
+var chunks = await processor.ProcessUrlAsync(url, options);
+```
+
+### 크롤링 옵션 설정
+
+```csharp
+var crawlOptions = new CrawlOptions
+{
+    MaxDepth = 2,                    // 최대 2단계 깊이
+    MaxPages = 50,                   // 최대 50페이지
+    RespectRobotsTxt = true,        // robots.txt 준수
+    UserAgent = "MyApp/1.0",        // User-Agent 설정
+    DelayMs = 1000,                 // 요청 간 1초 대기
+    TimeoutSeconds = 30             // 30초 타임아웃
+};
+```
+
+---
+
+## 고급 사용법
+
+### 웹사이트 전체 크롤링 (스트리밍)
+
+대규모 웹사이트를 처리할 때 메모리 효율적인 스트리밍 방식:
+
+```csharp
+var crawlOptions = new CrawlOptions { MaxPages = 100 };
+var chunkOptions = new ChunkingOptions { Strategy = "Auto" };
+
+await foreach (var chunk in processor.ProcessWebsiteAsync(
+    "https://docs.example.com",
+    crawlOptions,
+    chunkOptions))
+{
+    // 청크 생성 즉시 벡터 DB에 저장
+    await vectorDb.InsertAsync(new VectorEntry
+    {
+        Id = chunk.ChunkId,
+        Content = chunk.Content,
+        Embedding = await embeddingService.GetEmbeddingAsync(chunk.Content),
+        Metadata = chunk.AdditionalMetadata
+    });
+
+    Console.WriteLine($"처리됨: {chunk.SourceUrl}");
+}
+```
+
+### 진행 상황 추적
+
+```csharp
+await foreach (var result in processor.ProcessWithProgressAsync(
+    "https://docs.example.com",
+    crawlOptions,
+    chunkOptions))
+{
+    if (result.IsSuccess)
+    {
+        Console.WriteLine($"✓ 성공: {result.Url} ({result.Result.Count} 청크)");
+        await SaveChunksAsync(result.Result);
+    }
+    else
+    {
+        Console.WriteLine($"✗ 실패: {result.Url} - {result.Error}");
+    }
+}
+```
+
+### 병렬 처리 설정
+
+```csharp
+services.AddWebFlux(config =>
+{
+    config.MaxDegreeOfParallelism = 4;  // 동시 4개 페이지 처리
+    config.EnableCaching = true;         // 캐싱 활성화
+});
+```
+
+### 커스텀 청킹 전략
+
+```csharp
+public class CustomChunkingStrategy : IChunkingStrategy
+{
+    public string Name => "Custom";
+    public string Description => "커스텀 청킹 로직";
+
+    public async Task<IReadOnlyList<WebContentChunk>> ChunkAsync(
+        ExtractedContent content,
+        ChunkingOptions options,
+        CancellationToken cancellationToken = default)
+    {
+        var chunks = new List<WebContentChunk>();
+
+        // 커스텀 로직 구현
+        var sentences = content.Text.Split(". ");
+        var currentChunk = "";
+        var chunkIndex = 0;
+
+        foreach (var sentence in sentences)
+        {
+            if (currentChunk.Length + sentence.Length > options.MaxChunkSize)
+            {
+                chunks.Add(new WebContentChunk
+                {
+                    ChunkId = Guid.NewGuid().ToString(),
+                    ChunkIndex = chunkIndex++,
+                    Content = currentChunk,
+                    SourceUrl = content.SourceUrl
+                });
+                currentChunk = "";
+            }
+            currentChunk += sentence + ". ";
+        }
+
+        if (!string.IsNullOrWhiteSpace(currentChunk))
+        {
+            chunks.Add(new WebContentChunk
+            {
+                ChunkId = Guid.NewGuid().ToString(),
+                ChunkIndex = chunkIndex,
+                Content = currentChunk,
+                SourceUrl = content.SourceUrl
+            });
+        }
+
+        return chunks;
+    }
+}
+
+// 등록
+services.AddScoped<IChunkingStrategy, CustomChunkingStrategy>();
+```
+
+---
+
+## 실전 시나리오
+
+### 시나리오 1: 기술 문서 RAG 시스템
+
+```csharp
+public class TechnicalDocumentationRAG
 {
     private readonly IWebContentProcessor _processor;
-    private readonly ITextEmbeddingService _embeddingService;
-    private readonly IVectorStore _vectorStore;
+    private readonly IVectorDatabase _vectorDb;
+    private readonly ITextEmbeddingService _embedding;
 
-    public async Task IndexWebsiteAsync(string baseUrl)
+    public async Task IndexDocumentationAsync(string docsUrl)
     {
         var crawlOptions = new CrawlOptions
         {
             MaxDepth = 3,
-            MaxPages = 100,
+            MaxPages = 500,
             RespectRobotsTxt = true
         };
 
-        var chunkingOptions = new ChunkingOptions
+        var chunkOptions = new ChunkingOptions
         {
-            Strategy = "Auto",
+            Strategy = "Smart",      // HTML 구조 인식
             MaxChunkSize = 512,
             OverlapSize = 64
         };
 
-        await foreach (var result in _processor.ProcessWithProgressAsync(
-            baseUrl,
-            crawlOptions,
-            chunkingOptions))
+        await foreach (var chunk in _processor.ProcessWebsiteAsync(
+            docsUrl, crawlOptions, chunkOptions))
         {
-            if (result.IsSuccess && result.Result != null)
-            {
-                foreach (var chunk in result.Result)
-                {
-                    // Generate embedding
-                    var embedding = await _embeddingService.GenerateAsync(chunk.Content);
+            var embedding = await _embedding.GetEmbeddingAsync(chunk.Content);
 
-                    // Store in vector database
-                    await _vectorStore.UpsertAsync(new VectorDocument
+            await _vectorDb.UpsertAsync(new DocumentChunk
+            {
+                Id = chunk.ChunkId,
+                Content = chunk.Content,
+                Embedding = embedding,
+                Source = chunk.SourceUrl,
+                Metadata = chunk.AdditionalMetadata
+            });
+        }
+    }
+
+    public async Task<string> QueryAsync(string question)
+    {
+        var questionEmbedding = await _embedding.GetEmbeddingAsync(question);
+        var relevantChunks = await _vectorDb.SearchAsync(questionEmbedding, topK: 5);
+
+        var context = string.Join("\n\n", relevantChunks.Select(c => c.Content));
+        return await GenerateAnswerAsync(question, context);
+    }
+}
+```
+
+### 시나리오 2: 블로그 콘텐츠 수집
+
+```csharp
+public class BlogContentCollector
+{
+    public async Task CollectBlogPostsAsync(string blogUrl)
+    {
+        var processor = GetProcessor();
+
+        var options = new ChunkingOptions
+        {
+            Strategy = "Intelligent",  // LLM 기반 분할
+            MaxChunkSize = 1000,
+            MinChunkSize = 300
+        };
+
+        var posts = await processor.ProcessUrlAsync(blogUrl, options);
+
+        foreach (var post in posts)
+        {
+            await SaveToDatabase(new BlogPost
+            {
+                Title = ExtractTitle(post.AdditionalMetadata),
+                Content = post.Content,
+                Summary = await GenerateSummaryAsync(post.Content),
+                PublishedDate = ExtractDate(post.AdditionalMetadata),
+                Author = ExtractAuthor(post.AdditionalMetadata)
+            });
+        }
+    }
+}
+```
+
+### 시나리오 3: 대용량 문서 처리
+
+```csharp
+public class LargeDocumentProcessor
+{
+    public async Task ProcessLargeWebsiteAsync(string url)
+    {
+        var options = new ChunkingOptions
+        {
+            Strategy = "MemoryOptimized",  // 메모리 효율적 처리
+            MaxChunkSize = 512,
+            BufferSizeBytes = 1024 * 1024  // 1MB 버퍼
+        };
+
+        int totalChunks = 0;
+        var stopwatch = Stopwatch.StartNew();
+
+        await foreach (var chunk in _processor.ProcessWebsiteAsync(
+            url,
+            new CrawlOptions { MaxPages = 1000 },
+            options))
+        {
+            await ProcessChunkAsync(chunk);
+            totalChunks++;
+
+            if (totalChunks % 100 == 0)
+            {
+                Console.WriteLine($"처리된 청크: {totalChunks} " +
+                    $"(경과 시간: {stopwatch.Elapsed.TotalMinutes:F1}분)");
+            }
+        }
+
+        Console.WriteLine($"완료: {totalChunks} 청크, " +
+            $"{stopwatch.Elapsed.TotalMinutes:F1}분 소요");
+    }
+}
+```
+
+### 시나리오 4: 다국어 콘텐츠 처리
+
+```csharp
+public class MultilingualContentProcessor
+{
+    public async Task ProcessMultilingualSiteAsync(string baseUrl)
+    {
+        var languages = new[] { "en", "ko", "ja", "zh" };
+
+        foreach (var lang in languages)
+        {
+            var url = $"{baseUrl}/{lang}";
+
+            var chunks = await _processor.ProcessUrlAsync(
+                url,
+                new ChunkingOptions
+                {
+                    Strategy = "Semantic",
+                    MaxChunkSize = 512
+                });
+
+            foreach (var chunk in chunks)
+            {
+                // 언어별로 별도 인덱스에 저장
+                await _vectorDb.UpsertAsync(
+                    index: $"docs_{lang}",
+                    document: new
                     {
-                        Id = chunk.Id,
+                        Id = chunk.ChunkId,
                         Content = chunk.Content,
-                        Embedding = embedding,
-                        Metadata = new Dictionary<string, object>
-                        {
-                            ["source_url"] = chunk.SourceUrl,
-                            ["chunk_index"] = chunk.ChunkIndex,
-                            ["title"] = chunk.Metadata.Title ?? "",
-                            ["indexed_at"] = DateTime.UtcNow
-                        }
+                        Language = lang,
+                        Embedding = await GetEmbeddingAsync(chunk.Content, lang)
                     });
-                }
             }
         }
     }
 }
 ```
 
-### Custom Content Extractor
+---
 
+## 문제 해결
+
+### 메모리 부족
+
+**증상**: OutOfMemoryException 발생
+
+**해결책**:
 ```csharp
-public class CustomApiExtractor : IContentExtractor
+// MemoryOptimized 전략 사용
+var options = new ChunkingOptions
 {
-    public string ExtractorType => "CustomApi";
-    public IEnumerable<string> SupportedContentTypes => new[] { "application/json" };
+    Strategy = "MemoryOptimized",
+    BufferSizeBytes = 512 * 1024  // 512KB로 제한
+};
 
-    public bool CanExtract(string contentType, string url)
-    {
-        return url.Contains("/api/") && contentType == "application/json";
-    }
-
-    public async Task<RawWebContent> ExtractAsync(
-        string url,
-        HttpResponseMessage response,
-        CancellationToken cancellationToken = default)
-    {
-        var json = await response.Content.ReadAsStringAsync(cancellationToken);
-        var data = JsonSerializer.Deserialize<CustomApiResponse>(json);
-
-        return new RawWebContent
-        {
-            Url = url,
-            Content = data.MainContent,
-            ContentType = "application/json",
-            Metadata = new WebContentMetadata
-            {
-                Title = data.Title,
-                Description = data.Description,
-                Properties = new Dictionary<string, object>
-                {
-                    ["api_version"] = data.Version,
-                    ["last_updated"] = data.UpdatedAt
-                }
-            }
-        };
-    }
+// 스트리밍 방식으로 처리
+await foreach (var chunk in processor.ProcessWebsiteAsync(url, options))
+{
+    await ProcessChunkImmediately(chunk);
 }
-
-// Registration
-services.AddTransient<IContentExtractor, CustomApiExtractor>();
 ```
 
-### Batch Processing with Progress Tracking
+### 처리 속도 느림
 
+**증상**: 대규모 사이트 처리가 너무 느림
+
+**해결책**:
 ```csharp
-public class BatchProcessor
+services.AddWebFlux(config =>
 {
-    public async Task ProcessUrlsAsync(IEnumerable<string> urls, IProgress<ProgressInfo> progress)
-    {
-        int total = urls.Count();
-        int processed = 0;
+    // 병렬 처리 증가
+    config.MaxDegreeOfParallelism = 8;
 
-        foreach (var url in urls)
+    // 캐싱 활성화
+    config.EnableCaching = true;
+
+    // 빠른 전략 사용
+    config.Chunking.DefaultStrategy = "FixedSize";
+});
+```
+
+### 청크 품질 낮음
+
+**증상**: 의미가 잘리거나 문맥이 유실됨
+
+**해결책**:
+```csharp
+// 고품질 전략 사용
+var options = new ChunkingOptions
+{
+    Strategy = "Intelligent",  // 또는 "Semantic"
+    MaxChunkSize = 1000,       // 크기 증가
+    OverlapSize = 200          // 오버랩 증가
+};
+```
+
+### robots.txt 차단
+
+**증상**: 크롤링이 차단됨
+
+**해결책**:
+```csharp
+var crawlOptions = new CrawlOptions
+{
+    RespectRobotsTxt = false,  // 주의: 웹사이트 정책 확인 필요
+    UserAgent = "MyBot/1.0 (+https://mysite.com/bot)",
+    DelayMs = 2000  // 서버 부하 고려
+};
+```
+
+### AI 서비스 오류
+
+**증상**: 임베딩 또는 LLM 서비스 실패
+
+**해결책**:
+```csharp
+public class ResilientEmbeddingService : ITextEmbeddingService
+{
+    public async Task<double[]> GetEmbeddingAsync(string text, CancellationToken ct)
+    {
+        int retries = 3;
+        while (retries > 0)
         {
             try
             {
-                var chunks = await _processor.ChunkAsync(url, _defaultOptions);
-                await StoreChunks(chunks);
-
-                processed++;
-                progress.Report(new ProgressInfo
-                {
-                    Current = processed,
-                    Total = total,
-                    PercentComplete = (double)processed / total * 100,
-                    CurrentUrl = url
-                });
+                return await _innerService.GetEmbeddingAsync(text, ct);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error processing {url}: {ex.Message}");
+                retries--;
+                if (retries == 0) throw;
+                await Task.Delay(1000 * (4 - retries));  // 백오프
             }
         }
-    }
-}
-
-// Usage
-var progress = new Progress<ProgressInfo>(info =>
-{
-    Console.WriteLine($"Progress: {info.PercentComplete:F1}% ({info.Current}/{info.Total})");
-    Console.WriteLine($"Current: {info.CurrentUrl}");
-});
-
-await batchProcessor.ProcessUrlsAsync(urls, progress);
-```
-
-### Incremental Updates
-
-```csharp
-public class IncrementalIndexer
-{
-    public async Task UpdateIndexAsync(string baseUrl)
-    {
-        // Get last crawl time from vector store
-        var lastCrawl = await _vectorStore.GetMetadataAsync(baseUrl, "last_crawl_time");
-        var lastCrawlTime = lastCrawl != null
-            ? DateTime.Parse(lastCrawl.ToString()!)
-            : DateTime.MinValue;
-
-        var options = new CrawlOptions
-        {
-            MaxDepth = 3,
-            IfModifiedSince = lastCrawlTime,  // Only process updated pages
-            RespectRobotsTxt = true
-        };
-
-        await foreach (var result in _processor.ProcessWithProgressAsync(baseUrl, options))
-        {
-            if (result.IsSuccess && result.Result != null)
-            {
-                foreach (var chunk in result.Result)
-                {
-                    // Update or insert chunk
-                    await _vectorStore.UpsertAsync(CreateVectorDocument(chunk));
-                }
-            }
-        }
-
-        // Update last crawl time
-        await _vectorStore.SetMetadataAsync(baseUrl, "last_crawl_time", DateTime.UtcNow);
+        throw new Exception("Max retries exceeded");
     }
 }
 ```
 
-## Performance Optimization
+---
 
-### Parallel Processing
+## 다음 단계
 
-```csharp
-var options = new CrawlOptions
-{
-    MaxConcurrentRequests = Environment.ProcessorCount,  // Use all CPU cores
-    MaxPages = 1000,
-    Timeout = TimeSpan.FromSeconds(30)
-};
-```
+- [청킹 전략 상세 가이드](CHUNKING_STRATEGIES.md)
+- [API 참조](INTERFACES.md)
+- [아키텍처 이해하기](ARCHITECTURE.md)
+- [GitHub 샘플 코드](../samples/)
 
-### Memory-Efficient Streaming
+## 지원
 
-```csharp
-var options = new ChunkingOptions
-{
-    Strategy = "MemoryOptimized",
-    StreamingMode = true,
-    MaxChunkSize = 512
-};
-
-await foreach (var chunk in _processor.ChunkStreamAsync(url, options))
-{
-    await ProcessChunkImmediately(chunk);
-    // Chunk is processed and can be garbage collected
-}
-```
-
-### Caching
-
-```csharp
-services.AddWebFlux(options =>
-{
-    options.EnableCaching = true;
-    options.CacheDuration = TimeSpan.FromHours(4);
-    options.MaxCacheSize = 1000;  // Max cached items
-});
-```
-
-### Batch Embedding Generation
-
-```csharp
-// Process chunks in batches for efficient embedding generation
-var chunkBatch = new List<WebContentChunk>();
-const int batchSize = 100;
-
-await foreach (var result in _processor.ProcessWithProgressAsync(url, options))
-{
-    if (result.Result != null)
-    {
-        chunkBatch.AddRange(result.Result);
-
-        if (chunkBatch.Count >= batchSize)
-        {
-            await ProcessBatch(chunkBatch);
-            chunkBatch.Clear();
-        }
-    }
-}
-
-// Process remaining chunks
-if (chunkBatch.Any())
-{
-    await ProcessBatch(chunkBatch);
-}
-
-async Task ProcessBatch(List<WebContentChunk> chunks)
-{
-    var texts = chunks.Select(c => c.Content);
-    var embeddings = await _embeddingService.GenerateBatchAsync(texts);
-
-    await _vectorStore.UpsertBatchAsync(
-        chunks.Zip(embeddings, CreateVectorDocument));
-}
-```
-
-## Troubleshooting
-
-### Missing Service Errors
-
-**Problem**: `InvalidOperationException: ITextCompletionService is required for Rewrite strategy`
-
-**Solution**: Either register the required service or use a strategy that doesn't require it:
-
-```csharp
-// Option 1: Register the service
-services.AddScoped<ITextCompletionService, YourLLMService>();
-
-// Option 2: Use a non-LLM strategy
-var options = new ReconstructOptions { Strategy = "None" };
-
-// Option 3: Let Auto strategy handle it
-var options = new ReconstructOptions { Strategy = "Auto" };  // Falls back to "None"
-```
-
-### Memory Issues
-
-**Problem**: High memory usage when processing large websites
-
-**Solution**: Use MemoryOptimized strategy and streaming:
-
-```csharp
-var chunkingOptions = new ChunkingOptions
-{
-    Strategy = "MemoryOptimized",
-    StreamingMode = true
-};
-
-var crawlOptions = new CrawlOptions
-{
-    MaxConcurrentRequests = 2,  // Reduce concurrency
-    MaxPages = 100  // Process in smaller batches
-};
-```
-
-### Rate Limiting
-
-**Problem**: Getting rate-limited by target website
-
-**Solution**: Adjust crawling delays and concurrency:
-
-```csharp
-var options = new CrawlOptions
-{
-    DelayBetweenRequests = TimeSpan.FromSeconds(2),
-    MaxConcurrentRequests = 1,
-    RespectRobotsTxt = true,
-    UserAgent = "YourBot/1.0 (+https://yoursite.com/bot)"
-};
-```
-
-### Poor Chunk Quality
-
-**Problem**: Chunks don't preserve semantic meaning
-
-**Solution**: Use Semantic or Intelligent chunking strategy:
-
-```csharp
-var options = new ChunkingOptions
-{
-    Strategy = "Semantic",
-    UseEmbeddings = true,
-    OverlapSize = 100  // Increase overlap for better context
-};
-```
-
-### Slow Processing
-
-**Problem**: Processing is slower than expected
-
-**Solution**: Enable parallel processing and caching:
-
-```csharp
-// Enable caching
-services.AddWebFlux(config =>
-{
-    config.EnableCaching = true;
-    config.CacheDuration = TimeSpan.FromHours(4);
-});
-
-// Increase concurrency
-var options = new CrawlOptions
-{
-    MaxConcurrentRequests = 5,
-    MaxPages = 500
-};
-
-// Use faster chunking strategy
-var chunkingOptions = new ChunkingOptions
-{
-    Strategy = "FixedSize",  // Fastest but lowest quality
-    MaxChunkSize = 512
-};
-```
-
-### robots.txt Violations
-
-**Problem**: Blocked by robots.txt rules
-
-**Solution**: Ensure compliance and check permissions:
-
-```csharp
-var options = new CrawlOptions
-{
-    RespectRobotsTxt = true,  // Always enable
-    UserAgent = "YourBot/1.0",  // Set identifiable User-Agent
-    DelayBetweenRequests = TimeSpan.FromSeconds(1)  // Be polite
-};
-
-// Check robots.txt before crawling
-var robotsParser = provider.GetRequiredService<IRobotsParser>();
-var isAllowed = await robotsParser.IsAllowedAsync(url, options.UserAgent);
-```
-
-## Next Steps
-
-- Explore [Pipeline Design](PIPELINE_DESIGN.md) for architecture details
-- Review [Interfaces](INTERFACES.md) for implementation reference
-- Read [Chunking Strategies](CHUNKING_STRATEGIES.md) for strategy details
-- Check the [samples](../samples/) directory for complete examples
+- 이슈: [GitHub Issues](https://github.com/iyulab/WebFlux/issues)
+- 패키지: [NuGet](https://www.nuget.org/packages/WebFlux/)

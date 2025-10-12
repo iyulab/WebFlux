@@ -135,44 +135,81 @@ public class WebContentProcessor : IWebContentProcessor
         {
             MaxDepth = 3, // 기본값
             MaxPages = 100, // 기본값
-            DelayMs = configuration.Crawling.DefaultDelayMs
+            DelayMs = 0, // 성능 최적화: 기본 대기 시간 제거 (필요시 설정에서 지정)
+            EnableScrolling = false, // 성능 최적화: 기본 스크롤 비활성화 (SPA가 아닌 경우)
+            TimeoutMs = 15000 // 성능 최적화: 타임아웃 15초로 단축
         };
 
-        // 각 시작 URL에 대해 크롤링 수행
+        // 병렬 URL 크롤링 (성능 최적화: 순차 → 병렬 처리)
         var startUrls = configuration.Crawling.StartUrls ?? new List<string>();
         var crawledCount = 0;
 
-        foreach (var url in startUrls)
+        if (startUrls.Count == 0)
         {
-            _logger.LogDebug("Crawling URL: {Url}", url);
-
-            // 웹사이트 크롤링 사용 (여러 페이지)
-            await foreach (var crawlResult in crawler.CrawlWebsiteAsync(url, crawlOptions, cancellationToken))
-            {
-                crawledCount++;
-
-                // CrawlResult를 WebContent로 변환
-                var webContent = new WebContent
-                {
-                    Url = crawlResult.Url,
-                    Content = crawlResult.Content ?? string.Empty,
-                    ContentType = crawlResult.ContentType ?? "text/html",
-                    StatusCode = crawlResult.StatusCode,
-                    Metadata = new WebContentMetadata
-                    {
-                        Title = ExtractTitle(crawlResult.Content),
-                        ContentType = crawlResult.ContentType ?? "text/html",
-                        ContentLength = crawlResult.Content?.Length ?? 0,
-                        Language = "ko"
-                    }
-                };
-
-                yield return webContent;
-            }
+            _logger.LogWarning("No URLs to crawl");
+            yield break;
         }
 
-        _logger.LogDebug("Crawling completed: {Count} pages, {TotalBytes} bytes",
-            crawledCount, startUrls.Count);
+        // 병렬 처리를 위한 채널 생성
+        var channel = Channel.CreateUnbounded<WebContent>();
+        var writer = channel.Writer;
+        var reader = channel.Reader;
+
+        // 각 URL을 병렬로 크롤링
+        var crawlTasks = startUrls.Select(async url =>
+        {
+            _logger.LogDebug("Starting parallel crawl: {Url}", url);
+
+            try
+            {
+                await foreach (var crawlResult in crawler.CrawlWebsiteAsync(url, crawlOptions, cancellationToken))
+                {
+                    Interlocked.Increment(ref crawledCount);
+
+                    // CrawlResult를 WebContent로 변환
+                    var webContent = new WebContent
+                    {
+                        Url = crawlResult.Url,
+                        Content = crawlResult.Content ?? string.Empty,
+                        ContentType = crawlResult.ContentType ?? "text/html",
+                        StatusCode = crawlResult.StatusCode,
+                        Metadata = new WebContentMetadata
+                        {
+                            Title = ExtractTitle(crawlResult.Content),
+                            ContentType = crawlResult.ContentType ?? "text/html",
+                            ContentLength = crawlResult.Content?.Length ?? 0,
+                            Language = "ko"
+                        }
+                    };
+
+                    _logger.LogInformation("  📄 CrawlResult → WebContent: {Url}, Content={ContentLength} chars",
+                        crawlResult.Url, crawlResult.Content?.Length ?? 0);
+
+                    await writer.WriteAsync(webContent, cancellationToken);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to crawl URL: {Url}", url);
+            }
+        }).ToList();
+
+        // 모든 크롤링 완료 후 채널 닫기
+        var completionTask = Task.Run(async () =>
+        {
+            await Task.WhenAll(crawlTasks);
+            writer.Complete();
+            _logger.LogInformation("Parallel crawling completed: {Count} pages from {UrlCount} URLs",
+                crawledCount, startUrls.Count);
+        }, cancellationToken);
+
+        // 채널에서 결과를 스트리밍으로 반환
+        await foreach (var webContent in reader.ReadAllAsync(cancellationToken))
+        {
+            yield return webContent;
+        }
+
+        await completionTask;
     }
 
     /// <summary>
@@ -222,15 +259,17 @@ public class WebContentProcessor : IWebContentProcessor
         }, cancellationToken);
 
         // 결과를 스트리밍으로 반환
+        var totalChars = 0;
         await foreach (var extracted in reader.ReadAllAsync(cancellationToken))
         {
             extractedCount++;
+            totalChars += (extracted.Text?.Length ?? 0);
             yield return extracted;
         }
 
         await extractionTask;
         _logger.LogInformation("Extracted {Count} documents, {TotalChars} chars",
-            extractedCount, extractedCount);
+            extractedCount, totalChars);
     }
 
     /// <summary>
@@ -252,12 +291,18 @@ public class WebContentProcessor : IWebContentProcessor
 
         try
         {
+            _logger.LogInformation("  🔍 Extracting from WebContent: {Url}, Input={InputLength} chars",
+                webContent.Url, webContent.Content?.Length ?? 0);
+
             var extractor = _serviceFactory.CreateContentExtractor(webContent.ContentType);
             var extracted = await extractor.ExtractAutoAsync(
                 webContent.Content,
                 webContent.Url,
                 webContent.ContentType,
                 cancellationToken);
+
+            _logger.LogInformation("  ✅ Extraction complete: {Url}, Output={OutputLength} chars, MainContent={MainLength} chars",
+                webContent.Url, extracted.Text?.Length ?? 0, extracted.MainContent?.Length ?? 0);
 
             await writer.WriteAsync(extracted, cancellationToken);
         }
@@ -273,7 +318,7 @@ public class WebContentProcessor : IWebContentProcessor
     }
 
     /// <summary>
-    /// AI 증강 파이프라인
+    /// AI 증강 파이프라인 (Priority 3 최적화: 병렬 처리)
     /// </summary>
     /// <param name="extractedContents">추출된 콘텐츠 스트림</param>
     /// <param name="configuration">구성</param>
@@ -295,47 +340,99 @@ public class WebContentProcessor : IWebContentProcessor
             yield break;
         }
 
+        // Priority 3: 병렬 처리를 위한 채널 설정
+        var channel = Channel.CreateUnbounded<ExtractedContent>();
+        var writer = channel.Writer;
+        var reader = channel.Reader;
         var enhancedCount = 0;
 
-        await foreach (var extracted in extractedContents.WithCancellation(cancellationToken))
+        // 백그라운드에서 AI 증강 작업 병렬 실행
+        var enhancementTask = Task.Run(async () =>
         {
-            ExtractedContent result;
             try
             {
-                var enhancementOptions = new Core.Options.EnhancementOptions
+                var tasks = new List<Task>();
+                var semaphore = new SemaphoreSlim(configuration.Performance.MaxDegreeOfParallelism);
+
+                await foreach (var extracted in extractedContents.WithCancellation(cancellationToken))
                 {
-                    EnableSummary = configuration.AiEnhancement.EnableSummary,
-                    EnableMetadata = configuration.AiEnhancement.EnableMetadata,
-                    EnableRewrite = false,
-                    EnableParallelProcessing = true
-                };
+                    var task = ProcessSingleEnhancement(extracted, aiService, configuration, writer, semaphore, cancellationToken);
+                    tasks.Add(task);
 
-                var enhanced = await aiService.EnhanceAsync(
-                    extracted.MainContent ?? extracted.Text,
-                    enhancementOptions,
-                    cancellationToken);
+                    // 완료된 작업 정리
+                    tasks.RemoveAll(t => t.IsCompleted);
+                }
 
-                extracted.AiMetadata = enhanced.Metadata;
-                extracted.AiSummary = enhanced.Summary;
-                enhancedCount++;
-
-                result = extracted;
+                // 모든 작업 완료 대기
+                await Task.WhenAll(tasks);
+                writer.Complete();
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "AI enhancement failed for {Url}", extracted.Url);
-                result = extracted;
+                _logger.LogError(ex, "AI enhancement pipeline failed");
+                writer.Complete(ex);
             }
+        }, cancellationToken);
 
-            yield return result;
+        // 결과를 스트리밍으로 반환
+        await foreach (var enhanced in reader.ReadAllAsync(cancellationToken))
+        {
+            enhancedCount++;
+            yield return enhanced;
         }
 
+        await enhancementTask;
         _logger.LogInformation("Enhanced {Count} documents ({Keywords} keywords avg)",
             enhancedCount, enhancedCount > 0 ? 12 : 0);
     }
 
     /// <summary>
-    /// 콘텐츠 청킹 파이프라인
+    /// 개별 AI 증강 처리 (Priority 3 최적화: 병렬 처리 지원)
+    /// </summary>
+    private async Task ProcessSingleEnhancement(
+        ExtractedContent extracted,
+        IAiEnhancementService aiService,
+        WebFluxConfiguration configuration,
+        ChannelWriter<ExtractedContent> writer,
+        SemaphoreSlim semaphore,
+        CancellationToken cancellationToken)
+    {
+        await semaphore.WaitAsync(cancellationToken);
+
+        try
+        {
+            var enhancementOptions = new Core.Options.EnhancementOptions
+            {
+                EnableSummary = configuration.AiEnhancement.EnableSummary,
+                EnableMetadata = configuration.AiEnhancement.EnableMetadata,
+                EnableRewrite = false,
+                EnableParallelProcessing = true
+            };
+
+            var enhanced = await aiService.EnhanceAsync(
+                extracted.MainContent ?? extracted.Text,
+                enhancementOptions,
+                cancellationToken);
+
+            extracted.AiMetadata = enhanced.Metadata;
+            extracted.AiSummary = enhanced.Summary;
+
+            await writer.WriteAsync(extracted, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "AI enhancement failed for {Url}", extracted.Url);
+            // 실패해도 원본 콘텐츠는 반환
+            await writer.WriteAsync(extracted, cancellationToken);
+        }
+        finally
+        {
+            semaphore.Release();
+        }
+    }
+
+    /// <summary>
+    /// 콘텐츠 청킹 파이프라인 (Priority 3 최적화: 병렬 처리)
     /// </summary>
     /// <param name="extractedContents">추출된 콘텐츠 스트림</param>
     /// <param name="configuration">구성</param>
@@ -346,12 +443,74 @@ public class WebContentProcessor : IWebContentProcessor
         WebFluxConfiguration configuration,
         [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
     {
+        // Priority 3: 병렬 처리를 위한 채널 설정
+        var channel = Channel.CreateUnbounded<WebContentChunk>();
+        var writer = channel.Writer;
+        var reader = channel.Reader;
         var totalChunks = 0;
         var documentCount = 0;
 
-        await foreach (var extracted in extractedContents.WithCancellation(cancellationToken))
+        // 백그라운드에서 청킹 작업 병렬 실행
+        var chunkingTask = Task.Run(async () =>
         {
-            documentCount++;
+            try
+            {
+                var tasks = new List<Task>();
+                var semaphore = new SemaphoreSlim(configuration.Performance.MaxDegreeOfParallelism);
+                var docCounter = 0;
+
+                await foreach (var extracted in extractedContents.WithCancellation(cancellationToken))
+                {
+                    var docNum = Interlocked.Increment(ref docCounter);
+                    var task = ProcessSingleChunking(extracted, docNum, configuration, writer, semaphore, cancellationToken);
+                    tasks.Add(task);
+
+                    // 완료된 작업 정리
+                    tasks.RemoveAll(t => t.IsCompleted);
+                }
+
+                // 모든 작업 완료 대기
+                await Task.WhenAll(tasks);
+                writer.Complete();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Chunking pipeline failed");
+                writer.Complete(ex);
+            }
+        }, cancellationToken);
+
+        // 결과를 스트리밍으로 반환
+        await foreach (var chunk in reader.ReadAllAsync(cancellationToken))
+        {
+            documentCount = Math.Max(documentCount, chunk.AdditionalMetadata.ContainsKey("DocumentNumber") ?
+                (int)chunk.AdditionalMetadata["DocumentNumber"] : documentCount);
+            totalChunks++;
+            yield return chunk;
+        }
+
+        await chunkingTask;
+        _logger.LogInformation("Chunked {Count} documents → {TotalChunks} chunks",
+            documentCount, totalChunks);
+    }
+
+    /// <summary>
+    /// 개별 청킹 처리 (Priority 3 최적화: 병렬 처리 지원)
+    /// </summary>
+    private async Task ProcessSingleChunking(
+        ExtractedContent extracted,
+        int documentNumber,
+        WebFluxConfiguration configuration,
+        ChannelWriter<WebContentChunk> writer,
+        SemaphoreSlim semaphore,
+        CancellationToken cancellationToken)
+    {
+        await semaphore.WaitAsync(cancellationToken);
+
+        try
+        {
+            _logger.LogInformation("  📦 Chunking document {DocNum}: Text={TextLength} chars, MainContent={MainLength} chars",
+                documentNumber, extracted.Text?.Length ?? 0, extracted.MainContent?.Length ?? 0);
 
             var chunkingStrategy = _serviceFactory.CreateChunkingStrategy(configuration.Chunking.DefaultStrategy);
 
@@ -368,15 +527,25 @@ public class WebContentProcessor : IWebContentProcessor
                 chunkingOptions,
                 cancellationToken);
 
+            _logger.LogInformation("  ✅ Chunked document {DocNum} → {ChunkCount} chunks",
+                documentNumber, chunks.Count);
+
+            // 각 청크에 document number 메타데이터 추가
             foreach (var chunk in chunks)
             {
-                totalChunks++;
-                yield return chunk;
+                chunk.AdditionalMetadata["DocumentNumber"] = documentNumber;
+                await writer.WriteAsync(chunk, cancellationToken);
             }
         }
-
-        _logger.LogInformation("Chunked {Count} documents → {TotalChunks} chunks",
-            documentCount, totalChunks);
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to chunk document {DocNum}", documentNumber);
+            // 에러가 발생해도 파이프라인 계속 진행
+        }
+        finally
+        {
+            semaphore.Release();
+        }
     }
 
     /// <summary>
@@ -414,7 +583,7 @@ public class WebContentProcessor : IWebContentProcessor
             {
                 StartUrls = new List<string> { url },
                 Strategy = "Dynamic", // Phase 1: Playwright 기반 동적 렌더링 사용
-                DefaultDelayMs = 500
+                DefaultDelayMs = 0 // 성능 최적화: 기본 대기 시간 제거
             },
             Chunking = new ChunkingConfiguration
             {

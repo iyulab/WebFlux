@@ -25,12 +25,6 @@ class Program
         Console.WriteLine("🚀 WebFlux Basic Usage Sample");
         Console.WriteLine("=============================\n");
 
-        // Build configuration from .env.local
-        var configuration = new ConfigurationBuilder()
-            .SetBasePath(Directory.GetCurrentDirectory())
-            .AddEnvironmentVariables()
-            .Build();
-
         // Load from parent directory's .env.local
         var envPath = Path.Combine(Directory.GetCurrentDirectory(), "..", "..", ".env.local");
         if (File.Exists(envPath))
@@ -224,10 +218,54 @@ public class OpenAITextCompletionService : ITextCompletionService
             new ChatCompletionOptions
             {
                 MaxOutputTokenCount = options?.MaxTokens ?? 2000,
-                Temperature = options?.Temperature ?? 0.3f
+                Temperature = (float)(options?.Temperature ?? 0.3)
             },
             cancellationToken);
 
         return response.Value.Content[0].Text;
+    }
+
+    public async IAsyncEnumerable<string> CompleteStreamAsync(
+        string prompt,
+        TextCompletionOptions? options = null,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await CompleteAsync(prompt, options, cancellationToken);
+        yield return result;
+    }
+
+    public async Task<IReadOnlyList<string>> CompleteBatchAsync(
+        IEnumerable<string> prompts,
+        TextCompletionOptions? options = null,
+        CancellationToken cancellationToken = default)
+    {
+        var results = new List<string>();
+        foreach (var prompt in prompts)
+        {
+            results.Add(await CompleteAsync(prompt, options, cancellationToken));
+        }
+        return results;
+    }
+
+    public Task<bool> IsAvailableAsync(CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult(true);
+    }
+
+    public ServiceHealthInfo GetHealthInfo()
+    {
+        return new ServiceHealthInfo
+        {
+            ServiceName = "OpenAI",
+            Status = ServiceStatus.Healthy,
+            ResponseTimeMs = 0,
+            AvailableModels = [_model],
+            LastChecked = DateTimeOffset.UtcNow,
+            Metadata = new Dictionary<string, object>
+            {
+                ["Provider"] = "OpenAI",
+                ["Model"] = _model
+            }
+        };
     }
 }

@@ -310,7 +310,8 @@ public class SiteConfigurationAnalyzer : ISiteConfigurationAnalyzer
             return new AuthorInfo { Name = authorString };
         }
 
-        if (authorObj is Dictionary<string, object> authorDict)
+        var authorDict = ConvertToStringDictionary(authorObj);
+        if (authorDict != null)
         {
             return new AuthorInfo
             {
@@ -328,13 +329,17 @@ public class SiteConfigurationAnalyzer : ISiteConfigurationAnalyzer
     {
         var social = new Dictionary<string, string>();
 
-        if (authorDict.TryGetValue("social", out var socialObj) && socialObj is Dictionary<string, object> socialDict)
+        if (authorDict.TryGetValue("social", out var socialObj))
         {
-            foreach (var kvp in socialDict)
+            var socialDict = ConvertToStringDictionary(socialObj);
+            if (socialDict != null)
             {
-                if (kvp.Value?.ToString() is string value)
+                foreach (var kvp in socialDict)
                 {
-                    social[kvp.Key] = value;
+                    if (kvp.Value?.ToString() is string value)
+                    {
+                        social[kvp.Key] = value;
+                    }
                 }
             }
         }
@@ -376,18 +381,22 @@ public class SiteConfigurationAnalyzer : ISiteConfigurationAnalyzer
     {
         var collections = new Dictionary<string, CollectionConfig>();
 
-        if (parsedYaml.TryGetValue("collections", out var collectionsObj) &&
-            collectionsObj is Dictionary<string, object> collectionsDict)
+        if (parsedYaml.TryGetValue("collections", out var collectionsObj))
         {
-            foreach (var kvp in collectionsDict)
+            var collectionsDict = ConvertToStringDictionary(collectionsObj);
+            if (collectionsDict != null)
             {
-                if (kvp.Value is Dictionary<string, object> collectionDict)
+                foreach (var kvp in collectionsDict)
                 {
-                    collections[kvp.Key] = new CollectionConfig
+                    var collectionDict = ConvertToStringDictionary(kvp.Value);
+                    if (collectionDict != null)
                     {
-                        Output = GetBoolValue(collectionDict, "output"),
-                        Permalink = GetStringValue(collectionDict, "permalink")
-                    };
+                        collections[kvp.Key] = new CollectionConfig
+                        {
+                            Output = GetBoolValue(collectionDict, "output"),
+                            Permalink = GetStringValue(collectionDict, "permalink")
+                        };
+                    }
                 }
             }
         }
@@ -491,8 +500,11 @@ public class SiteConfigurationAnalyzer : ISiteConfigurationAnalyzer
 
     private GitHubPagesConfig? ExtractGitHubPagesConfig(Dictionary<string, object> parsedYaml)
     {
-        if (!parsedYaml.TryGetValue("github", out var githubObj) ||
-            githubObj is not Dictionary<string, object> githubDict)
+        if (!parsedYaml.TryGetValue("github", out var githubObj))
+            return null;
+
+        var githubDict = ConvertToStringDictionary(githubObj);
+        if (githubDict == null)
             return null;
 
         return new GitHubPagesConfig
@@ -505,8 +517,11 @@ public class SiteConfigurationAnalyzer : ISiteConfigurationAnalyzer
 
     private NetlifyConfig? ExtractNetlifyConfig(Dictionary<string, object> parsedYaml)
     {
-        if (!parsedYaml.TryGetValue("netlify", out var netlifyObj) ||
-            netlifyObj is not Dictionary<string, object> netlifyDict)
+        if (!parsedYaml.TryGetValue("netlify", out var netlifyObj))
+            return null;
+
+        var netlifyDict = ConvertToStringDictionary(netlifyObj);
+        if (netlifyDict == null)
             return null;
 
         return new NetlifyConfig
@@ -519,8 +534,11 @@ public class SiteConfigurationAnalyzer : ISiteConfigurationAnalyzer
 
     private VercelConfig? ExtractVercelConfig(Dictionary<string, object> parsedYaml)
     {
-        if (!parsedYaml.TryGetValue("vercel", out var vercelObj) ||
-            vercelObj is not Dictionary<string, object> vercelDict)
+        if (!parsedYaml.TryGetValue("vercel", out var vercelObj))
+            return null;
+
+        var vercelDict = ConvertToStringDictionary(vercelObj);
+        if (vercelDict == null)
             return null;
 
         return new VercelConfig
@@ -545,8 +563,11 @@ public class SiteConfigurationAnalyzer : ISiteConfigurationAnalyzer
 
     private SocialMediaConfig? ExtractSeoSocialMedia(Dictionary<string, object> parsedYaml)
     {
-        if (!parsedYaml.TryGetValue("social", out var socialObj) ||
-            socialObj is not Dictionary<string, object> socialDict)
+        if (!parsedYaml.TryGetValue("social", out var socialObj))
+            return null;
+
+        var socialDict = ConvertToStringDictionary(socialObj);
+        if (socialDict == null)
             return null;
 
         return new SocialMediaConfig
@@ -571,8 +592,11 @@ public class SiteConfigurationAnalyzer : ISiteConfigurationAnalyzer
 
     private SassConfig? ExtractSassConfig(Dictionary<string, object> parsedYaml)
     {
-        if (!parsedYaml.TryGetValue("sass", out var sassObj) ||
-            sassObj is not Dictionary<string, object> sassDict)
+        if (!parsedYaml.TryGetValue("sass", out var sassObj))
+            return null;
+
+        var sassDict = ConvertToStringDictionary(sassObj);
+        if (sassDict == null)
             return null;
 
         return new SassConfig
@@ -584,8 +608,11 @@ public class SiteConfigurationAnalyzer : ISiteConfigurationAnalyzer
 
     private CacheConfig? ExtractCacheConfig(Dictionary<string, object> parsedYaml)
     {
-        if (!parsedYaml.TryGetValue("cache", out var cacheObj) ||
-            cacheObj is not Dictionary<string, object> cacheDict)
+        if (!parsedYaml.TryGetValue("cache", out var cacheObj))
+            return null;
+
+        var cacheDict = ConvertToStringDictionary(cacheObj);
+        if (cacheDict == null)
             return null;
 
         return new CacheConfig
@@ -597,8 +624,11 @@ public class SiteConfigurationAnalyzer : ISiteConfigurationAnalyzer
 
     private CdnConfig? ExtractCdnConfig(Dictionary<string, object> parsedYaml)
     {
-        if (!parsedYaml.TryGetValue("cdn", out var cdnObj) ||
-            cdnObj is not Dictionary<string, object> cdnDict)
+        if (!parsedYaml.TryGetValue("cdn", out var cdnObj))
+            return null;
+
+        var cdnDict = ConvertToStringDictionary(cdnObj);
+        if (cdnDict == null)
             return null;
 
         return new CdnConfig
@@ -1129,6 +1159,32 @@ public class SiteConfigurationAnalyzer : ISiteConfigurationAnalyzer
     }
 
     // Helper Methods
+
+    /// <summary>
+    /// YamlDotNet deserializes nested objects as Dictionary<object, object>, not Dictionary<string, object>.
+    /// This helper converts object dictionaries to string dictionaries.
+    /// </summary>
+    private Dictionary<string, object>? ConvertToStringDictionary(object obj)
+    {
+        if (obj is Dictionary<string, object> stringDict)
+            return stringDict;
+
+        if (obj is Dictionary<object, object> objectDict)
+        {
+            var result = new Dictionary<string, object>();
+            foreach (var kvp in objectDict)
+            {
+                if (kvp.Key?.ToString() is string key)
+                {
+                    result[key] = kvp.Value;
+                }
+            }
+            return result;
+        }
+
+        return null;
+    }
+
     private string? GetStringValue(Dictionary<string, object> dict, string key)
     {
         return dict.TryGetValue(key, out var value) ? value?.ToString() : null;

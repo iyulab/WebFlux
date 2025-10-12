@@ -32,5 +32,5 @@ public class ProcessingResult
         ? ExtractedLength / ProcessingTime.Value.TotalMinutes
         : 0;
 
-    public bool IsSuccess => !string.IsNullOrEmpty(Summary) && string.IsNullOrEmpty(ErrorMessage);
+    public bool IsSuccess => ExtractedLength > 0 && string.IsNullOrEmpty(ErrorMessage);
 }

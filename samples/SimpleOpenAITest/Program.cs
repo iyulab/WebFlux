@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -60,11 +61,9 @@ public class SimpleOpenAITest
                 });
                 builder.SetMinimumLevel(LogLevel.Information);
 
-                // Playwright 크롤러는 Warning 레벨만 출력
-                builder.AddFilter("WebFlux.Services.Crawlers.PlaywrightCrawler", LogLevel.Warning);
-
-                // AI Enhancement는 Warning 레벨만 출력
-                builder.AddFilter("WebFlux.Services.AiEnhancement", LogLevel.Warning);
+                // 디버깅을 위해 모든 로그 출력
+                // builder.AddFilter("WebFlux.Services.Crawlers.PlaywrightCrawler", LogLevel.Warning);
+                // builder.AddFilter("WebFlux.Services.AiEnhancement", LogLevel.Warning);
             });
 
             // WebFlux SDK 등록 (Phase 1: Dynamic Rendering + AI Enhancement)
@@ -121,7 +120,7 @@ public class SimpleOpenAITest
 
                 try
                 {
-                    var result = await TestWebsiteProcessing(url, urlId, processor);
+                    var result = await TestWebsiteProcessing(url, urlId, processor, outputManager);
                     results.Add(result);
                     await outputManager.SaveProcessingResultAsync(result);
                 }
@@ -260,7 +259,7 @@ public class SimpleOpenAITest
         });
     }
 
-    private static async Task<ProcessingResult> TestWebsiteProcessing(string url, string urlId, IWebContentProcessor processor)
+    private static async Task<ProcessingResult> TestWebsiteProcessing(string url, string urlId, IWebContentProcessor processor, OutputManager outputManager)
     {
         var startTime = DateTime.UtcNow;
 
@@ -279,6 +278,12 @@ public class SimpleOpenAITest
 
         var endTime = DateTime.UtcNow;
         var processingTime = endTime - startTime;
+
+        // 청크 파일 저장 (세션 디렉토리에)
+        if (chunks.Count > 0)
+        {
+            await SaveChunkFiles(chunks, urlId, url, outputManager);
+        }
 
         // 메타데이터에서 정보 추출
         string? extractedText = null;
@@ -332,6 +337,56 @@ public class SimpleOpenAITest
             TruncatedText = truncatedText,
             Summary = aiSummary ?? ""
         };
+    }
+
+    private static async Task SaveChunkFiles(IReadOnlyList<WebContentChunk> chunks, string urlId, string url, OutputManager outputManager)
+    {
+        // URL별 디렉토리 경로 생성 (OutputManager와 동일한 규칙 사용)
+        var urlDirName = SanitizeDirectoryName($"{urlId}_{GetDomainFromUrl(url)}");
+        var urlDir = Path.Combine(outputManager.GetSessionDirectory(), urlDirName);
+
+        // chunks 하위 디렉토리 생성
+        var chunksDir = Path.Combine(urlDir, "chunks");
+        Directory.CreateDirectory(chunksDir);
+
+        var jsonOptions = new JsonSerializerOptions
+        {
+            WriteIndented = true,
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        };
+
+        // 각 청크를 개별 JSON 파일로 저장
+        for (int i = 0; i < chunks.Count; i++)
+        {
+            var chunk = chunks[i];
+            var chunkFileName = $"chunk-{i + 1:D4}.json";
+            var chunkFilePath = Path.Combine(chunksDir, chunkFileName);
+
+            var chunkJson = JsonSerializer.Serialize(chunk, jsonOptions);
+            await File.WriteAllTextAsync(chunkFilePath, chunkJson);
+        }
+
+        Console.WriteLine($"  📦 {chunks.Count}개 청크 파일 저장 완료");
+    }
+
+    private static string GetDomainFromUrl(string url)
+    {
+        try
+        {
+            var uri = new Uri(url);
+            return uri.Host.Replace("www.", "");
+        }
+        catch
+        {
+            return "unknown";
+        }
+    }
+
+    private static string SanitizeDirectoryName(string name)
+    {
+        var invalid = Path.GetInvalidFileNameChars();
+        return string.Join("_", name.Split(invalid, StringSplitOptions.RemoveEmptyEntries))
+            .TrimEnd('.');
     }
 
 }

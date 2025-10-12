@@ -355,26 +355,6 @@ public class ResilienceService : IResilienceService
         };
     }
 
-    private void UpdateCircuitBreakerState(string name, CircuitBreakerState state)
-    {
-        _circuitBreakerStates.AddOrUpdate(name,
-            new CircuitBreakerInfo
-            {
-                State = state,
-                LastStateChange = DateTime.UtcNow
-            },
-            (_, existing) => new CircuitBreakerInfo
-            {
-                State = state,
-                LastStateChange = DateTime.UtcNow,
-                ConsecutiveFailures = state == CircuitBreakerState.Closed ? 0 : existing.ConsecutiveFailures,
-                LastFailureTime = state == CircuitBreakerState.Open ? DateTime.UtcNow : existing.LastFailureTime,
-                NextAttemptAt = state == CircuitBreakerState.Open
-                    ? DateTime.UtcNow.Add(TimeSpan.FromSeconds(30))
-                    : null
-            });
-    }
-
     private void LogEvent(ResilienceEventType eventType, string policyName, TimeSpan executionTime, Exception? exception = null)
     {
         var resilienceEvent = new ResilienceEvent

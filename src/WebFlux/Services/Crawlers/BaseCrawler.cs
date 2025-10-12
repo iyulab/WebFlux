@@ -305,9 +305,23 @@ public abstract class BaseCrawler : ICrawler
         {
             var href = match.Groups[1].Value;
 
+            // javascript:, mailto:, tel: 등의 프로토콜과 anchor만 있는 링크 제외
+            if (string.IsNullOrWhiteSpace(href) ||
+                href.StartsWith("javascript:", StringComparison.OrdinalIgnoreCase) ||
+                href.StartsWith("mailto:", StringComparison.OrdinalIgnoreCase) ||
+                href.StartsWith("tel:", StringComparison.OrdinalIgnoreCase) ||
+                href.StartsWith("#"))
+            {
+                continue;
+            }
+
             if (Uri.TryCreate(baseUri, href, out var absoluteUri))
             {
-                links.Add(absoluteUri.ToString());
+                // http 또는 https 스킴만 허용
+                if (absoluteUri.Scheme == Uri.UriSchemeHttp || absoluteUri.Scheme == Uri.UriSchemeHttps)
+                {
+                    links.Add(absoluteUri.ToString());
+                }
             }
         }
 
