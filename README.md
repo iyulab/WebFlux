@@ -71,21 +71,97 @@ await foreach (var result in processor.ProcessWithProgressAsync("https://example
 
 ## Core Interfaces
 
-You provide implementations for AI services:
+WebFlux uses the **Interface Provider** pattern. You provide AI service implementations, and WebFlux handles crawling, extraction, and chunking.
+
+### Required AI Services
+
+#### ITextEmbeddingService (Required)
+Vector embedding generation for semantic chunking:
 
 ```csharp
 public interface ITextEmbeddingService
 {
-    Task<double[]> GetEmbeddingAsync(string text, CancellationToken cancellationToken = default);
-}
-
-public interface ITextCompletionService // Optional, for content reconstruction
-{
-    Task<string> CompleteAsync(string prompt, CancellationToken cancellationToken = default);
+    Task<float[]> GetEmbeddingAsync(string text, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<float[]>> GetEmbeddingsAsync(IReadOnlyList<string> texts, CancellationToken cancellationToken = default);
+    int MaxTokens { get; }
+    int EmbeddingDimension { get; }
 }
 ```
 
-WebFlux handles the rest: crawling, extraction, analysis, and chunking.
+### Optional AI Services
+
+#### ITextCompletionService (Optional)
+LLM text completion for multimodal processing and content reconstruction:
+
+```csharp
+public interface ITextCompletionService
+{
+    Task<string> CompleteAsync(string prompt, TextCompletionOptions? options = null, CancellationToken cancellationToken = default);
+    IAsyncEnumerable<string> CompleteStreamAsync(string prompt, TextCompletionOptions? options = null, CancellationToken cancellationToken = default);
+    Task<bool> IsAvailableAsync(CancellationToken cancellationToken = default);
+}
+```
+
+#### IImageToTextService (Optional)
+Image-to-text conversion for multimodal content:
+
+```csharp
+public interface IImageToTextService
+{
+    Task<string> ConvertImageToTextAsync(string imageUrl, ImageToTextOptions? options = null, CancellationToken cancellationToken = default);
+    Task<string> ExtractTextFromImageAsync(string imageUrl, CancellationToken cancellationToken = default);
+    Task<bool> IsAvailableAsync(CancellationToken cancellationToken = default);
+}
+```
+
+### Main Processor
+
+#### IWebContentProcessor
+The main entry point for all web content processing:
+
+```csharp
+// Single URL processing
+var chunks = await processor.ProcessUrlAsync("https://example.com");
+
+// Website crawling (streaming)
+await foreach (var chunk in processor.ProcessWebsiteAsync(url, crawlOptions, chunkOptions))
+{
+    // Process chunk
+}
+
+// Batch processing
+var results = await processor.ProcessUrlsBatchAsync(urls, chunkOptions);
+```
+
+### Extensibility
+
+#### IChunkingStrategy
+Implement custom chunking strategies:
+
+```csharp
+public interface IChunkingStrategy
+{
+    string Name { get; }
+    string Description { get; }
+    Task<IReadOnlyList<WebContentChunk>> ChunkAsync(ExtractedContent content, ChunkingOptions? options = null, CancellationToken cancellationToken = default);
+}
+```
+
+#### IProgressReporter & IEventPublisher
+Monitor processing progress and subscribe to system events:
+
+```csharp
+// Progress monitoring
+await foreach (var progress in progressReporter.MonitorProgressAsync(jobId))
+{
+    Console.WriteLine($"Progress: {progress.Progress:P0}");
+}
+
+// Event subscription
+eventPublisher.Subscribe<PageProcessedEvent>(async evt => await LogEvent(evt));
+```
+
+For detailed implementation examples, see the [Tutorial](docs/TUTORIAL.md#핵심-인터페이스).
 
 ## Configuration
 

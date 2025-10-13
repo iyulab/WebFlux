@@ -630,9 +630,102 @@ public class WebContentProcessor : IWebContentProcessor
         ChunkingOptions? chunkingOptions = null,
         [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        // Stub implementation
-        await Task.CompletedTask;
-        yield break;
+        _logger.LogInformation("Processing website: {Url} (Dynamic: {Dynamic})",
+            startUrl, crawlOptions?.UseDynamicRendering ?? false);
+
+        // WebFluxConfiguration 생성
+        var configuration = new WebFluxConfiguration
+        {
+            Crawling = new CrawlingConfiguration
+            {
+                StartUrls = new List<string> { startUrl },
+                // CrawlOptions가 제공되고 UseDynamicRendering이 true면 Dynamic 전략 사용
+                Strategy = (crawlOptions?.UseDynamicRendering == true || crawlOptions?.Strategy == WebFlux.Core.Options.CrawlStrategy.Dynamic)
+                    ? "Dynamic"
+                    : "BreadthFirst",
+                DefaultDelayMs = crawlOptions?.DelayMs ?? 0
+            },
+            Chunking = new ChunkingConfiguration
+            {
+                DefaultStrategy = chunkingOptions?.Strategy.ToString() ?? "Auto",
+                MaxChunkSize = chunkingOptions?.MaxChunkSize ?? 1000,
+                MinChunkSize = chunkingOptions?.MinChunkSize ?? 100
+            },
+            AiEnhancement = new AiEnhancementConfiguration
+            {
+                Enabled = false
+            },
+            Performance = new PerformanceConfiguration
+            {
+                MaxDegreeOfParallelism = 3
+            }
+        };
+
+        // CrawlOptions를 직접 사용하여 크롤링
+        var crawlStrategy = (crawlOptions?.UseDynamicRendering == true || crawlOptions?.Strategy == WebFlux.Core.Options.CrawlStrategy.Dynamic)
+            ? WebFlux.Core.Options.CrawlStrategy.Dynamic
+            : WebFlux.Core.Options.CrawlStrategy.BreadthFirst;
+
+        var crawler = _serviceFactory.CreateCrawler(crawlStrategy);
+
+        // CrawlOptions 적용
+        var effectiveCrawlOptions = crawlOptions ?? new CrawlOptions
+        {
+            MaxDepth = 1,
+            MaxPages = 1,
+            DelayMs = 0,
+            TimeoutMs = 15000
+        };
+
+        _logger.LogInformation("Using crawler: {Strategy}, UseDynamicRendering: {Dynamic}",
+            crawlStrategy, effectiveCrawlOptions.UseDynamicRendering);
+
+        // 크롤링 및 처리
+        await foreach (var crawlResult in crawler.CrawlWebsiteAsync(startUrl, effectiveCrawlOptions, cancellationToken))
+        {
+            if (string.IsNullOrEmpty(crawlResult.Content))
+            {
+                _logger.LogWarning("Empty content from {Url}", crawlResult.Url);
+                continue;
+            }
+
+            // 콘텐츠 추출
+            var extractor = _serviceFactory.CreateContentExtractor(crawlResult.ContentType ?? "text/html");
+            var extracted = await extractor.ExtractAutoAsync(
+                crawlResult.Content,
+                crawlResult.Url,
+                crawlResult.ContentType ?? "text/html",
+                cancellationToken);
+
+            if (string.IsNullOrEmpty(extracted.MainContent) && string.IsNullOrEmpty(extracted.Text))
+            {
+                _logger.LogWarning("No extractable content from {Url}", crawlResult.Url);
+                continue;
+            }
+
+            // 청킹
+            var chunkingStrategy = _serviceFactory.CreateChunkingStrategy(
+                (chunkingOptions?.Strategy ?? ChunkingStrategyType.Auto).ToString());
+
+            var effectiveChunkingOptions = chunkingOptions ?? new ChunkingOptions
+            {
+                MaxChunkSize = 1000,
+                ChunkOverlap = 50,
+                PreserveHeaders = true
+            };
+
+            var chunks = await chunkingStrategy.ChunkAsync(
+                extracted,
+                effectiveChunkingOptions,
+                cancellationToken);
+
+            _logger.LogInformation("Generated {ChunkCount} chunks from {Url}", chunks.Count, crawlResult.Url);
+
+            foreach (var chunk in chunks)
+            {
+                yield return chunk;
+            }
+        }
     }
 
     public async Task<IReadOnlyList<WebContentChunk>> ProcessHtmlAsync(

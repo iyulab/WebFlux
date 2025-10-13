@@ -7,9 +7,17 @@
 1. [설치](#설치)
 2. [첫 번째 프로젝트](#첫-번째-프로젝트)
 3. [기본 사용법](#기본-사용법)
-4. [고급 사용법](#고급-사용법)
-5. [실전 시나리오](#실전-시나리오)
-6. [문제 해결](#문제-해결)
+4. [핵심 인터페이스](#핵심-인터페이스)
+   - [ITextEmbeddingService](#itextembeddingservice-필수)
+   - [ITextCompletionService](#itextcompletionservice-선택적)
+   - [IImageToTextService](#iimagetotextservice-선택적)
+   - [IWebContentProcessor](#iwebcontentprocessor)
+   - [IChunkingStrategy](#ichunkingstrategy)
+   - [IProgressReporter](#iprogressreporter)
+   - [IEventPublisher](#ieventpublisher)
+5. [고급 사용법](#고급-사용법)
+6. [실전 시나리오](#실전-시나리오)
+7. [문제 해결](#문제-해결)
 
 ---
 
@@ -172,6 +180,524 @@ var crawlOptions = new CrawlOptions
     DelayMs = 1000,                 // 요청 간 1초 대기
     TimeoutSeconds = 30             // 30초 타임아웃
 };
+```
+
+---
+
+## 핵심 인터페이스
+
+WebFlux는 **Interface Provider** 패턴을 사용합니다. 라이브러리는 인터페이스를 정의하고, 소비 애플리케이션이 구현체를 제공합니다.
+
+### 필수 AI 서비스 인터페이스
+
+#### ITextEmbeddingService (필수)
+
+텍스트를 벡터 임베딩으로 변환하는 서비스입니다. Semantic 청킹 전략에 필수입니다.
+
+**인터페이스 정의:**
+```csharp
+public interface ITextEmbeddingService
+{
+    Task<float[]> GetEmbeddingAsync(string text, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<float[]>> GetEmbeddingsAsync(IReadOnlyList<string> texts, CancellationToken cancellationToken = default);
+    int MaxTokens { get; }
+    int EmbeddingDimension { get; }
+}
+```
+
+**OpenAI 구현 예제:**
+```csharp
+using OpenAI;
+using OpenAI.Embeddings;
+
+public class OpenAIEmbeddingService : ITextEmbeddingService
+{
+    private readonly EmbeddingClient _client;
+
+    public OpenAIEmbeddingService(string apiKey)
+    {
+        _client = new EmbeddingClient("text-embedding-3-small", apiKey);
+    }
+
+    public async Task<float[]> GetEmbeddingAsync(string text, CancellationToken cancellationToken = default)
+    {
+        var response = await _client.GenerateEmbeddingAsync(text, cancellationToken);
+        return response.Value.ToFloats().ToArray();
+    }
+
+    public async Task<IReadOnlyList<float[]>> GetEmbeddingsAsync(
+        IReadOnlyList<string> texts,
+        CancellationToken cancellationToken = default)
+    {
+        var tasks = texts.Select(t => GetEmbeddingAsync(t, cancellationToken));
+        return await Task.WhenAll(tasks);
+    }
+
+    public int MaxTokens => 8191;
+    public int EmbeddingDimension => 1536;
+}
+```
+
+**서비스 등록:**
+```csharp
+services.AddScoped<ITextEmbeddingService>(sp =>
+    new OpenAIEmbeddingService(Environment.GetEnvironmentVariable("OPENAI_API_KEY")));
+```
+
+---
+
+#### ITextCompletionService (선택적)
+
+LLM 텍스트 완성 서비스입니다. 멀티모달 처리 및 콘텐츠 재구성에 사용됩니다.
+
+**인터페이스 정의:**
+```csharp
+public interface ITextCompletionService
+{
+    Task<string> CompleteAsync(string prompt, TextCompletionOptions? options = null, CancellationToken cancellationToken = default);
+    IAsyncEnumerable<string> CompleteStreamAsync(string prompt, TextCompletionOptions? options = null, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<string>> CompleteBatchAsync(IEnumerable<string> prompts, TextCompletionOptions? options = null, CancellationToken cancellationToken = default);
+    Task<bool> IsAvailableAsync(CancellationToken cancellationToken = default);
+    ServiceHealthInfo GetHealthInfo();
+}
+```
+
+**OpenAI GPT-4 구현 예제:**
+```csharp
+using OpenAI.Chat;
+
+public class OpenAICompletionService : ITextCompletionService
+{
+    private readonly ChatClient _client;
+
+    public OpenAICompletionService(string apiKey, string model = "gpt-4")
+    {
+        _client = new ChatClient(model, apiKey);
+    }
+
+    public async Task<string> CompleteAsync(
+        string prompt,
+        TextCompletionOptions? options = null,
+        CancellationToken cancellationToken = default)
+    {
+        var messages = new[] { new ChatMessage(ChatRole.User, prompt) };
+        var response = await _client.CompleteChatAsync(messages, cancellationToken: cancellationToken);
+        return response.Value.Content[0].Text;
+    }
+
+    public async IAsyncEnumerable<string> CompleteStreamAsync(
+        string prompt,
+        TextCompletionOptions? options = null,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        var messages = new[] { new ChatMessage(ChatRole.User, prompt) };
+        await foreach (var update in _client.CompleteChatStreamingAsync(messages, cancellationToken: cancellationToken))
+        {
+            foreach (var content in update.ContentUpdate)
+            {
+                yield return content.Text;
+            }
+        }
+    }
+
+    public async Task<bool> IsAvailableAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await CompleteAsync("test", cancellationToken: cancellationToken);
+            return true;
+        }
+        catch { return false; }
+    }
+
+    public ServiceHealthInfo GetHealthInfo()
+    {
+        return new ServiceHealthInfo { IsHealthy = true, ServiceName = "OpenAI GPT-4" };
+    }
+}
+```
+
+**서비스 등록:**
+```csharp
+services.AddScoped<ITextCompletionService>(sp =>
+    new OpenAICompletionService(Environment.GetEnvironmentVariable("OPENAI_API_KEY"), "gpt-4"));
+```
+
+---
+
+#### IImageToTextService (선택적)
+
+이미지를 텍스트 설명으로 변환하는 서비스입니다. 멀티모달 콘텐츠 처리에 필요합니다.
+
+**인터페이스 정의:**
+```csharp
+public interface IImageToTextService
+{
+    Task<string> ConvertImageToTextAsync(string imageUrl, ImageToTextOptions? options = null, CancellationToken cancellationToken = default);
+    Task<string> ConvertImageToTextAsync(byte[] imageBytes, string mimeType, ImageToTextOptions? options = null, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<string>> ConvertImagesBatchAsync(IEnumerable<string> imageUrls, ImageToTextOptions? options = null, CancellationToken cancellationToken = default);
+    Task<string> ExtractTextFromImageAsync(string imageUrl, CancellationToken cancellationToken = default);
+    IReadOnlyList<string> GetSupportedImageFormats();
+    Task<bool> IsAvailableAsync(CancellationToken cancellationToken = default);
+}
+```
+
+**OpenAI GPT-4V 구현 예제:**
+```csharp
+using OpenAI.Chat;
+
+public class OpenAIVisionService : IImageToTextService
+{
+    private readonly ChatClient _client;
+
+    public OpenAIVisionService(string apiKey)
+    {
+        _client = new ChatClient("gpt-4-vision-preview", apiKey);
+    }
+
+    public async Task<string> ConvertImageToTextAsync(
+        string imageUrl,
+        ImageToTextOptions? options = null,
+        CancellationToken cancellationToken = default)
+    {
+        var prompt = options?.Prompt ?? "Describe this image in detail.";
+
+        var messages = new[]
+        {
+            new ChatMessage(ChatRole.User, new[]
+            {
+                ChatMessageContentPart.CreateTextPart(prompt),
+                ChatMessageContentPart.CreateImagePart(new Uri(imageUrl))
+            })
+        };
+
+        var response = await _client.CompleteChatAsync(messages, cancellationToken: cancellationToken);
+        return response.Value.Content[0].Text;
+    }
+
+    public async Task<string> ExtractTextFromImageAsync(
+        string imageUrl,
+        CancellationToken cancellationToken = default)
+    {
+        return await ConvertImageToTextAsync(
+            imageUrl,
+            new ImageToTextOptions { Prompt = "Extract all text from this image (OCR)." },
+            cancellationToken);
+    }
+
+    public IReadOnlyList<string> GetSupportedImageFormats()
+    {
+        return new[] { "image/jpeg", "image/png", "image/gif", "image/webp" };
+    }
+
+    public async Task<bool> IsAvailableAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            // Simple health check
+            return true;
+        }
+        catch { return false; }
+    }
+}
+```
+
+**서비스 등록:**
+```csharp
+services.AddScoped<IImageToTextService>(sp =>
+    new OpenAIVisionService(Environment.GetEnvironmentVariable("OPENAI_API_KEY")));
+```
+
+---
+
+### 메인 프로세서
+
+#### IWebContentProcessor
+
+웹 콘텐츠 처리의 메인 진입점입니다. 크롤링부터 청킹까지 전체 파이프라인을 관리합니다.
+
+**주요 메서드:**
+```csharp
+public interface IWebContentProcessor
+{
+    // 단일 URL 처리
+    Task<IReadOnlyList<WebContentChunk>> ProcessUrlAsync(
+        string url,
+        ChunkingOptions? chunkingOptions = null,
+        CancellationToken cancellationToken = default);
+
+    // 여러 URL 배치 처리
+    Task<IReadOnlyDictionary<string, IReadOnlyList<WebContentChunk>>> ProcessUrlsBatchAsync(
+        IEnumerable<string> urls,
+        ChunkingOptions? chunkingOptions = null,
+        CancellationToken cancellationToken = default);
+
+    // 웹사이트 전체 크롤링 (스트리밍)
+    IAsyncEnumerable<WebContentChunk> ProcessWebsiteAsync(
+        string startUrl,
+        CrawlOptions? crawlOptions = null,
+        ChunkingOptions? chunkingOptions = null,
+        CancellationToken cancellationToken = default);
+
+    // HTML 직접 처리
+    Task<IReadOnlyList<WebContentChunk>> ProcessHtmlAsync(
+        string htmlContent,
+        string sourceUrl,
+        ChunkingOptions? chunkingOptions = null,
+        CancellationToken cancellationToken = default);
+
+    // 진행률 모니터링
+    IAsyncEnumerable<ProcessingProgress> MonitorProgressAsync(string jobId);
+
+    // 작업 취소
+    Task<bool> CancelJobAsync(string jobId);
+
+    // 처리 통계
+    Task<ProcessingStatistics> GetStatisticsAsync();
+
+    // 사용 가능한 청킹 전략 목록
+    IReadOnlyList<string> GetAvailableChunkingStrategies();
+}
+```
+
+**사용 예제:**
+```csharp
+var processor = serviceProvider.GetRequiredService<IWebContentProcessor>();
+
+// 1. 단일 URL 처리
+var chunks = await processor.ProcessUrlAsync("https://example.com");
+
+// 2. 여러 URL 배치 처리
+var urls = new[] { "https://example.com/page1", "https://example.com/page2" };
+var batchResults = await processor.ProcessUrlsBatchAsync(urls);
+
+// 3. 웹사이트 전체 크롤링 (스트리밍)
+await foreach (var chunk in processor.ProcessWebsiteAsync(
+    "https://docs.example.com",
+    new CrawlOptions { MaxDepth = 2, MaxPages = 100 },
+    new ChunkingOptions { Strategy = "Auto" }))
+{
+    Console.WriteLine($"청크 생성: {chunk.ChunkId}");
+}
+
+// 4. HTML 직접 처리
+string html = await File.ReadAllTextAsync("page.html");
+var htmlChunks = await processor.ProcessHtmlAsync(html, "https://example.com");
+
+// 5. 처리 통계 확인
+var stats = await processor.GetStatisticsAsync();
+Console.WriteLine($"처리된 페이지: {stats.TotalPagesProcessed}");
+Console.WriteLine($"생성된 청크: {stats.TotalChunksGenerated}");
+```
+
+---
+
+### 청킹 시스템
+
+#### IChunkingStrategy
+
+청킹 전략 인터페이스입니다. 커스텀 청킹 로직을 구현할 수 있습니다.
+
+**인터페이스 정의:**
+```csharp
+public interface IChunkingStrategy
+{
+    string Name { get; }
+    string Description { get; }
+
+    Task<IReadOnlyList<WebContentChunk>> ChunkAsync(
+        ExtractedContent content,
+        ChunkingOptions? options = null,
+        CancellationToken cancellationToken = default);
+}
+```
+
+**커스텀 전략 구현 예제:**
+```csharp
+public class SentenceBasedChunkingStrategy : IChunkingStrategy
+{
+    public string Name => "SentenceBased";
+    public string Description => "문장 경계 기반 청킹 전략";
+
+    public async Task<IReadOnlyList<WebContentChunk>> ChunkAsync(
+        ExtractedContent content,
+        ChunkingOptions? options = null,
+        CancellationToken cancellationToken = default)
+    {
+        var chunks = new List<WebContentChunk>();
+        var maxSize = options?.MaxChunkSize ?? 512;
+        var overlapSize = options?.OverlapSize ?? 64;
+
+        // 문장 분리 (간단한 예제)
+        var sentences = content.Text.Split(new[] { ". ", "! ", "? " }, StringSplitOptions.RemoveEmptyEntries);
+
+        var currentChunk = new StringBuilder();
+        var chunkIndex = 0;
+
+        foreach (var sentence in sentences)
+        {
+            if (currentChunk.Length + sentence.Length > maxSize && currentChunk.Length > 0)
+            {
+                // 청크 생성
+                chunks.Add(new WebContentChunk
+                {
+                    ChunkId = Guid.NewGuid().ToString(),
+                    ChunkIndex = chunkIndex++,
+                    Content = currentChunk.ToString().Trim(),
+                    SourceUrl = content.SourceUrl,
+                    ContentType = content.ContentType,
+                    AdditionalMetadata = content.Metadata
+                });
+
+                // 오버랩 처리
+                var overlapText = GetLastNCharacters(currentChunk.ToString(), overlapSize);
+                currentChunk = new StringBuilder(overlapText);
+            }
+
+            currentChunk.Append(sentence).Append(". ");
+        }
+
+        // 마지막 청크
+        if (currentChunk.Length > 0)
+        {
+            chunks.Add(new WebContentChunk
+            {
+                ChunkId = Guid.NewGuid().ToString(),
+                ChunkIndex = chunkIndex,
+                Content = currentChunk.ToString().Trim(),
+                SourceUrl = content.SourceUrl,
+                ContentType = content.ContentType,
+                AdditionalMetadata = content.Metadata
+            });
+        }
+
+        return chunks;
+    }
+
+    private string GetLastNCharacters(string text, int n)
+    {
+        return text.Length > n ? text.Substring(text.Length - n) : text;
+    }
+}
+```
+
+**서비스 등록:**
+```csharp
+services.AddScoped<IChunkingStrategy, SentenceBasedChunkingStrategy>();
+```
+
+---
+
+### 진행률 모니터링
+
+#### IProgressReporter
+
+처리 진행률을 실시간으로 추적하고 보고합니다.
+
+**인터페이스 정의:**
+```csharp
+public interface IProgressReporter
+{
+    Task<IProgressTracker> StartJobAsync(string jobId, string description, int totalSteps);
+    Task ReportProgressAsync(string jobId, ProgressInfo progress);
+    Task CompleteJobAsync(string jobId, object? result = null);
+    Task FailJobAsync(string jobId, Exception error);
+    IAsyncEnumerable<ProgressInfo> MonitorProgressAsync(string jobId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<JobProgress>> GetAllJobsAsync();
+    Task<JobProgress?> GetJobProgressAsync(string jobId);
+}
+```
+
+**사용 예제:**
+```csharp
+var progressReporter = serviceProvider.GetRequiredService<IProgressReporter>();
+
+// 작업 시작
+var jobId = Guid.NewGuid().ToString();
+var tracker = await progressReporter.StartJobAsync(jobId, "웹사이트 크롤링", totalSteps: 3);
+
+try
+{
+    // 단계 1: 크롤링
+    await tracker.UpdateStepAsync("크롤링", 0, "페이지 수집 중...");
+    await CrawlWebsiteAsync();
+
+    // 단계 2: 추출
+    await tracker.UpdateStepAsync("콘텐츠 추출", 1, "HTML 파싱 중...");
+    await ExtractContentAsync();
+
+    // 단계 3: 청킹
+    await tracker.UpdateStepAsync("청킹", 2, "청크 생성 중...");
+    await ChunkContentAsync();
+
+    // 완료
+    await tracker.CompleteAsync(new { TotalChunks = 150 });
+}
+catch (Exception ex)
+{
+    await tracker.FailAsync(ex);
+}
+
+// 진행률 모니터링 (별도 작업)
+await foreach (var progress in progressReporter.MonitorProgressAsync(jobId))
+{
+    Console.WriteLine($"[{progress.StepName}] {progress.Progress:P0} - {progress.Details}");
+}
+```
+
+---
+
+#### IEventPublisher
+
+시스템 이벤트를 발행하고 구독합니다.
+
+**인터페이스 정의:**
+```csharp
+public interface IEventPublisher
+{
+    Task PublishAsync(ProcessingEvent processingEvent, CancellationToken cancellationToken = default);
+    void Publish(ProcessingEvent processingEvent);
+    IDisposable Subscribe<T>(Func<T, Task> handler) where T : ProcessingEvent;
+    IDisposable Subscribe<T>(Action<T> handler) where T : ProcessingEvent;
+    IDisposable SubscribeAll(Func<ProcessingEvent, Task> handler);
+    EventPublishingStatistics GetStatistics();
+}
+```
+
+**사용 예제:**
+```csharp
+var eventPublisher = serviceProvider.GetRequiredService<IEventPublisher>();
+
+// 이벤트 구독
+var subscription = eventPublisher.Subscribe<PageProcessedEvent>(async evt =>
+{
+    Console.WriteLine($"페이지 처리 완료: {evt.Url}");
+    await LogToDatabase(evt);
+});
+
+// 이벤트 발행
+await eventPublisher.PublishAsync(new PageProcessedEvent
+{
+    Url = "https://example.com",
+    ChunkCount = 10,
+    ProcessingTimeMs = 250,
+    Timestamp = DateTimeOffset.UtcNow
+});
+
+// 모든 이벤트 구독
+var allEventsSubscription = eventPublisher.SubscribeAll(async evt =>
+{
+    Console.WriteLine($"[{evt.GetType().Name}] {evt.Timestamp}");
+});
+
+// 구독 해제
+subscription.Dispose();
+allEventsSubscription.Dispose();
+
+// 통계 확인
+var stats = eventPublisher.GetStatistics();
+Console.WriteLine($"총 발행 이벤트: {stats.TotalEventsPublished}");
+Console.WriteLine($"구독자 수: {stats.SubscriberCount}");
 ```
 
 ---
