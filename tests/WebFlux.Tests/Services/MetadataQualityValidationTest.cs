@@ -18,7 +18,7 @@ public class MetadataQualityValidationTest
         _extractor = new MetadataExtractor();
     }
 
-    [Fact(Skip = "v0.x: 90% quality target deferred to v1.0")]
+    [Fact(Skip = "v1.0: Requires test data files and EvaluateCompleteness() implementation")]
     public async Task ValidateMetadataQuality_ShouldAchieve90PercentTarget()
     {
         // Arrange - Rich metadata HTML from test data
@@ -56,7 +56,7 @@ public class MetadataQualityValidationTest
         metadata.SchemaOrg.MainEntityType.Should().NotBeNullOrEmpty();
     }
 
-    [Fact(Skip = "v0.x: 95% accuracy target deferred to v1.0")]
+    [Fact(Skip = "v1.0: Requires test data files")]
     public async Task ValidateMarkdownStructureAccuracy_ShouldAchieve95PercentTarget()
     {
         // Arrange - Blog post with complex structure
@@ -87,7 +87,7 @@ public class MetadataQualityValidationTest
         metadata.Accessibility.AccessibilityScore.Should().BeGreaterThan(70);
     }
 
-    [Theory(Skip = "v0.x: 15 web standards support deferred to v1.0")]
+    [Theory(Skip = "v1.0: Requires test data files")]
     [InlineData("15개 웹 표준 메타데이터")]
     [InlineData("HtmlAgilityPack 파싱")]
     [InlineData("Schema.org JSON-LD")]
@@ -144,7 +144,7 @@ public class MetadataQualityValidationTest
         }
     }
 
-    [Fact(Skip = "v0.x: Phase 5C quality targets deferred to v1.0")]
+    [Fact(Skip = "v1.0: Requires EvaluateCompleteness() implementation")]
     public void CalculateQualityScore_ShouldMeetPhase5CTargets()
     {
         // Arrange - Complete metadata scenario

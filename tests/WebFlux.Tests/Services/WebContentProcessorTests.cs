@@ -126,6 +126,14 @@ public class WebContentProcessorTests
         // Arrange
         var startUrl = "https://example.com";
 
+        // Setup mock crawler to return empty results
+        var mockCrawler = new Mock<ICrawler>();
+        mockCrawler.Setup(c => c.CrawlWebsiteAsync(It.IsAny<string>(), It.IsAny<CrawlOptions>(), It.IsAny<CancellationToken>()))
+            .Returns(ToAsyncEnumerable(new List<CrawlResult>()));
+
+        _mockServiceFactory.Setup(f => f.CreateCrawler(It.IsAny<WebFlux.Core.Options.CrawlStrategy>()))
+            .Returns(mockCrawler.Object);
+
         // Act
         var chunks = new List<WebContentChunk>();
         await foreach (var chunk in _processor.ProcessWebsiteAsync(startUrl))
@@ -145,6 +153,14 @@ public class WebContentProcessorTests
         var crawlOptions = new CrawlOptions { MaxPages = 10 };
         var chunkingOptions = new ChunkingOptions { ChunkSize = 1000 };
 
+        // Setup mock crawler to return empty results
+        var mockCrawler = new Mock<ICrawler>();
+        mockCrawler.Setup(c => c.CrawlWebsiteAsync(It.IsAny<string>(), It.IsAny<CrawlOptions>(), It.IsAny<CancellationToken>()))
+            .Returns(ToAsyncEnumerable(new List<CrawlResult>()));
+
+        _mockServiceFactory.Setup(f => f.CreateCrawler(It.IsAny<WebFlux.Core.Options.CrawlStrategy>()))
+            .Returns(mockCrawler.Object);
+
         // Act
         var chunks = new List<WebContentChunk>();
         await foreach (var chunk in _processor.ProcessWebsiteAsync(startUrl, crawlOptions, chunkingOptions))
@@ -162,6 +178,14 @@ public class WebContentProcessorTests
         // Arrange
         var startUrl = "https://example.com";
         using var cts = new CancellationTokenSource();
+
+        // Setup mock crawler to return empty results
+        var mockCrawler = new Mock<ICrawler>();
+        mockCrawler.Setup(c => c.CrawlWebsiteAsync(It.IsAny<string>(), It.IsAny<CrawlOptions>(), It.IsAny<CancellationToken>()))
+            .Returns(ToAsyncEnumerable(new List<CrawlResult>()));
+
+        _mockServiceFactory.Setup(f => f.CreateCrawler(It.IsAny<WebFlux.Core.Options.CrawlStrategy>()))
+            .Returns(mockCrawler.Object);
 
         // Act
         var chunks = new List<WebContentChunk>();

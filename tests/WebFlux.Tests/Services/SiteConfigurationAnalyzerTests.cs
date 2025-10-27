@@ -47,7 +47,7 @@ public class SiteConfigurationAnalyzerTests
         result.SiteInfo.BaseUrl.Should().Be("/blog");
     }
 
-    [Fact(Skip = "v0.x: Hugo parsing not critical for RAG preprocessing")]
+    [Fact(Skip = "v1.0: Hugo YAML parsing not fully implemented")]
     public async Task AnalyzeConfigurationAsync_ValidHugoYaml_ShouldParseSuccessfully()
     {
         // Arrange
@@ -73,7 +73,7 @@ public class SiteConfigurationAnalyzerTests
 
     #region 설정 타입 감지 테스트
 
-    [Theory(Skip = "v0.x: Multiple SSG detection not critical for RAG preprocessing")]
+    [Theory(Skip = "v1.0: DetectConfigurationType() not fully implemented")]
     [InlineData("_config.yml", SiteConfigurationType.Jekyll)]
     [InlineData("config.yaml", SiteConfigurationType.Hugo)]
     [InlineData("hugo.yaml", SiteConfigurationType.Hugo)]
@@ -146,7 +146,7 @@ public class SiteConfigurationAnalyzerTests
 
     #region 품질 평가 테스트 (90% 목표)
 
-    [Fact(Skip = "v0.x: Advanced quality assessment out of scope")]
+    [Fact(Skip = "v1.0: AssessQuality() scoring not finalized")]
     public void AssessQuality_WellConfiguredSite_ShouldAchieveHighScore()
     {
         // Arrange
@@ -215,7 +215,7 @@ public class SiteConfigurationAnalyzerTests
 
     #region 설정 검증 테스트
 
-    [Fact(Skip = "v0.x: Configuration validation out of scope")]
+    [Fact(Skip = "v1.0: ValidateConfiguration() not fully implemented")]
     public void ValidateConfiguration_MissingRequiredFields_ShouldReturnIssues()
     {
         // Arrange
@@ -245,7 +245,7 @@ public class SiteConfigurationAnalyzerTests
         titleIssue!.Type.Should().Be(ConfigurationIssueType.MissingRequired);
     }
 
-    [Fact(Skip = "v0.x: Security validation out of scope")]
+    [Fact(Skip = "v1.0: Security validation not implemented")]
     public void ValidateConfiguration_SecurityIssues_ShouldReturnSecurityWarnings()
     {
         // Arrange
@@ -315,7 +315,7 @@ public class SiteConfigurationAnalyzerTests
 
     #region 형식 변환 테스트
 
-    [Fact(Skip = "v0.x: Format conversion out of scope")]
+    [Fact(Skip = "v1.0: ConvertToFormat() not implemented")]
     public void ConvertToFormat_JekyllToHugo_ShouldConvertConfiguration()
     {
         // Arrange
@@ -388,7 +388,7 @@ public class SiteConfigurationAnalyzerTests
 
     #region 에러 처리 테스트
 
-    [Fact(Skip = "v0.x: YAML error handling refinement deferred to v1.0")]
+    [Fact(Skip = "v1.0: YAML error handling needs refinement")]
     public async Task AnalyzeConfigurationAsync_InvalidYaml_ShouldHandleGracefully()
     {
         // Arrange

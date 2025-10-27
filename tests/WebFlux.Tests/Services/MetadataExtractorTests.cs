@@ -18,7 +18,7 @@ public class MetadataExtractorTests
         _extractor = new MetadataExtractor();
     }
 
-    [Fact(Skip = "v0.x: Full web standards support deferred to v1.0")]
+    [Fact(Skip = "v1.0: Metadata extraction quality needs improvement (missing keywords/description)")]
     public async Task ExtractMetadataAsync_WithRichMetadataHtml_ShouldExtractAllStandards()
     {
         // Arrange
@@ -42,7 +42,7 @@ public class MetadataExtractorTests
         metadata.QualityScore.Should().BeGreaterThan(0.8);
     }
 
-    [Fact(Skip = "v0.x: Advanced article metadata extraction deferred")]
+    [Fact(Skip = "v1.0: Keywords extraction not working properly")]
     public async Task ExtractMetadataAsync_WithBlogPostHtml_ShouldExtractArticleMetadata()
     {
         // Arrange
@@ -95,7 +95,7 @@ public class MetadataExtractorTests
         metadata.QualityScore.Should().BeLessThan(0.5); // Low quality due to missing metadata
     }
 
-    [Fact(Skip = "v0.x: Complex JSON-LD parsing deferred to v1.0")]
+    [Fact(Skip = "v1.0: JSON-LD parsing needs refinement")]
     public async Task ExtractMetadataAsync_WithJsonLdSchema_ShouldParseStructuredData()
     {
         // Arrange
@@ -131,7 +131,7 @@ public class MetadataExtractorTests
         metadata.SchemaOrg.Software.ProgrammingLanguage.Should().Be("C#");
     }
 
-    [Fact(Skip = "v0.x: Quality score tuning deferred to v1.0")]
+    [Fact(Skip = "v1.0: Quality score calculation needs tuning")]
     public void CalculateQualityScore_WithCompleteMetadata_ShouldReturnHighScore()
     {
         // Arrange
@@ -761,7 +761,7 @@ public class MetadataExtractorIntegrationTests
         _extractor = new MetadataExtractor();
     }
 
-    [Fact(Skip = "v0.x: Integration tests deferred")]
+    [Fact(Skip = "v1.0: Quality score below target (0.56 vs 0.8)")]
     public async Task ExtractMetadata_FromLocalRichFile_ShouldExtractComprehensiveData()
     {
         // Arrange
@@ -813,7 +813,7 @@ public class MetadataExtractorIntegrationTests
         completeness.OverallScore.Should().BeGreaterThan(0.75);
     }
 
-    [Fact(Skip = "v0.x: Integration tests deferred")]
+    [Fact(Skip = "v1.0: Blog post metadata extraction needs improvement")]
     public async Task ExtractMetadata_FromLocalBlogFile_ShouldExtractArticleData()
     {
         // Arrange

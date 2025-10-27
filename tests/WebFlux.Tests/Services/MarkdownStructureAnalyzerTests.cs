@@ -19,7 +19,7 @@ public class MarkdownStructureAnalyzerTests
         _analyzer = new MarkdownStructureAnalyzer();
     }
 
-    [Fact(Skip = "v0.x: 95% accuracy target deferred to v1.0")]
+    [Fact(Skip = "v1.0: 95% accuracy target requires algorithm improvements (currently 92.5%)")]
     public async Task AnalyzeStructure_ComplexMarkdown_ShouldAchieve95PercentAccuracy()
     {
         // Arrange - Complex markdown with various structures
@@ -266,7 +266,7 @@ var test = ""Hello World"";
         result.StructureInfo.Tables.Should().HaveCount(1);
     }
 
-    [Fact(Skip = "v0.x: Front matter metadata extraction deferred")]
+    [Fact(Skip = "v1.0: Front matter date parsing timezone handling")]
     public async Task AnalyzeStructure_WithFrontMatter_ShouldExtractMetadata()
     {
         // Arrange
@@ -361,7 +361,7 @@ This is the main content of the document.
             "완벽한 구조는 95% 이상의 정확도를 달성해야 합니다");
     }
 
-    [Fact(Skip = "v0.x: Quality assessment scoring deferred to v1.0")]
+    [Fact(Skip = "v1.0: Quality scoring algorithm needs tuning (currently 78% vs target 85%)")]
     public void AssessQuality_RichContent_ShouldAchieveHighScore()
     {
         // Arrange
