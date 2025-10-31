@@ -13,11 +13,13 @@ public interface IContentExtractor
     /// </summary>
     /// <param name="htmlContent">HTML 콘텐츠</param>
     /// <param name="sourceUrl">원본 URL</param>
+    /// <param name="enableMetadataExtraction">AI 메타데이터 추출 활성화 (기본값: false)</param>
     /// <param name="cancellationToken">취소 토큰</param>
     /// <returns>추출된 콘텐츠</returns>
     Task<ExtractedContent> ExtractFromHtmlAsync(
         string htmlContent,
         string sourceUrl,
+        bool enableMetadataExtraction = false,
         CancellationToken cancellationToken = default);
 
     /// <summary>

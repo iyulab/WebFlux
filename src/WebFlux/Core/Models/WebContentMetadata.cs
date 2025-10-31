@@ -113,12 +113,18 @@ public class WebContentMetadata
 /// </summary>
 public class OpenGraphData
 {
-    public string? Title { get; init; }
-    public string? Description { get; init; }
-    public string? Type { get; init; }
-    public string? Url { get; init; }
-    public string? Image { get; init; }
-    public string? SiteName { get; init; }
+    public string? Title { get; set; }
+    public string? Description { get; set; }
+    public string? Type { get; set; }
+    public string? Url { get; set; }
+    public string? Image { get; set; }
+    public string? SiteName { get; set; }
+    public string? Locale { get; set; }
+    public DateTimeOffset? PublishedTime { get; set; }
+    public DateTimeOffset? ModifiedTime { get; set; }
+    public string? Author { get; set; }
+    public string? Section { get; set; }
+    public List<string> Tags { get; set; } = new();
 }
 
 /// <summary>
@@ -126,10 +132,10 @@ public class OpenGraphData
 /// </summary>
 public class TwitterCardData
 {
-    public string? Card { get; init; }
-    public string? Site { get; init; }
-    public string? Creator { get; init; }
-    public string? Title { get; init; }
-    public string? Description { get; init; }
-    public string? Image { get; init; }
+    public string? Card { get; set; }
+    public string? Site { get; set; }
+    public string? Creator { get; set; }
+    public string? Title { get; set; }
+    public string? Description { get; set; }
+    public string? Image { get; set; }
 }

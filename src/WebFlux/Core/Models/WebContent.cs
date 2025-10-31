@@ -53,8 +53,11 @@ public class ExtractedContent
     /// <summary>이미지 URL 목록</summary>
     public List<string> ImageUrls { get; set; } = new();
 
-    /// <summary>추출된 메타데이터</summary>
-    public ExtractedMetadata? Metadata { get; set; }
+    /// <summary>
+    /// 풍부한 메타데이터 (HTML + AI 융합)
+    /// 기본 메타데이터 + AI 추출 메타데이터 통합
+    /// </summary>
+    public EnrichedMetadata? Metadata { get; set; }
 
     /// <summary>원본 URL</summary>
     public string OriginalUrl { get; set; } = string.Empty;
@@ -71,33 +74,10 @@ public class ExtractedContent
     /// <summary>처리 시간 (밀리초)</summary>
     public int ProcessingTimeMs { get; set; }
 
-    /// <summary>AI 증강 메타데이터 (선택적)</summary>
-    public AiMetadata? AiMetadata { get; set; }
-
     /// <summary>AI 생성 요약 (선택적)</summary>
     public string? AiSummary { get; set; }
-}
 
-/// <summary>
-/// 추출된 메타데이터 모델
-/// </summary>
-public class ExtractedMetadata
-{
-    /// <summary>제목</summary>
-    public string Title { get; set; } = string.Empty;
-
-    /// <summary>설명</summary>
-    public string Description { get; set; } = string.Empty;
-
-    /// <summary>작성자</summary>
-    public string Author { get; set; } = string.Empty;
-
-    /// <summary>언어</summary>
-    public string Language { get; set; } = "unknown";
-
-    /// <summary>콘텐츠 타입</summary>
-    public string ContentType { get; set; } = string.Empty;
-
+    // 통계 정보 (EnrichedMetadata에서 별도 관리하지 않는 추출 관련 메트릭)
     /// <summary>단어 수</summary>
     public int WordCount { get; set; }
 
@@ -106,12 +86,6 @@ public class ExtractedMetadata
 
     /// <summary>읽기 시간 (분)</summary>
     public double ReadingTimeMinutes { get; set; }
-
-    /// <summary>키워드</summary>
-    public List<string> Keywords { get; set; } = new();
-
-    /// <summary>원본 메타데이터</summary>
-    public Dictionary<string, object> OriginalMetadata { get; set; } = new();
 }
 
 /// <summary>

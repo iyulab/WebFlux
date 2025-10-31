@@ -56,8 +56,13 @@ public abstract class BaseContentExtractor : IContentExtractor
             // 후처리
             var processedText = await PostprocessTextAsync(extractedText, cancellationToken);
 
-            // 메타데이터 추출
-            var metadata = await ExtractMetadataAsync(webContent, processedText, cancellationToken);
+            // 기본 메타데이터 추출 (HTML 기반)
+            var metadata = await ExtractBasicMetadataAsync(webContent, processedText, cancellationToken);
+
+            // 통계 정보 계산
+            var wordCount = CountWords(processedText);
+            var charCount = processedText.Length;
+            var readingTime = EstimateReadingTime(processedText);
 
             var result = new ExtractedContent
             {
@@ -67,7 +72,10 @@ public abstract class BaseContentExtractor : IContentExtractor
                 OriginalContentType = webContent.ContentType,
                 ExtractionMethod = GetExtractionMethod(),
                 ExtractionTimestamp = DateTimeOffset.UtcNow,
-                ProcessingTimeMs = (int)(DateTimeOffset.UtcNow - startTime).TotalMilliseconds
+                ProcessingTimeMs = (int)(DateTimeOffset.UtcNow - startTime).TotalMilliseconds,
+                WordCount = wordCount,
+                CharacterCount = charCount,
+                ReadingTimeMinutes = readingTime
             };
 
             await _eventPublisher.PublishAsync(new ContentExtractionCompletedEvent
@@ -172,28 +180,35 @@ public abstract class BaseContentExtractor : IContentExtractor
     }
 
     /// <summary>
-    /// 메타데이터 추출
+    /// 기본 메타데이터 추출 (HTML 기반)
+    /// AI 메타데이터 추출이 활성화된 경우 HtmlMetadataSnapshot만 생성
     /// </summary>
     /// <param name="webContent">원본 웹 콘텐츠</param>
     /// <param name="extractedText">추출된 텍스트</param>
     /// <param name="cancellationToken">취소 토큰</param>
-    /// <returns>추출된 메타데이터</returns>
-    protected virtual Task<ExtractedMetadata> ExtractMetadataAsync(
+    /// <returns>기본 메타데이터</returns>
+    protected virtual Task<EnrichedMetadata> ExtractBasicMetadataAsync(
         WebContent webContent,
         string extractedText,
         CancellationToken cancellationToken)
     {
-        var metadata = new ExtractedMetadata
+        var metadata = new EnrichedMetadata
         {
+            Url = webContent.Url,
+            Domain = !string.IsNullOrEmpty(webContent.Url) ? new Uri(webContent.Url).Host : string.Empty,
             Title = webContent.Metadata?.Title ?? ExtractTitleFromContent(extractedText),
             Description = ExtractDescriptionFromContent(extractedText),
             Language = DetectLanguage(extractedText),
-            WordCount = CountWords(extractedText),
-            CharacterCount = extractedText.Length,
-            ReadingTimeMinutes = EstimateReadingTime(extractedText),
-            Keywords = ExtractKeywords(extractedText),
-            OriginalMetadata = webContent.Metadata?.AdditionalData?.ToDictionary(kv => kv.Key, kv => kv.Value) ?? new Dictionary<string, object>()
+            Keywords = ExtractKeywords(extractedText).AsReadOnly(),
+            Source = MetadataSource.Html,
+            ExtractedAt = DateTimeOffset.UtcNow
         };
+
+        // FieldSources 초기화
+        metadata.FieldSources["title"] = MetadataSource.Html;
+        metadata.FieldSources["description"] = MetadataSource.Html;
+        metadata.FieldSources["language"] = MetadataSource.Html;
+        metadata.FieldSources["keywords"] = MetadataSource.Html;
 
         return Task.FromResult(metadata);
     }
@@ -326,11 +341,13 @@ public abstract class BaseContentExtractor : IContentExtractor
     /// </summary>
     /// <param name="htmlContent">HTML 콘텐츠</param>
     /// <param name="sourceUrl">원본 URL</param>
+    /// <param name="enableMetadataExtraction">AI 메타데이터 추출 활성화 (기본값: false)</param>
     /// <param name="cancellationToken">취소 토큰</param>
     /// <returns>추출된 콘텐츠</returns>
     public abstract Task<ExtractedContent> ExtractFromHtmlAsync(
         string htmlContent,
         string sourceUrl,
+        bool enableMetadataExtraction = false,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -408,7 +425,7 @@ public abstract class BaseContentExtractor : IContentExtractor
         var ct = contentType.ToLowerInvariant();
 
         if (ct.Contains("html"))
-            return await ExtractFromHtmlAsync(content, sourceUrl, cancellationToken);
+            return await ExtractFromHtmlAsync(content, sourceUrl, false, cancellationToken);
         if (ct.Contains("json"))
             return await ExtractFromJsonAsync(content, sourceUrl, cancellationToken);
         if (ct.Contains("xml"))

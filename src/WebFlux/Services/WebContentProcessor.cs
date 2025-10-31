@@ -414,7 +414,27 @@ public class WebContentProcessor : IWebContentProcessor
                 enhancementOptions,
                 cancellationToken);
 
-            extracted.AiMetadata = enhanced.Metadata;
+            // AI 메타데이터를 기존 메타데이터와 병합
+            if (extracted.Metadata == null)
+            {
+                extracted.Metadata = enhanced.Metadata;
+            }
+            else
+            {
+                // 기존 HTML 메타데이터와 AI 메타데이터 병합
+                extracted.Metadata.Source = MetadataSource.Merged;
+                if (string.IsNullOrEmpty(extracted.Metadata.Title) && !string.IsNullOrEmpty(enhanced.Metadata.Title))
+                    extracted.Metadata.Title = enhanced.Metadata.Title;
+                if (string.IsNullOrEmpty(extracted.Metadata.Description) && !string.IsNullOrEmpty(enhanced.Metadata.Description))
+                    extracted.Metadata.Description = enhanced.Metadata.Description;
+
+                // AI 전용 필드 추가
+                extracted.Metadata.Topics = enhanced.Metadata.Topics;
+                foreach (var kvp in enhanced.Metadata.SchemaSpecificData)
+                {
+                    extracted.Metadata.SchemaSpecificData[kvp.Key] = kvp.Value;
+                }
+            }
             extracted.AiSummary = enhanced.Summary;
 
             await writer.WriteAsync(extracted, cancellationToken);

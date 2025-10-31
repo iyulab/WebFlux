@@ -85,7 +85,7 @@ public class BasicAiEnhancementService : IAiEnhancementService
     /// <summary>
     /// 메타데이터 추출
     /// </summary>
-    public async Task<AiMetadata> ExtractMetadataAsync(
+    public async Task<EnrichedMetadata> ExtractMetadataAsync(
         string content,
         MetadataExtractionOptions? options = null,
         CancellationToken cancellationToken = default)
@@ -130,7 +130,7 @@ public class BasicAiEnhancementService : IAiEnhancementService
 
         string? summary = null;
         string? rewritten = null;
-        AiMetadata? metadata = null;
+        EnrichedMetadata? metadata = null;
 
         if (options.EnableParallelProcessing)
         {
@@ -170,7 +170,7 @@ public class BasicAiEnhancementService : IAiEnhancementService
             OriginalContent = content,
             Summary = summary,
             RewrittenContent = rewritten,
-            Metadata = metadata ?? new AiMetadata(),
+            Metadata = metadata ?? new EnrichedMetadata(),
             ProcessedAt = DateTimeOffset.UtcNow,
             ProcessingTimeMs = processingTime
         };
@@ -321,7 +321,7 @@ Metadata JSON:";
         return content.Substring(0, maxLength) + "\n\n[Content truncated...]";
     }
 
-    private AiMetadata ParseMetadataResponse(string response, MetadataExtractionOptions options)
+    private EnrichedMetadata ParseMetadataResponse(string response, MetadataExtractionOptions options)
     {
         try
         {
@@ -332,26 +332,83 @@ Metadata JSON:";
             var doc = JsonDocument.Parse(json);
             var root = doc.RootElement;
 
-            return new AiMetadata
+            var metadata = new EnrichedMetadata
             {
                 Title = GetJsonString(root, "title"),
                 Description = GetJsonString(root, "description"),
                 Keywords = GetJsonStringArray(root, "keywords"),
-                Topics = GetJsonStringArray(root, "topics"),
-                MainTopic = GetJsonString(root, "mainTopic"),
-                Sentiment = GetJsonString(root, "sentiment"),
-                TargetAudience = GetJsonString(root, "targetAudience"),
-                EstimatedReadingTimeMinutes = GetJsonInt(root, "estimatedReadingTimeMinutes"),
-                ContentType = GetJsonString(root, "contentType"),
-                DifficultyLevel = GetJsonString(root, "difficultyLevel"),
-                Language = GetJsonString(root, "language"),
-                ConfidenceScore = 0.8 // 기본 신뢰도
+                Language = GetJsonString(root, "language") ?? "en",
+                Source = MetadataSource.AI,
+                ExtractedAt = DateTimeOffset.UtcNow,
+                OverallConfidence = 0.8f // 기본 신뢰도
             };
+
+            // AI 전용 필드 설정
+            var topics = GetJsonStringArray(root, "topics");
+            if (topics.Any())
+            {
+                metadata.SchemaSpecificData["topics"] = topics;
+                metadata.FieldSources["topics"] = MetadataSource.AI;
+            }
+
+            var mainTopic = GetJsonString(root, "mainTopic");
+            if (!string.IsNullOrEmpty(mainTopic))
+            {
+                metadata.SchemaSpecificData["mainTopic"] = mainTopic;
+                metadata.FieldSources["mainTopic"] = MetadataSource.AI;
+            }
+
+            var sentiment = GetJsonString(root, "sentiment");
+            if (!string.IsNullOrEmpty(sentiment))
+            {
+                metadata.SchemaSpecificData["sentiment"] = sentiment;
+                metadata.FieldSources["sentiment"] = MetadataSource.AI;
+            }
+
+            var targetAudience = GetJsonString(root, "targetAudience");
+            if (!string.IsNullOrEmpty(targetAudience))
+            {
+                metadata.SchemaSpecificData["targetAudience"] = targetAudience;
+                metadata.FieldSources["targetAudience"] = MetadataSource.AI;
+            }
+
+            var contentType = GetJsonString(root, "contentType");
+            if (!string.IsNullOrEmpty(contentType))
+            {
+                metadata.SchemaSpecificData["contentType"] = contentType;
+                metadata.FieldSources["contentType"] = MetadataSource.AI;
+            }
+
+            var difficultyLevel = GetJsonString(root, "difficultyLevel");
+            if (!string.IsNullOrEmpty(difficultyLevel))
+            {
+                metadata.SchemaSpecificData["difficultyLevel"] = difficultyLevel;
+                metadata.FieldSources["difficultyLevel"] = MetadataSource.AI;
+            }
+
+            // 필드별 신뢰도 설정
+            metadata.FieldConfidence["title"] = 0.9f;
+            metadata.FieldConfidence["description"] = 0.85f;
+            metadata.FieldConfidence["keywords"] = 0.8f;
+            metadata.FieldConfidence["language"] = 0.95f;
+
+            // 필드 소스 설정
+            metadata.FieldSources["title"] = MetadataSource.AI;
+            metadata.FieldSources["description"] = MetadataSource.AI;
+            metadata.FieldSources["keywords"] = MetadataSource.AI;
+            metadata.FieldSources["language"] = MetadataSource.AI;
+
+            return metadata;
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to parse metadata JSON, returning empty metadata");
-            return new AiMetadata();
+            return new EnrichedMetadata
+            {
+                Source = MetadataSource.AI,
+                ExtractedAt = DateTimeOffset.UtcNow,
+                OverallConfidence = 0.0f
+            };
         }
     }
 

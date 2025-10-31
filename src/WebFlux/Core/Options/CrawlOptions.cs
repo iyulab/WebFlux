@@ -1,3 +1,6 @@
+using WebFlux.Core.Interfaces;
+using WebFlux.Core.Models;
+
 namespace WebFlux.Core.Options;
 
 /// <summary>
@@ -190,6 +193,48 @@ public class CrawlOptions
     /// 요청 타임아웃 (밀리초, 기본값: 30000)
     /// </summary>
     public int TimeoutMs { get; set; } = 30000;
+
+    // ===================================================================
+    // AI 메타데이터 추출 옵션
+    // ===================================================================
+
+    /// <summary>
+    /// AI 메타데이터 추출 활성화 (기본값: false)
+    /// true일 경우 IWebMetadataExtractor를 사용하여 콘텐츠에서 메타데이터를 추출합니다
+    /// </summary>
+    public bool EnableMetadataExtraction { get; set; } = false;
+
+    /// <summary>
+    /// 메타데이터 스키마 (기본값: General)
+    /// 웹 콘텐츠 타입에 따라 최적화된 추출 전략을 선택합니다
+    /// General: 일반 웹 콘텐츠, TechnicalDoc: 기술 문서, ProductManual: 제품 페이지, Article: 블로그/뉴스
+    /// </summary>
+    public MetadataSchema MetadataSchema { get; set; } = MetadataSchema.General;
+
+    /// <summary>
+    /// 커스텀 추출 프롬프트 (MetadataSchema.Custom 사용 시 필수)
+    /// 특정 도메인에 맞는 메타데이터 추출을 위한 사용자 정의 프롬프트
+    /// </summary>
+    public string? CustomMetadataPrompt { get; set; }
+
+    /// <summary>
+    /// HTML 메타데이터 사용 여부 (기본값: true)
+    /// true일 경우 HTML meta 태그, OpenGraph, Twitter Card를 AI 프롬프트 힌트로 사용합니다
+    /// </summary>
+    public bool UseHtmlMetadata { get; set; } = true;
+
+    /// <summary>
+    /// 최소 신뢰도 임계값 (기본값: 0.6, 범위: 0.0 - 1.0)
+    /// 이 값보다 낮은 신뢰도의 메타데이터는 포함되지 않습니다
+    /// </summary>
+    public float MinConfidence { get; set; } = 0.6f;
+
+    /// <summary>
+    /// 메타데이터 추출용 최대 문자 수 (기본값: 8000)
+    /// 토큰 최적화를 위해 콘텐츠를 샘플링할 최대 문자 수
+    /// 긴 문서의 경우 제목 + 헤딩 + 첫 N자를 사용합니다
+    /// </summary>
+    public int MetadataExtractionMaxChars { get; set; } = 8000;
 }
 
 /// <summary>

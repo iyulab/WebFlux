@@ -42,7 +42,7 @@ public class OpenAiEmbeddingService : ITextEmbeddingService
 
 ### ITextCompletionService (선택)
 
-콘텐츠 재구성 기능 사용 시 필요합니다.
+콘텐츠 재구성 및 AI 기반 메타데이터 추출 기능 사용 시 필요합니다.
 
 ```csharp
 public interface ITextCompletionService
@@ -70,6 +70,42 @@ public interface IImageToTextService
         byte[] imageData,
         ImageToTextOptions? options = null,
         CancellationToken cancellationToken = default);
+}
+```
+
+### IWebMetadataExtractor (선택)
+
+AI 기반 웹 메타데이터 추출 기능 사용 시 필요합니다. ITextCompletionService를 사용하여 웹 콘텐츠에서 풍부한 메타데이터를 추출합니다.
+
+```csharp
+public interface IWebMetadataExtractor
+{
+    Task<EnrichedMetadata> ExtractAsync(
+        string content,
+        string url,
+        HtmlMetadataSnapshot? htmlMetadata = null,
+        MetadataSchema schema = MetadataSchema.General,
+        string? customPrompt = null,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<EnrichedMetadata>> ExtractBatchAsync(
+        IEnumerable<(string content, string url, HtmlMetadataSnapshot? htmlMetadata)> items,
+        MetadataSchema schema = MetadataSchema.General,
+        string? customPrompt = null,
+        CancellationToken cancellationToken = default);
+
+    IReadOnlyList<MetadataSchema> GetSupportedSchemas();
+    string GetSchemaDescription(MetadataSchema schema);
+}
+
+// 메타데이터 스키마 타입
+public enum MetadataSchema
+{
+    General,        // 일반 웹 콘텐츠
+    TechnicalDoc,   // 기술 문서 (라이브러리, 프레임워크 정보)
+    ProductManual,  // 제품 페이지 (가격, 스펙 정보)
+    Article,        // 블로그/뉴스 (작성자, 태그 정보)
+    Custom          // 사용자 정의 (customPrompt 필수)
 }
 ```
 
@@ -168,6 +204,48 @@ public class WebContentChunk
     public int StartPosition { get; set; }
     public int EndPosition { get; set; }
     public Dictionary<string, object> AdditionalMetadata { get; set; }
+}
+```
+
+### EnrichedMetadata
+
+HTML 메타데이터와 AI 추출 메타데이터를 통합한 풍부한 메타데이터 모델입니다.
+
+```csharp
+public class EnrichedMetadata
+{
+    // 기본 메타데이터 (HTML 우선, AI로 보완)
+    public string? Title { get; set; }
+    public string? Description { get; set; }
+    public string? Author { get; set; }
+    public DateTimeOffset? PublishedDate { get; set; }
+    public string? Language { get; set; }
+
+    // AI 추출 메타데이터
+    public IReadOnlyList<string> Topics { get; set; }
+    public IReadOnlyList<string> Keywords { get; set; }
+    public string? ContentType { get; set; }        // "article", "documentation", etc.
+    public string? SiteStructure { get; set; }      // "blog", "documentation", etc.
+
+    // 웹 소스 정보
+    public string Url { get; set; }
+    public string Domain { get; set; }
+
+    // 스키마별 확장 데이터
+    public Dictionary<string, object> SchemaSpecificData { get; set; }
+
+    // 메타데이터 출처 추적
+    public MetadataSource Source { get; set; }                      // Html, AI, Merged, User
+    public Dictionary<string, MetadataSource> FieldSources { get; set; }
+
+    // 신뢰도 및 품질
+    public float OverallConfidence { get; set; }
+    public Dictionary<string, float> FieldConfidence { get; set; }
+
+    // HTML 메타데이터 원본
+    public HtmlMetadataSnapshot? HtmlMetadata { get; set; }
+
+    public DateTimeOffset ExtractedAt { get; set; }
 }
 ```
 

@@ -17,7 +17,7 @@ public class BasicContentExtractor : IContentExtractor
         _eventPublisher = eventPublisher ?? new NullEventPublisher();
     }
 
-    public Task<ExtractedContent> ExtractFromHtmlAsync(string htmlContent, string sourceUrl, CancellationToken cancellationToken = default)
+    public Task<ExtractedContent> ExtractFromHtmlAsync(string htmlContent, string sourceUrl, bool enableMetadataExtraction = false, CancellationToken cancellationToken = default)
     {
         var cleanText = System.Text.RegularExpressions.Regex.Replace(htmlContent, "<[^>]*>", "");
         cleanText = System.Web.HttpUtility.HtmlDecode(cleanText);
@@ -27,8 +27,28 @@ public class BasicContentExtractor : IContentExtractor
             Text = cleanText.Trim(),
             MainContent = cleanText.Trim(), // 주요 콘텐츠는 추출된 텍스트와 동일하게 설정
             Url = sourceUrl,
-            Title = ExtractTitle(htmlContent)
+            Title = ExtractTitle(htmlContent),
+            WordCount = cleanText.Split(new[] { ' ', '\t', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries).Length,
+            CharacterCount = cleanText.Length,
+            ReadingTimeMinutes = Math.Max(1, cleanText.Split(new[] { ' ', '\t', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries).Length / 200.0)
         };
+
+        if (enableMetadataExtraction)
+        {
+            extracted.Metadata = new EnrichedMetadata
+            {
+                Url = sourceUrl,
+                Domain = !string.IsNullOrEmpty(sourceUrl) ? new Uri(sourceUrl).Host : string.Empty,
+                Title = extracted.Title,
+                Description = cleanText.Length > 200 ? cleanText.Substring(0, 200) + "..." : cleanText,
+                Language = "en",
+                Source = MetadataSource.Html,
+                ExtractedAt = DateTimeOffset.UtcNow
+            };
+
+            extracted.Metadata.FieldSources["title"] = MetadataSource.Html;
+            extracted.Metadata.FieldSources["description"] = MetadataSource.Html;
+        }
 
         return Task.FromResult(extracted);
     }
@@ -107,7 +127,7 @@ public class BasicContentExtractor : IContentExtractor
     {
         return contentType?.ToLower() switch
         {
-            "text/html" or "application/xhtml+xml" => ExtractFromHtmlAsync(content, sourceUrl, cancellationToken),
+            "text/html" or "application/xhtml+xml" => ExtractFromHtmlAsync(content, sourceUrl, false, cancellationToken),
             "text/markdown" => ExtractFromMarkdownAsync(content, sourceUrl, cancellationToken),
             "application/json" => ExtractFromJsonAsync(content, sourceUrl, cancellationToken),
             "application/xml" or "text/xml" => ExtractFromXmlAsync(content, sourceUrl, cancellationToken),

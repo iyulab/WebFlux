@@ -361,7 +361,7 @@ var code = ""example"";
         using var cts = new CancellationTokenSource();
 
         // Act
-        var result = await _extractor.ExtractFromHtmlAsync(html, url, cts.Token);
+        var result = await _extractor.ExtractFromHtmlAsync(html, url, false, cts.Token);
 
         // Assert
         result.Should().NotBeNull();

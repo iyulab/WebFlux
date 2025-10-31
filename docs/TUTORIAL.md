@@ -198,8 +198,8 @@ WebFlux는 **Interface Provider** 패턴을 사용합니다. 라이브러리는 
 ```csharp
 public interface ITextEmbeddingService
 {
-    Task<float[]> GetEmbeddingAsync(string text, CancellationToken cancellationToken = default);
-    Task<IReadOnlyList<float[]>> GetEmbeddingsAsync(IReadOnlyList<string> texts, CancellationToken cancellationToken = default);
+    Task<double[]> GetEmbeddingAsync(string text, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<double[]>> GetEmbeddingsAsync(IReadOnlyList<string> texts, CancellationToken cancellationToken = default);
     int MaxTokens { get; }
     int EmbeddingDimension { get; }
 }
@@ -219,13 +219,13 @@ public class OpenAIEmbeddingService : ITextEmbeddingService
         _client = new EmbeddingClient("text-embedding-3-small", apiKey);
     }
 
-    public async Task<float[]> GetEmbeddingAsync(string text, CancellationToken cancellationToken = default)
+    public async Task<double[]> GetEmbeddingAsync(string text, CancellationToken cancellationToken = default)
     {
         var response = await _client.GenerateEmbeddingAsync(text, cancellationToken);
-        return response.Value.ToFloats().ToArray();
+        return response.Value.ToFloats().Select(f => (double)f).ToArray();
     }
 
-    public async Task<IReadOnlyList<float[]>> GetEmbeddingsAsync(
+    public async Task<IReadOnlyList<double[]>> GetEmbeddingsAsync(
         IReadOnlyList<string> texts,
         CancellationToken cancellationToken = default)
     {
@@ -406,6 +406,58 @@ public class OpenAIVisionService : IImageToTextService
 ```csharp
 services.AddScoped<IImageToTextService>(sp =>
     new OpenAIVisionService(Environment.GetEnvironmentVariable("OPENAI_API_KEY")));
+```
+
+---
+
+#### IWebMetadataExtractor (선택적)
+
+웹 콘텐츠에서 AI 기반으로 메타데이터를 추출하는 서비스입니다. ITextCompletionService를 사용하여 콘텐츠를 분석하고 구조화된 메타데이터를 생성합니다.
+
+**인터페이스 정의:**
+```csharp
+public interface IWebMetadataExtractor
+{
+    Task<EnrichedMetadata> ExtractAsync(
+        string content,
+        string url,
+        HtmlMetadataSnapshot? htmlMetadata = null,
+        MetadataSchema schema = MetadataSchema.General,
+        string? customPrompt = null,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<EnrichedMetadata>> ExtractBatchAsync(
+        IEnumerable<(string content, string url, HtmlMetadataSnapshot? htmlMetadata)> items,
+        MetadataSchema schema = MetadataSchema.General,
+        string? customPrompt = null,
+        CancellationToken cancellationToken = default);
+}
+```
+
+**사용 예제:**
+```csharp
+var metadataExtractor = serviceProvider.GetRequiredService<IWebMetadataExtractor>();
+
+// 기술 문서 메타데이터 추출
+var technicalMetadata = await metadataExtractor.ExtractAsync(
+    content: documentText,
+    url: "https://react.dev/reference/react/useState",
+    schema: MetadataSchema.TechnicalDoc
+);
+
+Console.WriteLine($"주제: {string.Join(", ", technicalMetadata.Topics)}");
+Console.WriteLine($"라이브러리: {technicalMetadata.SchemaSpecificData["libraries"]}");
+
+// 블로그 기사 메타데이터 추출
+var articleMetadata = await metadataExtractor.ExtractAsync(
+    content: blogPost,
+    url: "https://blog.example.com/post",
+    schema: MetadataSchema.Article
+);
+
+Console.WriteLine($"작성자: {articleMetadata.Author}");
+Console.WriteLine($"작성일: {articleMetadata.PublishedDate}");
+Console.WriteLine($"태그: {string.Join(", ", articleMetadata.SchemaSpecificData["tags"])}");
 ```
 
 ---

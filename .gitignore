@@ -366,6 +366,7 @@ FodyWeavers.xsd
 CLAUDE.local.md
 claudedocs/
 .playwright-mcp/
+.serena/
 
 # WebFlux Samples - CI/CD에서 제외
 samples/*/bin/

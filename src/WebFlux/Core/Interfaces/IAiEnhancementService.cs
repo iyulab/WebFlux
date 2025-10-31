@@ -34,13 +34,13 @@ public interface IAiEnhancementService
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// AI를 활용하여 의미론적 메타데이터를 추출합니다.
+    /// AI를 활용하여 풍부한 메타데이터를 추출합니다 (HTML + AI 융합).
     /// </summary>
     /// <param name="content">메타데이터를 추출할 콘텐츠</param>
     /// <param name="options">메타데이터 추출 옵션</param>
     /// <param name="cancellationToken">취소 토큰</param>
-    /// <returns>추출된 메타데이터</returns>
-    Task<AiMetadata> ExtractMetadataAsync(
+    /// <returns>추출된 풍부한 메타데이터</returns>
+    Task<EnrichedMetadata> ExtractMetadataAsync(
         string content,
         MetadataExtractionOptions? options = null,
         CancellationToken cancellationToken = default);
