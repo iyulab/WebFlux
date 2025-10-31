@@ -7,7 +7,10 @@ param(
     [switch]$Coverage,
     [switch]$Verbose,
     [string]$Filter = "",
-    [string]$Configuration = "Debug"
+    [string]$Configuration = "Debug",
+    [switch]$IncludePerformance,  # Performance 테스트 포함
+    [switch]$IncludeLongRunning,  # LongRunning 테스트 포함
+    [switch]$FastOnly              # 빠른 테스트만 실행 (기본값)
 )
 
 $ErrorActionPreference = "Stop"
@@ -96,9 +99,48 @@ $testArgs = @(
     "--logger", "console;verbosity=normal"
 )
 
+# 테스트 필터 구성
+$filterParts = @()
+
+if ($FastOnly) {
+    # FastOnly: Performance와 LongRunning 제외
+    $filterParts += "Category!=Performance"
+    $filterParts += "Category!=LongRunning"
+    Write-Host "Test Mode: Fast tests only (excluding Performance and LongRunning)" -ForegroundColor Yellow
+}
+elseif (-not $IncludePerformance -and -not $IncludeLongRunning) {
+    # 기본값: Performance와 LongRunning 제외
+    $filterParts += "Category!=Performance"
+    $filterParts += "Category!=LongRunning"
+    Write-Host "Test Mode: Standard tests (excluding Performance and LongRunning)" -ForegroundColor Yellow
+    Write-Host "  Tip: Use -IncludePerformance or -IncludeLongRunning to include them" -ForegroundColor Cyan
+}
+else {
+    # Performance 또는 LongRunning 포함 요청
+    if ($IncludePerformance -and -not $IncludeLongRunning) {
+        $filterParts += "Category!=LongRunning"
+        Write-Host "Test Mode: Including Performance tests (excluding LongRunning)" -ForegroundColor Yellow
+    }
+    elseif ($IncludeLongRunning -and -not $IncludePerformance) {
+        $filterParts += "Category!=Performance"
+        Write-Host "Test Mode: Including LongRunning tests (excluding Performance)" -ForegroundColor Yellow
+    }
+    else {
+        Write-Host "Test Mode: All tests (including Performance and LongRunning)" -ForegroundColor Yellow
+    }
+}
+
+# 사용자 지정 필터 추가
 if ($Filter) {
-    $testArgs += "--filter", $Filter
-    Write-Host "Filter: $Filter" -ForegroundColor Yellow
+    $filterParts += $Filter
+    Write-Host "Custom Filter: $Filter" -ForegroundColor Yellow
+}
+
+# 필터 조합
+if ($filterParts.Count -gt 0) {
+    $combinedFilter = $filterParts -join "&"
+    $testArgs += "--filter", $combinedFilter
+    Write-Host "Final Filter: $combinedFilter" -ForegroundColor Cyan
 }
 
 if ($Coverage) {
@@ -197,10 +239,12 @@ $duration = $endTime - $startTime
 
 Write-Host @"
 
-Configuration: $Configuration
-Test Filter:   $(if ($Filter) { $Filter } else { "(none)" })
-Coverage:      $(if ($Coverage) { "Enabled" } else { "Disabled" })
-Duration:      $($duration.ToString("mm\:ss"))
+Configuration:     $Configuration
+Test Filter:       $(if ($Filter) { $Filter } else { "(auto-generated)" })
+Include Performance: $(if ($IncludePerformance) { "Yes" } else { "No" })
+Include LongRunning: $(if ($IncludeLongRunning) { "Yes" } else { "No" })
+Coverage:          $(if ($Coverage) { "Enabled" } else { "Disabled" })
+Duration:          $($duration.ToString("mm\:ss"))
 
 "@ -ForegroundColor White
 

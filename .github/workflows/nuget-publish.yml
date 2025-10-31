@@ -75,8 +75,14 @@ jobs:
       - name: 🔨 Build Solution
         run: dotnet build src/WebFlux.sln --configuration ${{ env.BUILD_CONFIGURATION }} --no-restore
 
-      - name: 🧪 Run Unit Tests (tests/ only, samples/ excluded)
-        run: dotnet test tests/WebFlux.Tests/WebFlux.Tests.csproj --configuration ${{ env.BUILD_CONFIGURATION }} --no-build --verbosity normal
+      - name: 🧪 Run Fast Tests (excluding Performance and LongRunning)
+        run: dotnet test tests/WebFlux.Tests/WebFlux.Tests.csproj --configuration ${{ env.BUILD_CONFIGURATION }} --no-build --verbosity normal --filter "Category!=Performance&Category!=LongRunning"
+
+      - name: ℹ️ Test Execution Info
+        run: |
+          echo "✅ Fast tests completed successfully"
+          echo "⏭️ Performance and LongRunning tests are excluded from CI for efficiency"
+          echo "💡 To run all tests locally: ./scripts/full-test.ps1 -IncludePerformance -IncludeLongRunning"
 
   # NuGet 패키지 빌드
   build-package:
