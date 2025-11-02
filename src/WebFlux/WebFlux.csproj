@@ -19,39 +19,39 @@
 
   <ItemGroup>
     <!-- HTTP 클라이언트 -->
-    <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.9" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.10" />
 
     <!-- 의존성 주입 -->
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.9" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.9" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.10" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.10" />
 
     <!-- 로깅 -->
-    <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.9" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.9" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.10" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.10" />
 
     <!-- 구성 -->
-    <PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.9" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="9.0.9" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="9.0.9" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.10" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="9.0.10" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="9.0.10" />
 
     <!-- 캐싱 -->
-    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="9.0.9" />
-    <PackageReference Include="Microsoft.Extensions.Caching.Abstractions" Version="9.0.9" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="9.0.10" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Abstractions" Version="9.0.10" />
 
     <!-- 병렬 처리 -->
-    <PackageReference Include="System.Threading.Channels" Version="9.0.9" />
+    <PackageReference Include="System.Threading.Channels" Version="9.0.10" />
 
     <!-- 웹 브라우저 자동화 (동적 콘텐츠 크롤링) -->
     <PackageReference Include="Microsoft.Playwright" Version="1.55.0" />
 
     <!-- JSON 처리 -->
-    <PackageReference Include="System.Text.Json" Version="9.0.9" />
+    <PackageReference Include="System.Text.Json" Version="9.0.10" />
 
     <!-- HTML DOM 분석 (15개 메타데이터 표준 추출) -->
     <PackageReference Include="HtmlAgilityPack" Version="1.12.4" />
 
     <!-- 마크다운 문서 처리 -->
-    <PackageReference Include="Markdig" Version="0.42.0" />
+    <PackageReference Include="Markdig" Version="0.43.0" />
 
     <!-- YAML 설정 파일 분석 -->
     <PackageReference Include="YamlDotNet" Version="16.3.0" />
