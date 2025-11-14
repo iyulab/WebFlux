@@ -255,7 +255,7 @@ $reportContent += @"
 Write-Step "4. 버전 호환성 평가"
 
 # 4.1 .NET 버전 호환성
-$targetFrameworks = @(".net8.0", ".net9.0")
+$targetFrameworks = @(".net8.0", ".net10.0")
 $csprojPath = Join-Path $srcDir "WebFlux.csproj"
 
 if (Test-Path $csprojPath) {

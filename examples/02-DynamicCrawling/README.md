@@ -19,7 +19,7 @@
 ### 초기 설정
 ```bash
 # Playwright 브라우저 설치 (처음 한 번만 필요)
-pwsh bin/Debug/net9.0/playwright.ps1 install chromium
+pwsh bin/Debug/net10.0/playwright.ps1 install chromium
 ```
 
 또는 프로그램이 자동으로 설치를 시도합니다.
@@ -191,7 +191,7 @@ Timeout = TimeSpan.FromSeconds(30)  // 너무 긴 대기는 비효율적
 ### Q: "Executable doesn't exist" 오류
 A: Playwright 브라우저가 설치되지 않았습니다:
 ```bash
-pwsh bin/Debug/net9.0/playwright.ps1 install chromium
+pwsh bin/Debug/net10.0/playwright.ps1 install chromium
 ```
 
 ### Q: 너무 느립니다

@@ -37,7 +37,7 @@ Microsoft Playwright를 사용하여 React, Vue, Angular와 같은 SPA 웹사이
 cd 02-DynamicCrawling
 
 # Playwright 브라우저 설치 (처음 한 번만)
-pwsh bin/Debug/net9.0/playwright.ps1 install chromium
+pwsh bin/Debug/net10.0/playwright.ps1 install chromium
 
 dotnet run
 ```
@@ -215,7 +215,7 @@ dotnet build
 ### Playwright 설치 오류 (예제 2)
 ```bash
 # 수동 설치
-pwsh bin/Debug/net9.0/playwright.ps1 install chromium
+pwsh bin/Debug/net10.0/playwright.ps1 install chromium
 
 # 또는
 playwright install chromium

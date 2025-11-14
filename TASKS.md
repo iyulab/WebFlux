@@ -219,7 +219,7 @@
   - [ ] 패키지 크기 최적화 (불필요한 파일 제외)
   - [ ] 패키지 메타데이터 완성 (README, 라이센스)
   - [ ] 심볼 패키지 생성 (디버깅 지원)
-  - [ ] Multi-targeting 검증 (net8.0, net9.0)
+  - [ ] Multi-targeting 검증 (net8.0, net10.0)
 
 ##### 🎯 **Priority 5: API 문서화**
 - **5D.9** API 문서화 완성

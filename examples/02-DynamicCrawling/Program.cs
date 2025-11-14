@@ -31,7 +31,7 @@ class Program
         catch (Exception ex)
         {
             Console.WriteLine($"⚠️  Playwright 설치 오류: {ex.Message}");
-            Console.WriteLine("   수동 설치: pwsh bin/Debug/net9.0/playwright.ps1 install chromium\n");
+            Console.WriteLine("   수동 설치: pwsh bin/Debug/net10.0/playwright.ps1 install chromium\n");
         }
 
         // 2. 서비스 컬렉션 구성
@@ -156,7 +156,7 @@ class Program
             {
                 Console.WriteLine($"\n💡 해결 방법:");
                 Console.WriteLine($"   Playwright 브라우저를 수동으로 설치하세요:");
-                Console.WriteLine($"   pwsh bin/Debug/net9.0/playwright.ps1 install chromium");
+                Console.WriteLine($"   pwsh bin/Debug/net10.0/playwright.ps1 install chromium");
             }
         }
 
