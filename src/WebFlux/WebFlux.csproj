@@ -1,0 +1,65 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- 📦 Package Configuration (inherits from Directory.Build.props) -->
+    <PackageId>WebFlux</PackageId>
+    <IsPackable>true</IsPackable>
+
+    <!-- 🔧 Project-specific Build Settings -->
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <WarningsAsErrors />
+    <WarningsNotAsErrors>CS1591</WarningsNotAsErrors>
+  </PropertyGroup>
+
+  <!-- 🎯 Conditional Package References for .NET Compatibility -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net6.0' OR '$(TargetFramework)' == 'net7.0'">
+    <!-- Additional packages for older .NET versions if needed -->
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- HTTP 클라이언트 -->
+    <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.0" />
+
+    <!-- 의존성 주입 -->
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.0" />
+
+    <!-- 로깅 -->
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.0" />
+
+    <!-- 구성 -->
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="10.0.0" />
+
+    <!-- 캐싱 -->
+    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Abstractions" Version="10.0.0" />
+
+    <!-- 병렬 처리 -->
+
+    <!-- 웹 브라우저 자동화 (동적 콘텐츠 크롤링) -->
+    <PackageReference Include="Microsoft.Playwright" Version="1.56.0" />
+
+    <!-- JSON 처리 -->
+
+    <!-- HTML DOM 분석 (15개 메타데이터 표준 추출) -->
+    <PackageReference Include="HtmlAgilityPack" Version="1.12.4" />
+
+    <!-- HTML DOM 파싱 및 CSS 선택자 지원 (AngleSharp) -->
+    <PackageReference Include="AngleSharp" Version="1.2.0" />
+
+    <!-- 마크다운 문서 처리 -->
+    <PackageReference Include="Markdig" Version="0.43.0" />
+
+    <!-- YAML 설정 파일 분석 -->
+    <PackageReference Include="YamlDotNet" Version="16.3.0" />
+
+    <!-- HTTP 재시도 및 회로차단기 -->
+    <PackageReference Include="Polly" Version="8.6.4" />
+    <PackageReference Include="Polly.Extensions.Http" Version="3.0.0" />
+  </ItemGroup>
+
+</Project>

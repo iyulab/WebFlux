@@ -1,0 +1,3 @@
+https://learn.microsoft.com/ko-kr/windows-server
+# https://techdocs.broadcom.com/us/en/vmware-cis/vsphere/vsphere/8-0.html
+# https://docs.centos.org/

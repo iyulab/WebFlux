@@ -1,0 +1,30 @@
+<Project>
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+
+    <!-- 샘플 프로젝트 설정 -->
+    <IsPackable>false</IsPackable>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <IncludeInSingleFile>false</IncludeInSingleFile>
+
+    <!-- 빌드 최적화 비활성화 (샘플용) -->
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <WarningsAsErrors />
+    <NoWarn>1591</NoWarn>
+
+    <!-- 디버깅 편의성 -->
+    <DebugType>portable</DebugType>
+    <DebugSymbols>true</DebugSymbols>
+  </PropertyGroup>
+
+  <!-- 공통 패키지 -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.9" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.9" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.9" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.9" />
+  </ItemGroup>
+</Project>

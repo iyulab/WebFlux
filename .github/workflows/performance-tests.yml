@@ -1,0 +1,98 @@
+name: ⚡ Performance and LongRunning Tests
+
+on:
+  # 수동 실행
+  workflow_dispatch:
+  # 스케줄 실행 (매일 새벽 3시 UTC = 오후 12시 KST)
+  schedule:
+    - cron: '0 3 * * *'
+  # main 브랜치 푸시 시 (선택적)
+  push:
+    branches: [ main ]
+    paths:
+      - 'src/WebFlux/**/*.cs'
+      - 'tests/WebFlux.Tests/Performance/**/*.cs'
+
+env:
+  DOTNET_VERSION: '10.0.x'
+  BUILD_CONFIGURATION: 'Release'
+
+jobs:
+  performance-tests:
+    name: 🔬 Performance Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: 📦 Restore Dependencies
+        run: dotnet restore WebFlux.sln
+
+      - name: 🔨 Build Solution
+        run: dotnet build WebFlux.sln --configuration ${{ env.BUILD_CONFIGURATION }} --no-restore
+
+      - name: ⚡ Run Performance Tests (excluding LongRunning)
+        run: dotnet test tests/WebFlux.Tests/WebFlux.Tests.csproj --configuration ${{ env.BUILD_CONFIGURATION }} --no-build --verbosity normal --filter "Category=Performance&Category!=LongRunning"
+
+      - name: 📊 Performance Test Summary
+        if: always()
+        run: |
+          echo "✅ Performance tests completed"
+          echo "🔬 Tested: Memory efficiency, large document processing, GC pressure"
+          echo "⏱️ Duration: ~5-10 minutes"
+
+  long-running-tests:
+    name: 🕐 Long Running Tests (Manual Only)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    timeout-minutes: 120
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: 📦 Restore Dependencies
+        run: dotnet restore WebFlux.sln
+
+      - name: 🔨 Build Solution
+        run: dotnet build WebFlux.sln --configuration ${{ env.BUILD_CONFIGURATION }} --no-restore
+
+      - name: 🕐 Run LongRunning Tests
+        run: dotnet test tests/WebFlux.Tests/WebFlux.Tests.csproj --configuration ${{ env.BUILD_CONFIGURATION }} --no-build --verbosity normal --filter "Category=LongRunning"
+
+      - name: 📊 LongRunning Test Summary
+        if: always()
+        run: |
+          echo "✅ Long running tests completed"
+          echo "🕐 Duration: Variable (10 minutes to 24 hours depending on test)"
+          echo "🔬 Tested: Continuous processing stability, memory leak detection"
+
+  report-results:
+    name: 📊 Report Test Results
+    runs-on: ubuntu-latest
+    needs: [performance-tests, long-running-tests]
+    if: always()
+    steps:
+      - name: 📊 Summary
+        run: |
+          echo "## Performance Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Performance Tests" >> $GITHUB_STEP_SUMMARY
+          echo "Status: ${{ needs.performance-tests.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Long Running Tests" >> $GITHUB_STEP_SUMMARY
+          echo "Status: ${{ needs.long-running-tests.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "---" >> $GITHUB_STEP_SUMMARY
+          echo "💡 **Tip**: Performance tests run daily at 3 AM UTC (12 PM KST)" >> $GITHUB_STEP_SUMMARY
+          echo "🕐 **Long Running Tests**: Run manually via workflow_dispatch only" >> $GITHUB_STEP_SUMMARY
