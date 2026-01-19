@@ -25,7 +25,7 @@
 
 ### 요구사항
 
-- .NET 8 이상 또는 .NET 9
+- .NET 10 이상
 - AI 서비스 (OpenAI, Azure OpenAI, Anthropic 등)
 
 ### NuGet 패키지 설치

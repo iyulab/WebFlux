@@ -2,6 +2,29 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.9] - 2026-01-19
+
+### Changed
+- Updated Microsoft.SourceLink.GitHub to 10.0.102 (from 8.0.0)
+
+### Maintenance
+- Cleaned up internal development documentation files
+- Updated tutorial documentation for .NET 10 requirements
+
+---
+
+## [0.1.8] - 2025-12-XX
+
+### Changed
+- Centralized build properties with Directory.Build.props
+- Centralized package version management with Directory.Packages.props
+- Updated all NuGet packages to latest versions
+
+### Maintenance
+- Improved project structure with central package management
+
+---
+
 ## [0.1.7] - 2025-11-23
 
 ### Added

@@ -1,0 +1,67 @@
+<Project>
+
+  <!-- 🎯 Central Package Version Management -->
+  <!-- 모든 패키지 버전을 여기서 중앙 관리합니다 -->
+
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- 🔧 Microsoft.Extensions.* (Runtime) -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <PackageVersion Include="Microsoft.Extensions.Caching.Abstractions" Version="10.0.2" />
+    <PackageVersion Include="Microsoft.Extensions.Caching.Memory" Version="10.0.2" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration" Version="10.0.2" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.2" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration.Binder" Version="10.0.2" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="10.0.2" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.2" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.2" />
+    <PackageVersion Include="Microsoft.Extensions.Http" Version="10.0.2" />
+    <PackageVersion Include="Microsoft.Extensions.Logging" Version="10.0.2" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.2" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="10.0.2" />
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- 🌐 Web Crawling & HTML Processing -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <PackageVersion Include="Microsoft.Playwright" Version="1.57.0" />
+    <PackageVersion Include="HtmlAgilityPack" Version="1.12.4" />
+    <PackageVersion Include="AngleSharp" Version="1.4.0" />
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- 📝 Document Processing -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <PackageVersion Include="Markdig" Version="0.44.0" />
+    <PackageVersion Include="YamlDotNet" Version="16.3.0" />
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- 🛡️ Resilience -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <PackageVersion Include="Polly" Version="8.6.5" />
+    <PackageVersion Include="Polly.Extensions.Http" Version="3.0.0" />
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- 🤖 AI Services -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <PackageVersion Include="OpenAI" Version="2.4.0" />
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- 🔗 Source Link -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.102" />
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- 🧪 Testing -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
+    <PackageVersion Include="xunit" Version="2.9.3" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
+    <PackageVersion Include="coverlet.collector" Version="6.0.4" />
+    <PackageVersion Include="FluentAssertions" Version="8.8.0" />
+    <PackageVersion Include="Moq" Version="4.20.72" />
+  </ItemGroup>
+
+</Project>

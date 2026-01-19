@@ -1,0 +1,103 @@
+<Project>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- 📦 공통 빌드 속성 -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- 📋 버전 관리 -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <PropertyGroup>
+    <VersionPrefix>0.1.9</VersionPrefix>
+    <VersionSuffix></VersionSuffix>
+    <PackageVersion Condition="'$(VersionSuffix)' == ''">$(VersionPrefix)</PackageVersion>
+    <PackageVersion Condition="'$(VersionSuffix)' != ''">$(VersionPrefix)-$(VersionSuffix)</PackageVersion>
+    <AssemblyVersion>$(VersionPrefix).0</AssemblyVersion>
+    <FileVersion>$(VersionPrefix).0</FileVersion>
+  </PropertyGroup>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- 🏷️ 패키지 메타데이터 -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <PropertyGroup>
+    <Product>WebFlux</Product>
+    <Title>WebFlux - AI-Optimized Web Content Processing SDK</Title>
+    <Description>RAG preprocessing SDK powered by Web Intelligence Engine - transforms web content into AI-friendly chunks through integrated analysis of 15 web metadata standards</Description>
+    <PackageTags>RAG;AI;Web Crawling;Content Processing;Chunking;Web Intelligence;NLP;Machine Learning;SDK;DotNet;CSharp;Web Scraping;Text Processing;Multimodal;Document Processing;Semantic Chunking;Auto Strategy</PackageTags>
+  </PropertyGroup>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- 👨‍💻 저작자 정보 -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <PropertyGroup>
+    <Authors>iyulab</Authors>
+    <Company>Iyulab Corporation</Company>
+    <Owners>iyulab</Owners>
+    <Copyright>Copyright (c) Iyulab Corporation 2025.</Copyright>
+  </PropertyGroup>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- 🔗 Repository & URLs -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <PropertyGroup>
+    <RepositoryUrl>https://github.com/iyulab/WebFlux</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageProjectUrl>https://github.com/iyulab/WebFlux</PackageProjectUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageIcon>logo.png</PackageIcon>
+  </PropertyGroup>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- 📦 패키지 설정 -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <PropertyGroup>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+  </PropertyGroup>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- 🔧 빌드 설정 -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <PropertyGroup>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- 🚀 Release 최적화 -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <Optimize>true</Optimize>
+    <DebugType>portable</DebugType>
+    <DebugSymbols>true</DebugSymbols>
+  </PropertyGroup>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- 📁 패키지 파일 (IsPackable=true인 프로젝트만) -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <ItemGroup Condition="'$(IsPackable)' == 'true'">
+    <None Include="$(MSBuildThisFileDirectory)src\logo.png" Pack="true" PackagePath="\" />
+    <None Include="$(MSBuildThisFileDirectory)README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- 🔗 Source Link -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All" />
+  </ItemGroup>
+
+</Project>

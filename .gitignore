@@ -362,8 +362,10 @@ MigrationBackup/
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
 
+# Local
 .env.local
-CLAUDE.local.md
+CLAUDE.md
+*.local.md
 claudedocs/
 .playwright-mcp/
 .serena/
