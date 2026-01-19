@@ -4,7 +4,8 @@ on:
   push:
     branches: [ main, develop ]
     paths:
-      - 'src/Directory.Build.props'
+      - 'Directory.Build.props'
+      - 'Directory.Packages.props'
       - 'src/WebFlux/**/*.cs'
       - 'tests/**/*.cs'
       - '.github/workflows/nuget-publish.yml'
@@ -36,8 +37,8 @@ jobs:
       - name: 📊 Extract Version from Directory.Build.props
         id: extract-version
         run: |
-          VERSION=$(grep -oP '(?<=<VersionPrefix>)[^<]*' src/Directory.Build.props)
-          VERSION_SUFFIX=$(grep -oP '(?<=<VersionSuffix>)[^<]*' src/Directory.Build.props || echo "")
+          VERSION=$(grep -oP '(?<=<VersionPrefix>)[^<]*' Directory.Build.props)
+          VERSION_SUFFIX=$(grep -oP '(?<=<VersionSuffix>)[^<]*' Directory.Build.props || echo "")
 
           if [ -n "$VERSION_SUFFIX" ] && [ "$VERSION_SUFFIX" != "" ]; then
             FULL_VERSION="${VERSION}-${VERSION_SUFFIX}"
