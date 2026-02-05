@@ -6,60 +6,89 @@ using WebFlux.Core.Options;
 namespace WebFlux.Services.Crawlers;
 
 /// <summary>
-/// 깊이 우선 크롤링 전략 기본 구현
-/// Interface Provider 패턴에 따라 기본 구현만 제공
+/// 깊이 우선 크롤링 전략 구현
+/// Stack 기반으로 깊이 우선 탐색을 수행합니다.
 /// </summary>
-public class DepthFirstCrawler : ICrawler
+public class DepthFirstCrawler : BaseCrawler
 {
-    public Task<CrawlResult> CrawlAsync(string url, CrawlOptions? options = null, CancellationToken cancellationToken = default)
+    public DepthFirstCrawler(IHttpClientService httpClient, IEventPublisher eventPublisher)
+        : base(httpClient, eventPublisher)
     {
-        var result = new CrawlResult
+    }
+
+    /// <summary>
+    /// 깊이 우선 탐색으로 웹사이트를 크롤링합니다.
+    /// Queue 대신 Stack을 사용하여 가장 최근에 발견된 링크를 먼저 탐색합니다.
+    /// </summary>
+    public override async IAsyncEnumerable<CrawlResult> CrawlWebsiteAsync(
+        string startUrl,
+        CrawlOptions? options = null,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(startUrl))
+            throw new ArgumentException("Start URL cannot be null or empty", nameof(startUrl));
+
+        var stack = new Stack<(string url, int depth)>();
+        var visited = new HashSet<string>();
+        var maxDepth = options?.MaxDepth ?? 3;
+        var maxPages = options?.MaxPages ?? 100;
+
+        stack.Push((startUrl, 0));
+
+        while (stack.Count > 0 && visited.Count < maxPages && !cancellationToken.IsCancellationRequested)
         {
-            Url = url,
-            IsSuccessful = true,
-            Content = $"Basic DepthFirst crawl result for {url}",
-            ContentType = "text/html",
-            StatusCode = 200
-        };
-        return Task.FromResult(result);
-    }
+            var (currentUrl, depth) = stack.Pop();
 
-    public async IAsyncEnumerable<CrawlResult> CrawlWebsiteAsync(string startUrl, CrawlOptions? options = null, [EnumeratorCancellation] CancellationToken cancellationToken = default)
-    {
-        yield return await CrawlAsync(startUrl, options, cancellationToken);
-    }
+            if (visited.Contains(currentUrl) || depth > maxDepth)
+                continue;
 
-    public async IAsyncEnumerable<CrawlResult> CrawlSitemapAsync(string sitemapUrl, CrawlOptions? options = null, [EnumeratorCancellation] CancellationToken cancellationToken = default)
-    {
-        yield return await CrawlAsync(sitemapUrl, options, cancellationToken);
-    }
+            visited.Add(currentUrl);
 
-    public Task<RobotsTxtInfo> GetRobotsTxtAsync(string baseUrl, string userAgent, CancellationToken cancellationToken = default)
-    {
-        var robotsInfo = new RobotsTxtInfo
-        {
-            Content = "# Basic robots.txt"
-        };
-        return Task.FromResult(robotsInfo);
-    }
+            var originalResult = await CrawlAsync(currentUrl, options, cancellationToken);
+            var result = new CrawlResult
+            {
+                Url = originalResult.Url,
+                FinalUrl = originalResult.FinalUrl,
+                StatusCode = originalResult.StatusCode,
+                IsSuccess = originalResult.IsSuccess,
+                HtmlContent = originalResult.HtmlContent,
+                Headers = originalResult.Headers,
+                ContentType = originalResult.ContentType,
+                Encoding = originalResult.Encoding,
+                ContentLength = originalResult.ContentLength,
+                ResponseTimeMs = originalResult.ResponseTimeMs,
+                CrawledAt = originalResult.CrawledAt,
+                Depth = depth,
+                ParentUrl = originalResult.ParentUrl,
+                DiscoveredLinks = originalResult.DiscoveredLinks,
+                ErrorMessage = originalResult.ErrorMessage,
+                Exception = originalResult.Exception,
+                ImageUrls = originalResult.ImageUrls,
+                Metadata = originalResult.Metadata,
+                WebMetadata = originalResult.WebMetadata
+            };
 
-    public Task<bool> IsUrlAllowedAsync(string url, string userAgent)
-    {
-        return Task.FromResult(true);
-    }
+            yield return result;
 
-    public IReadOnlyList<string> ExtractLinks(string htmlContent, string baseUrl)
-    {
-        return new List<string>();
-    }
+            if (result.IsSuccess && depth < maxDepth)
+            {
+                // 깊이 우선: 링크들을 역순으로 스택에 추가하여 첫 번째 링크가 먼저 탐색되도록 함
+                var linksToAdd = result.DiscoveredLinks
+                    .Where(link => !visited.Contains(link) && ShouldCrawlUrl(link, startUrl))
+                    .Reverse()
+                    .ToList();
 
-    public CrawlStatistics GetStatistics()
-    {
-        return new CrawlStatistics
-        {
-            TotalRequests = 0,
-            SuccessfulRequests = 0,
-            FailedRequests = 0
-        };
+                foreach (var link in linksToAdd)
+                {
+                    stack.Push((link, depth + 1));
+                }
+            }
+
+            // 예의상 지연
+            if (options?.DelayMs > 0)
+            {
+                await Task.Delay(options.DelayMs, cancellationToken);
+            }
+        }
     }
 }

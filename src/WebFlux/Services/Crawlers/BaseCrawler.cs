@@ -1,5 +1,8 @@
 using System.Collections.Concurrent;
+using System.Net;
 using System.Runtime.CompilerServices;
+using System.Threading.Channels;
+using System.Xml.Linq;
 using WebFlux.Core.Interfaces;
 using WebFlux.Core.Models;
 using WebFlux.Core.Options;
@@ -35,6 +38,7 @@ public abstract class BaseCrawler : ICrawler
 
     /// <summary>
     /// 단일 URL을 크롤링합니다.
+    /// 지수 백오프 재시도 및 HTTP 429 Rate Limiting을 지원합니다.
     /// </summary>
     /// <param name="url">크롤링할 URL</param>
     /// <param name="options">크롤링 옵션</param>
@@ -45,65 +49,133 @@ public abstract class BaseCrawler : ICrawler
         CrawlOptions? options = null,
         CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         if (string.IsNullOrWhiteSpace(url))
             throw new ArgumentException("URL cannot be null or empty", nameof(url));
 
+        var maxRetries = options?.MaxRetries ?? 3;
         var startTime = DateTimeOffset.UtcNow;
+        Exception? lastException = null;
 
-        try
+        for (int attempt = 0; attempt <= maxRetries; attempt++)
         {
-            await _eventPublisher.PublishAsync(new UrlProcessingStartedEvent
+            try
             {
-                Url = url,
-                Timestamp = startTime
-            }, cancellationToken);
+                if (attempt == 0)
+                {
+                    await _eventPublisher.PublishAsync(new UrlProcessingStartedEvent
+                    {
+                        Url = url,
+                        Timestamp = startTime
+                    }, cancellationToken);
+                }
 
-            using var response = await _httpClient.GetAsync(url, cancellationToken: cancellationToken);
-            var content = await response.Content.ReadAsStringAsync(cancellationToken);
-            var responseTime = (long)(DateTimeOffset.UtcNow - startTime).TotalMilliseconds;
+                using var response = await _httpClient.GetAsync(url, cancellationToken: cancellationToken);
 
-            var discoveredLinks = ExtractLinks(content, url);
+                // HTTP 429 Too Many Requests 처리
+                if (response.StatusCode == HttpStatusCode.TooManyRequests && attempt < maxRetries)
+                {
+                    var retryAfter = GetRetryAfterDelay(response);
+                    await Task.Delay(retryAfter, cancellationToken);
+                    continue;
+                }
 
-            var result = new CrawlResult
+                var content = await response.Content.ReadAsStringAsync(cancellationToken);
+                var responseTime = (long)(DateTimeOffset.UtcNow - startTime).TotalMilliseconds;
+
+                var discoveredLinks = ExtractLinks(content, url);
+
+                var result = new CrawlResult
+                {
+                    Url = url,
+                    FinalUrl = response.RequestMessage?.RequestUri?.ToString() ?? url,
+                    StatusCode = (int)response.StatusCode,
+                    IsSuccess = response.IsSuccessStatusCode,
+                    HtmlContent = response.IsSuccessStatusCode ? content : null,
+                    Headers = response.Headers.ToDictionary(h => h.Key, h => string.Join(", ", h.Value)),
+                    ContentType = response.Content.Headers.ContentType?.MediaType,
+                    Encoding = response.Content.Headers.ContentType?.CharSet,
+                    ContentLength = response.Content.Headers.ContentLength,
+                    ResponseTimeMs = responseTime,
+                    CrawledAt = DateTimeOffset.UtcNow,
+                    Depth = 0,
+                    DiscoveredLinks = discoveredLinks,
+                    ErrorMessage = response.IsSuccessStatusCode ? null : response.ReasonPhrase
+                };
+
+                UpdateStatistics(result);
+                return result;
+            }
+            catch (HttpRequestException ex) when (attempt < maxRetries)
             {
-                Url = url,
-                FinalUrl = response.RequestMessage?.RequestUri?.ToString() ?? url,
-                StatusCode = (int)response.StatusCode,
-                IsSuccess = response.IsSuccessStatusCode,
-                HtmlContent = response.IsSuccessStatusCode ? content : null,
-                Headers = response.Headers.ToDictionary(h => h.Key, h => string.Join(", ", h.Value)),
-                ContentType = response.Content.Headers.ContentType?.MediaType,
-                Encoding = response.Content.Headers.ContentType?.CharSet,
-                ContentLength = response.Content.Headers.ContentLength,
-                ResponseTimeMs = responseTime,
-                CrawledAt = DateTimeOffset.UtcNow,
-                Depth = 0,
-                DiscoveredLinks = discoveredLinks,
-                ErrorMessage = response.IsSuccessStatusCode ? null : response.ReasonPhrase
-            };
-
-            UpdateStatistics(result);
-            return result;
+                lastException = ex;
+                // 지수 백오프: 1초, 2초, 4초, 8초...
+                var delay = TimeSpan.FromSeconds(Math.Pow(2, attempt));
+                await Task.Delay(delay, cancellationToken);
+            }
+            catch (TaskCanceledException ex) when (!cancellationToken.IsCancellationRequested && attempt < maxRetries)
+            {
+                // 타임아웃으로 인한 취소 (사용자 취소가 아닌 경우)
+                lastException = ex;
+                var delay = TimeSpan.FromSeconds(Math.Pow(2, attempt));
+                await Task.Delay(delay, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                lastException = ex;
+                break;
+            }
         }
-        catch (Exception ex)
+
+        // 모든 재시도 실패
+        var errorResult = new CrawlResult
         {
-            var errorResult = new CrawlResult
-            {
-                Url = url,
-                FinalUrl = url,
-                StatusCode = 0,
-                IsSuccess = false,
-                ResponseTimeMs = (long)(DateTimeOffset.UtcNow - startTime).TotalMilliseconds,
-                CrawledAt = DateTimeOffset.UtcNow,
-                Depth = 0,
-                DiscoveredLinks = Array.Empty<string>(),
-                ErrorMessage = ex.Message,
-                Exception = ex
-            };
+            Url = url,
+            FinalUrl = url,
+            StatusCode = 0,
+            IsSuccess = false,
+            ResponseTimeMs = (long)(DateTimeOffset.UtcNow - startTime).TotalMilliseconds,
+            CrawledAt = DateTimeOffset.UtcNow,
+            Depth = 0,
+            DiscoveredLinks = Array.Empty<string>(),
+            ErrorMessage = lastException?.Message ?? "Unknown error after retries",
+            Exception = lastException
+        };
 
-            UpdateStatistics(errorResult);
-            return errorResult;
+        UpdateStatistics(errorResult);
+        return errorResult;
+    }
+
+    /// <summary>
+    /// HTTP 응답에서 Retry-After 헤더를 파싱하여 대기 시간을 반환합니다.
+    /// </summary>
+    /// <param name="response">HTTP 응답</param>
+    /// <returns>대기 시간 (기본값: 60초)</returns>
+    protected virtual TimeSpan GetRetryAfterDelay(HttpResponseMessage response)
+    {
+        // Retry-After 헤더가 있는 경우
+        if (response.Headers.RetryAfter != null)
+        {
+            // Delta (초 단위) 형식
+            if (response.Headers.RetryAfter.Delta.HasValue)
+            {
+                return response.Headers.RetryAfter.Delta.Value;
+            }
+
+            // Date 형식
+            if (response.Headers.RetryAfter.Date.HasValue)
+            {
+                var delay = response.Headers.RetryAfter.Date.Value - DateTimeOffset.UtcNow;
+                if (delay > TimeSpan.Zero)
+                {
+                    return delay;
+                }
+            }
         }
+
+        // 기본값: 60초
+        return TimeSpan.FromSeconds(60);
     }
 
     /// <summary>
@@ -181,6 +253,179 @@ public abstract class BaseCrawler : ICrawler
                 await Task.Delay(options.DelayMs, cancellationToken);
             }
         }
+    }
+
+    /// <summary>
+    /// 웹사이트를 병렬로 크롤링합니다.
+    /// ConcurrentRequests 옵션을 사용하여 동시 요청 수를 제어합니다.
+    /// </summary>
+    /// <param name="startUrl">시작 URL</param>
+    /// <param name="options">크롤링 옵션</param>
+    /// <param name="cancellationToken">취소 토큰</param>
+    /// <returns>크롤링 결과 스트림 (완료 순서대로 반환)</returns>
+    public virtual async IAsyncEnumerable<CrawlResult> CrawlWebsiteParallelAsync(
+        string startUrl,
+        CrawlOptions? options = null,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(startUrl))
+            throw new ArgumentException("Start URL cannot be null or empty", nameof(startUrl));
+
+        _startTime = DateTimeOffset.UtcNow;
+
+        var maxDepth = options?.MaxDepth ?? 3;
+        var maxPages = options?.MaxPages ?? 100;
+        var concurrency = options?.ConcurrentRequests ?? 3;
+        var delayMs = options?.DelayMs ?? 0;
+
+        // 결과 채널 (bounded로 메모리 관리)
+        var channel = Channel.CreateBounded<CrawlResult>(new BoundedChannelOptions(maxPages)
+        {
+            FullMode = BoundedChannelFullMode.Wait,
+            SingleReader = true,
+            SingleWriter = false
+        });
+
+        // 방문한 URL 및 대기열 관리
+        var visited = new ConcurrentDictionary<string, bool>();
+        var pendingUrls = new ConcurrentQueue<(string url, int depth)>();
+        var semaphore = new SemaphoreSlim(concurrency, concurrency);
+        var activeWorkers = 0;
+        var completedCount = 0;
+
+        pendingUrls.Enqueue((startUrl, 0));
+
+        // Producer 작업 시작
+        var producerTask = Task.Run(async () =>
+        {
+            try
+            {
+                while (!cancellationToken.IsCancellationRequested)
+                {
+                    // 대기열에서 URL 가져오기
+                    if (!pendingUrls.TryDequeue(out var item))
+                    {
+                        // 대기열이 비어있고 활성 워커가 없으면 종료
+                        if (Volatile.Read(ref activeWorkers) == 0)
+                        {
+                            break;
+                        }
+
+                        // 잠시 대기 후 다시 확인
+                        await Task.Delay(10, cancellationToken);
+                        continue;
+                    }
+
+                    var (url, depth) = item;
+
+                    // 이미 방문했거나 최대 페이지 수 초과 시 스킵
+                    if (!visited.TryAdd(url, true) || Volatile.Read(ref completedCount) >= maxPages)
+                    {
+                        continue;
+                    }
+
+                    // 깊이 제한 확인
+                    if (depth > maxDepth)
+                    {
+                        continue;
+                    }
+
+                    // 동시성 제한
+                    await semaphore.WaitAsync(cancellationToken);
+                    Interlocked.Increment(ref activeWorkers);
+
+                    // 비동기로 크롤링 수행
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            var originalResult = await CrawlAsync(url, options, cancellationToken);
+                            var result = new CrawlResult
+                            {
+                                Url = originalResult.Url,
+                                FinalUrl = originalResult.FinalUrl,
+                                StatusCode = originalResult.StatusCode,
+                                IsSuccess = originalResult.IsSuccess,
+                                HtmlContent = originalResult.HtmlContent,
+                                Headers = originalResult.Headers,
+                                ContentType = originalResult.ContentType,
+                                Encoding = originalResult.Encoding,
+                                ContentLength = originalResult.ContentLength,
+                                ResponseTimeMs = originalResult.ResponseTimeMs,
+                                CrawledAt = originalResult.CrawledAt,
+                                Depth = depth,
+                                ParentUrl = originalResult.ParentUrl,
+                                DiscoveredLinks = originalResult.DiscoveredLinks,
+                                ErrorMessage = originalResult.ErrorMessage,
+                                Exception = originalResult.Exception,
+                                ImageUrls = originalResult.ImageUrls,
+                                Metadata = originalResult.Metadata,
+                                WebMetadata = originalResult.WebMetadata
+                            };
+
+                            // 채널에 결과 쓰기
+                            await channel.Writer.WriteAsync(result, cancellationToken);
+                            Interlocked.Increment(ref completedCount);
+
+                            // 새로운 링크 추가
+                            if (result.IsSuccess && depth < maxDepth && Volatile.Read(ref completedCount) < maxPages)
+                            {
+                                foreach (var link in result.DiscoveredLinks)
+                                {
+                                    if (!visited.ContainsKey(link) && ShouldCrawlUrl(link, startUrl))
+                                    {
+                                        pendingUrls.Enqueue((link, depth + 1));
+                                    }
+                                }
+                            }
+
+                            // 예의상 지연
+                            if (delayMs > 0)
+                            {
+                                await Task.Delay(delayMs, cancellationToken);
+                            }
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            // 취소됨 - 정상 종료
+                        }
+                        catch
+                        {
+                            // 개별 URL 오류는 무시 (이미 CrawlAsync에서 처리됨)
+                        }
+                        finally
+                        {
+                            semaphore.Release();
+                            Interlocked.Decrement(ref activeWorkers);
+                        }
+                    }, cancellationToken);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // 취소됨 - 정상 종료
+            }
+            finally
+            {
+                // 모든 활성 워커가 완료될 때까지 대기
+                while (Volatile.Read(ref activeWorkers) > 0)
+                {
+                    await Task.Delay(10, CancellationToken.None);
+                }
+
+                channel.Writer.Complete();
+                semaphore.Dispose();
+            }
+        }, cancellationToken);
+
+        // Consumer: 채널에서 결과 읽기
+        await foreach (var result in channel.Reader.ReadAllAsync(cancellationToken))
+        {
+            yield return result;
+        }
+
+        // Producer 완료 대기
+        await producerTask;
     }
 
     /// <summary>
@@ -339,6 +584,7 @@ public abstract class BaseCrawler : ICrawler
 
     /// <summary>
     /// Sitemap에서 URL 추출
+    /// XDocument 기반 파싱으로 namespace, CDATA를 지원합니다.
     /// </summary>
     /// <param name="sitemapUrl">Sitemap URL</param>
     /// <param name="cancellationToken">취소 토큰</param>
@@ -355,22 +601,102 @@ public abstract class BaseCrawler : ICrawler
                 return Array.Empty<string>();
 
             var content = await response.Content.ReadAsStringAsync(cancellationToken);
-
-            // 간단한 XML 파싱 (실제로는 XDocument 사용 권장)
-            var urlMatches = System.Text.RegularExpressions.Regex.Matches(
-                content,
-                @"<loc>([^<]+)</loc>",
-                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-
-            return urlMatches.Cast<System.Text.RegularExpressions.Match>()
-                            .Select(m => m.Groups[1].Value.Trim())
-                            .Where(url => !string.IsNullOrWhiteSpace(url))
-                            .ToList();
+            return ParseSitemapXml(content);
         }
         catch
         {
             return Array.Empty<string>();
         }
+    }
+
+    /// <summary>
+    /// Sitemap XML을 파싱하여 URL 목록을 추출합니다.
+    /// namespace, CDATA, sitemap index를 지원합니다.
+    /// </summary>
+    /// <param name="xmlContent">Sitemap XML 콘텐츠</param>
+    /// <returns>추출된 URL 목록</returns>
+    protected virtual IEnumerable<string> ParseSitemapXml(string xmlContent)
+    {
+        var urls = new List<string>();
+
+        try
+        {
+            var doc = XDocument.Parse(xmlContent);
+            var root = doc.Root;
+
+            if (root == null)
+                return urls;
+
+            // 네임스페이스 처리 (표준 sitemap namespace)
+            XNamespace? ns = root.GetDefaultNamespace();
+
+            // sitemap index 파일인 경우 (<sitemapindex>)
+            var sitemapElements = ns != null
+                ? root.Descendants(ns + "sitemap")
+                : root.Descendants("sitemap");
+
+            foreach (var sitemapElement in sitemapElements)
+            {
+                var locElement = ns != null
+                    ? sitemapElement.Element(ns + "loc")
+                    : sitemapElement.Element("loc");
+
+                if (locElement != null)
+                {
+                    var url = locElement.Value.Trim();
+                    if (!string.IsNullOrWhiteSpace(url))
+                    {
+                        urls.Add(url);
+                    }
+                }
+            }
+
+            // 일반 URL 항목 (<url>)
+            var urlElements = ns != null
+                ? root.Descendants(ns + "url")
+                : root.Descendants("url");
+
+            foreach (var urlElement in urlElements)
+            {
+                var locElement = ns != null
+                    ? urlElement.Element(ns + "loc")
+                    : urlElement.Element("loc");
+
+                if (locElement != null)
+                {
+                    var url = locElement.Value.Trim();
+                    if (!string.IsNullOrWhiteSpace(url))
+                    {
+                        urls.Add(url);
+                    }
+                }
+            }
+
+            return urls;
+        }
+        catch
+        {
+            // XML 파싱 실패 시 정규식 폴백
+            return ParseSitemapWithRegex(xmlContent);
+        }
+    }
+
+    /// <summary>
+    /// Sitemap XML을 정규식으로 파싱합니다 (폴백용).
+    /// </summary>
+    /// <param name="content">Sitemap 콘텐츠</param>
+    /// <returns>추출된 URL 목록</returns>
+    private static IEnumerable<string> ParseSitemapWithRegex(string content)
+    {
+        var urlMatches = System.Text.RegularExpressions.Regex.Matches(
+            content,
+            @"<loc>([^<]+)</loc>",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+        return urlMatches.Cast<System.Text.RegularExpressions.Match>()
+                        .Select(m => m.Groups[1].Value.Trim())
+                        .Where(url => !string.IsNullOrWhiteSpace(url))
+                        .ToList();
     }
 
     /// <summary>

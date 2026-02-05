@@ -1,3 +1,5 @@
+using System.Net;
+using Moq;
 using WebFlux.Core.Interfaces;
 using WebFlux.Core.Models;
 using WebFlux.Core.Options;
@@ -9,114 +11,77 @@ namespace WebFlux.Tests.Services.Crawlers;
 
 /// <summary>
 /// SitemapCrawler 단위 테스트
-/// 기본 구현 검증 (Interface Provider 패턴)
+/// BaseCrawler를 상속하며 sitemap.xml 기반 크롤링을 수행합니다.
 /// </summary>
-public class SitemapCrawlerTests
+public class SitemapCrawlerTests : IDisposable
 {
+    private readonly Mock<IHttpClientService> _mockHttpClient;
+    private readonly Mock<IEventPublisher> _mockEventPublisher;
     private readonly SitemapCrawler _crawler;
 
     public SitemapCrawlerTests()
     {
-        _crawler = new SitemapCrawler();
+        _mockHttpClient = new Mock<IHttpClientService>();
+        _mockEventPublisher = new Mock<IEventPublisher>();
+        _crawler = new SitemapCrawler(_mockHttpClient.Object, _mockEventPublisher.Object);
     }
+
+    public void Dispose()
+    {
+        // Cleanup if needed
+    }
+
+    #region Constructor Tests
+
+    [Fact]
+    public void Constructor_WithNullHttpClient_ShouldThrowArgumentNullException()
+    {
+        // Act & Assert
+        var ex = Assert.Throws<ArgumentNullException>(() =>
+            new SitemapCrawler(null!, _mockEventPublisher.Object));
+
+        ex.ParamName.Should().Be("httpClient");
+    }
+
+    [Fact]
+    public void Constructor_WithNullEventPublisher_ShouldThrowArgumentNullException()
+    {
+        // Act & Assert
+        var ex = Assert.Throws<ArgumentNullException>(() =>
+            new SitemapCrawler(_mockHttpClient.Object, null!));
+
+        ex.ParamName.Should().Be("eventPublisher");
+    }
+
+    #endregion
 
     #region CrawlAsync Tests
 
     [Fact]
-    public async Task CrawlAsync_WithValidUrl_ShouldReturnBasicResult()
+    public async Task CrawlAsync_WithValidUrl_ShouldReturnSuccessResult()
     {
         // Arrange
         var url = "https://example.com";
+        var htmlContent = "<html><head><title>Test</title></head><body>Content</body></html>";
+
+        var response = new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(htmlContent),
+            RequestMessage = new HttpRequestMessage { RequestUri = new Uri(url) }
+        };
+
+        _mockHttpClient.Setup(c => c.GetAsync(url, null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(response);
 
         // Act
         var result = await _crawler.CrawlAsync(url);
 
         // Assert
         result.Should().NotBeNull();
+        result.IsSuccess.Should().BeTrue();
         result.Url.Should().Be(url);
-        result.IsSuccessful.Should().BeTrue();
         result.StatusCode.Should().Be(200);
-        result.ContentType.Should().Be("text/html");
-        result.Content.Should().Contain("Sitemap");
-        result.Content.Should().Contain(url);
-    }
-
-    [Fact]
-    public async Task CrawlAsync_WithOptions_ShouldIgnoreOptions()
-    {
-        // Arrange
-        var url = "https://example.com";
-        var options = new CrawlOptions
-        {
-            MaxPages = 10,
-            MaxDepth = 5
-        };
-
-        // Act
-        var result = await _crawler.CrawlAsync(url, options);
-
-        // Assert
-        result.Should().NotBeNull();
-        result.IsSuccessful.Should().BeTrue();
-    }
-
-    [Fact]
-    public async Task CrawlAsync_WithCancellationToken_ShouldComplete()
-    {
-        // Arrange
-        var url = "https://example.com";
-        using var cts = new CancellationTokenSource();
-
-        // Act
-        var result = await _crawler.CrawlAsync(url, cancellationToken: cts.Token);
-
-        // Assert
-        result.Should().NotBeNull();
-        result.IsSuccessful.Should().BeTrue();
-    }
-
-    #endregion
-
-    #region CrawlWebsiteAsync Tests
-
-    [Fact]
-    public async Task CrawlWebsiteAsync_ShouldReturnSingleResult()
-    {
-        // Arrange
-        var startUrl = "https://example.com";
-
-        // Act
-        var results = new List<CrawlResult>();
-        await foreach (var result in _crawler.CrawlWebsiteAsync(startUrl))
-        {
-            results.Add(result);
-        }
-
-        // Assert
-        results.Should().HaveCount(1);
-        results[0].Url.Should().Be(startUrl);
-    }
-
-    [Fact]
-    public async Task CrawlWebsiteAsync_WithOptions_ShouldIgnoreOptions()
-    {
-        // Arrange
-        var startUrl = "https://example.com";
-        var options = new CrawlOptions
-        {
-            MaxPages = 100,
-            MaxDepth = 10
-        };
-
-        // Act
-        var results = new List<CrawlResult>();
-        await foreach (var result in _crawler.CrawlWebsiteAsync(startUrl, options))
-        {
-            results.Add(result);
-        }
-
-        // Assert
-        results.Should().HaveCount(1); // Basic implementation returns only start URL
+        result.HtmlContent.Should().Be(htmlContent);
     }
 
     #endregion
@@ -124,10 +89,21 @@ public class SitemapCrawlerTests
     #region CrawlSitemapAsync Tests
 
     [Fact]
-    public async Task CrawlSitemapAsync_ShouldReturnSingleResult()
+    public async Task CrawlSitemapAsync_WithValidSitemap_ShouldCrawlAllUrls()
     {
         // Arrange
         var sitemapUrl = "https://example.com/sitemap.xml";
+        var sitemapXml = @"<?xml version='1.0' encoding='UTF-8'?>
+            <urlset xmlns='http://www.sitemaps.org/schemas/sitemap/0.9'>
+                <url><loc>https://example.com/page1</loc></url>
+                <url><loc>https://example.com/page2</loc></url>
+                <url><loc>https://example.com/page3</loc></url>
+            </urlset>";
+
+        SetupMockResponse(sitemapUrl, sitemapXml, "application/xml");
+        SetupMockResponse("https://example.com/page1", "<html><body>Page 1</body></html>");
+        SetupMockResponse("https://example.com/page2", "<html><body>Page 2</body></html>");
+        SetupMockResponse("https://example.com/page3", "<html><body>Page 3</body></html>");
 
         // Act
         var results = new List<CrawlResult>();
@@ -137,15 +113,22 @@ public class SitemapCrawlerTests
         }
 
         // Assert
-        results.Should().HaveCount(1);
-        results[0].Url.Should().Be(sitemapUrl);
+        results.Should().HaveCount(3);
+        results.Select(r => r.Url).Should().Contain("https://example.com/page1");
+        results.Select(r => r.Url).Should().Contain("https://example.com/page2");
+        results.Select(r => r.Url).Should().Contain("https://example.com/page3");
     }
 
     [Fact]
-    public async Task CrawlSitemapAsync_WithMultipleUrls_ShouldReturnSingleResult()
+    public async Task CrawlSitemapAsync_WithEmptySitemap_ShouldReturnEmpty()
     {
         // Arrange
-        var sitemapUrl = "https://example.com/sitemap-index.xml";
+        var sitemapUrl = "https://example.com/sitemap.xml";
+        var sitemapXml = @"<?xml version='1.0' encoding='UTF-8'?>
+            <urlset xmlns='http://www.sitemaps.org/schemas/sitemap/0.9'>
+            </urlset>";
+
+        SetupMockResponse(sitemapUrl, sitemapXml, "application/xml");
 
         // Act
         var results = new List<CrawlResult>();
@@ -155,126 +138,87 @@ public class SitemapCrawlerTests
         }
 
         // Assert
-        results.Should().HaveCount(1); // Basic implementation returns only sitemap URL
+        results.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task CrawlSitemapAsync_WithSitemapIndex_ShouldProcessNestedSitemaps()
+    {
+        // Arrange
+        var sitemapIndexUrl = "https://example.com/sitemap-index.xml";
+        var sitemapIndex = @"<?xml version='1.0' encoding='UTF-8'?>
+            <sitemapindex xmlns='http://www.sitemaps.org/schemas/sitemap/0.9'>
+                <sitemap><loc>https://example.com/sitemap1.xml</loc></sitemap>
+            </sitemapindex>";
+
+        var sitemap1 = @"<?xml version='1.0' encoding='UTF-8'?>
+            <urlset xmlns='http://www.sitemaps.org/schemas/sitemap/0.9'>
+                <url><loc>https://example.com/page1</loc></url>
+            </urlset>";
+
+        SetupMockResponse(sitemapIndexUrl, sitemapIndex, "application/xml");
+        SetupMockResponse("https://example.com/sitemap1.xml", sitemap1, "application/xml");
+        SetupMockResponse("https://example.com/page1", "<html><body>Page 1</body></html>");
+
+        // Act
+        var results = new List<CrawlResult>();
+        await foreach (var result in _crawler.CrawlSitemapAsync(sitemapIndexUrl))
+        {
+            results.Add(result);
+        }
+
+        // Assert
+        results.Should().NotBeEmpty();
     }
 
     #endregion
 
-    #region GetRobotsTxtAsync Tests
+    #region CrawlWebsiteAsync Tests
 
     [Fact]
-    public async Task GetRobotsTxtAsync_ShouldReturnBasicRobotsTxtInfo()
+    public async Task CrawlWebsiteAsync_ShouldUseBreadthFirstByDefault()
     {
+        // SitemapCrawler는 CrawlWebsiteAsync에서 BaseCrawler의 기본 BFS 동작을 사용
         // Arrange
-        var baseUrl = "https://example.com";
-        var userAgent = "*";
+        var url = "https://example.com";
+        var htmlContent = "<html><body><a href='/page1'>Page1</a></body></html>";
+
+        SetupMockResponse(url, htmlContent);
+        SetupMockResponse("https://example.com/page1", "<html><body>Page 1</body></html>");
+
+        var options = new CrawlOptions { MaxDepth = 1, MaxPages = 10 };
 
         // Act
-        var result = await _crawler.GetRobotsTxtAsync(baseUrl, userAgent);
+        var results = new List<CrawlResult>();
+        await foreach (var result in _crawler.CrawlWebsiteAsync(url, options))
+        {
+            results.Add(result);
+        }
 
         // Assert
-        result.Should().NotBeNull();
-        result.Content.Should().Contain("robots.txt");
+        results.Should().NotBeEmpty();
+        results[0].Url.Should().Be(url);
     }
 
     #endregion
 
-    #region IsUrlAllowedAsync Tests
+    #region Helper Methods
 
-    [Fact]
-    public async Task IsUrlAllowedAsync_ShouldAlwaysReturnTrue()
+    private void SetupMockResponse(string url, string content, string? contentType = null)
     {
-        // Arrange
-        var url = "https://example.com/any/path";
-        var userAgent = "*";
+        var response = new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(content),
+            RequestMessage = new HttpRequestMessage { RequestUri = new Uri(url) }
+        };
 
-        // Act
-        var result = await _crawler.IsUrlAllowedAsync(url, userAgent);
+        if (!string.IsNullOrEmpty(contentType))
+        {
+            response.Content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(contentType);
+        }
 
-        // Assert
-        result.Should().BeTrue();
-    }
-
-    [Theory]
-    [InlineData("https://example.com")]
-    [InlineData("https://example.com/admin")]
-    [InlineData("https://example.com/private/secret")]
-    public async Task IsUrlAllowedAsync_WithVariousUrls_ShouldAlwaysReturnTrue(string url)
-    {
-        // Act
-        var result = await _crawler.IsUrlAllowedAsync(url, "*");
-
-        // Assert
-        result.Should().BeTrue();
-    }
-
-    #endregion
-
-    #region ExtractLinks Tests
-
-    [Fact]
-    public void ExtractLinks_ShouldReturnEmptyList()
-    {
-        // Arrange
-        var htmlContent = "<html><body><a href='/page1'>Link</a></body></html>";
-        var baseUrl = "https://example.com";
-
-        // Act
-        var links = _crawler.ExtractLinks(htmlContent, baseUrl);
-
-        // Assert
-        links.Should().BeEmpty(); // Basic implementation returns no links
-    }
-
-    [Fact]
-    public void ExtractLinks_WithComplexHtml_ShouldReturnEmptyList()
-    {
-        // Arrange
-        var htmlContent = @"
-            <html>
-                <body>
-                    <a href='/page1'>Page 1</a>
-                    <a href='/page2'>Page 2</a>
-                    <a href='https://external.com'>External</a>
-                </body>
-            </html>";
-        var baseUrl = "https://example.com";
-
-        // Act
-        var links = _crawler.ExtractLinks(htmlContent, baseUrl);
-
-        // Assert
-        links.Should().BeEmpty();
-    }
-
-    #endregion
-
-    #region GetStatistics Tests
-
-    [Fact]
-    public void GetStatistics_ShouldReturnEmptyStatistics()
-    {
-        // Act
-        var stats = _crawler.GetStatistics();
-
-        // Assert
-        stats.Should().NotBeNull();
-        stats.TotalRequests.Should().Be(0);
-        stats.SuccessfulRequests.Should().Be(0);
-        stats.FailedRequests.Should().Be(0);
-    }
-
-    [Fact]
-    public async Task GetStatistics_AfterCrawling_ShouldStillReturnZero()
-    {
-        // Arrange
-        await _crawler.CrawlAsync("https://example.com");
-
-        // Act
-        var stats = _crawler.GetStatistics();
-
-        // Assert
-        stats.TotalRequests.Should().Be(0); // Basic implementation doesn't track statistics
+        _mockHttpClient.Setup(c => c.GetAsync(url, null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(response);
     }
 
     #endregion

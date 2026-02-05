@@ -1,65 +1,19 @@
-using System.Runtime.CompilerServices;
 using WebFlux.Core.Interfaces;
-using WebFlux.Core.Models;
-using WebFlux.Core.Options;
 
 namespace WebFlux.Services.Crawlers;
 
 /// <summary>
-/// 너비 우선 크롤링 전략 기본 구현
-/// Interface Provider 패턴에 따라 기본 구현만 제공
+/// 너비 우선 크롤링 전략 구현
+/// BaseCrawler의 기본 CrawlWebsiteAsync가 이미 너비 우선(Queue 기반)이므로
+/// 별도의 오버라이드 없이 그대로 사용합니다.
 /// </summary>
-public class BreadthFirstCrawler : ICrawler
+public class BreadthFirstCrawler : BaseCrawler
 {
-    public Task<CrawlResult> CrawlAsync(string url, CrawlOptions? options = null, CancellationToken cancellationToken = default)
+    public BreadthFirstCrawler(IHttpClientService httpClient, IEventPublisher eventPublisher)
+        : base(httpClient, eventPublisher)
     {
-        var result = new CrawlResult
-        {
-            Url = url,
-            IsSuccessful = true,
-            Content = $"Basic BreadthFirst crawl result for {url}",
-            ContentType = "text/html",
-            StatusCode = 200
-        };
-        return Task.FromResult(result);
     }
 
-    public async IAsyncEnumerable<CrawlResult> CrawlWebsiteAsync(string startUrl, CrawlOptions? options = null, [EnumeratorCancellation] CancellationToken cancellationToken = default)
-    {
-        yield return await CrawlAsync(startUrl, options, cancellationToken);
-    }
-
-    public async IAsyncEnumerable<CrawlResult> CrawlSitemapAsync(string sitemapUrl, CrawlOptions? options = null, [EnumeratorCancellation] CancellationToken cancellationToken = default)
-    {
-        yield return await CrawlAsync(sitemapUrl, options, cancellationToken);
-    }
-
-    public Task<RobotsTxtInfo> GetRobotsTxtAsync(string baseUrl, string userAgent, CancellationToken cancellationToken = default)
-    {
-        var robotsInfo = new RobotsTxtInfo
-        {
-            Content = "# Basic robots.txt"
-        };
-        return Task.FromResult(robotsInfo);
-    }
-
-    public Task<bool> IsUrlAllowedAsync(string url, string userAgent)
-    {
-        return Task.FromResult(true);
-    }
-
-    public IReadOnlyList<string> ExtractLinks(string htmlContent, string baseUrl)
-    {
-        return new List<string>();
-    }
-
-    public CrawlStatistics GetStatistics()
-    {
-        return new CrawlStatistics
-        {
-            TotalRequests = 0,
-            SuccessfulRequests = 0,
-            FailedRequests = 0
-        };
-    }
+    // BaseCrawler.CrawlWebsiteAsync는 이미 Queue 기반 너비 우선 탐색을 사용합니다.
+    // 추가적인 오버라이드가 필요하지 않습니다.
 }
