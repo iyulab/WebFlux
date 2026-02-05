@@ -172,7 +172,8 @@ public class ContentQualityInfo
     public override string ToString()
     {
         var paywallWarning = HasPaywall ? " [Paywall]" : "";
-        return $"Quality: {OverallScore:P0} ({Grade}){paywallWarning}, {WordCount} words, ~{EstimatedReadingTimeMinutes}min read";
+        var percentage = (int)(OverallScore * 100);
+        return $"Quality: {percentage}% ({Grade}){paywallWarning}, {WordCount} words, ~{EstimatedReadingTimeMinutes}min read";
     }
 }
 
