@@ -6,9 +6,54 @@ namespace WebFlux.Core.Interfaces;
 /// <summary>
 /// 메인 웹 콘텐츠 처리 파이프라인 인터페이스
 /// 크롤링부터 청킹까지의 전체 처리 과정을 관리
+/// 청킹 없는 경량 텍스트 추출 API 포함
 /// </summary>
 public interface IWebContentProcessor
 {
+    #region 경량 추출 API
+
+    /// <summary>
+    /// 단일 URL에서 콘텐츠를 추출합니다 (청킹 없음).
+    /// AI 리서치 에이전트용 경량 추출 API
+    /// </summary>
+    /// <param name="url">추출할 URL</param>
+    /// <param name="options">추출 옵션</param>
+    /// <param name="cancellationToken">취소 토큰</param>
+    /// <returns>추출 결과 (성공/실패 래핑)</returns>
+    Task<ProcessingResult<ExtractedContent>> ExtractContentAsync(
+        string url,
+        ExtractOptions? options = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 여러 URL에서 콘텐츠를 배치 추출합니다.
+    /// 10-50개 URL 배치 처리, 부분 실패 허용
+    /// </summary>
+    /// <param name="urls">추출할 URL 목록</param>
+    /// <param name="options">추출 옵션</param>
+    /// <param name="cancellationToken">취소 토큰</param>
+    /// <returns>배치 추출 결과 (성공/실패 분리)</returns>
+    Task<BatchExtractResult> ExtractBatchAsync(
+        IEnumerable<string> urls,
+        ExtractOptions? options = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 여러 URL에서 콘텐츠를 스트리밍으로 배치 추출합니다.
+    /// 결과가 준비되는 대로 순차적으로 반환
+    /// </summary>
+    /// <param name="urls">추출할 URL 목록</param>
+    /// <param name="options">추출 옵션</param>
+    /// <param name="cancellationToken">취소 토큰</param>
+    /// <returns>추출 결과 스트림</returns>
+    IAsyncEnumerable<ProcessingResult<ExtractedContent>> ExtractBatchStreamAsync(
+        IEnumerable<string> urls,
+        ExtractOptions? options = null,
+        CancellationToken cancellationToken = default);
+
+    #endregion
+
+    #region 기존 청킹 처리 API
     /// <summary>
     /// 단일 URL을 처리하여 청크 목록을 반환합니다.
     /// </summary>
@@ -86,6 +131,8 @@ public interface IWebContentProcessor
     /// </summary>
     /// <returns>사용 가능한 청킹 전략 목록</returns>
     IReadOnlyList<string> GetAvailableChunkingStrategies();
+
+    #endregion
 }
 
 /// <summary>

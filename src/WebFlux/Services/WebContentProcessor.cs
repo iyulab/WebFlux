@@ -785,6 +785,470 @@ public class WebContentProcessor : IWebContentProcessor
         // Stub implementation
         return new List<string> { "FixedSize", "Paragraph", "Smart", "Semantic", "Auto", "MemoryOptimized" }.AsReadOnly();
     }
+
+    #region 경량 추출 API 구현
+
+    /// <summary>
+    /// 단일 URL에서 콘텐츠를 추출합니다 (청킹 없음)
+    /// </summary>
+    public async Task<ProcessingResult<ExtractedContent>> ExtractContentAsync(
+        string url,
+        ExtractOptions? options = null,
+        CancellationToken cancellationToken = default)
+    {
+        var startTime = DateTimeOffset.UtcNow;
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        options ??= ExtractOptions.Default;
+
+        try
+        {
+            _logger.LogDebug("Extracting content from {Url}", url);
+
+            // URL 유효성 검사
+            if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+            {
+                return ProcessingResult<ExtractedContent>.FromError(
+                    "Invalid URL format",
+                    ExtractErrorCodes.InvalidUrl,
+                    sw.ElapsedMilliseconds);
+            }
+
+            // 캐시 확인 (UseCache && !ForceRefresh)
+            var cacheService = _serviceFactory.TryCreateCacheService();
+            if (options.UseCache && !options.ForceRefresh && cacheService != null)
+            {
+                var cacheKey = $"extract:{url}:{options.Format}";
+                var cached = await cacheService.GetAsync<ExtractedContent>(cacheKey, cancellationToken).ConfigureAwait(false);
+
+                if (cached != null)
+                {
+                    _logger.LogDebug("Cache hit for {Url}", url);
+                    cached.FromCache = true;
+                    return ProcessingResult<ExtractedContent>.Success(
+                        cached,
+                        processingTimeMs: sw.ElapsedMilliseconds,
+                        metadata: new Dictionary<string, object> { ["cacheHit"] = true });
+                }
+            }
+
+            // 크롤링 전략 선택
+            var crawlStrategy = options.UseDynamicRendering
+                ? Core.Options.CrawlStrategy.Dynamic
+                : Core.Options.CrawlStrategy.BreadthFirst;
+
+            var crawler = _serviceFactory.CreateCrawler(crawlStrategy);
+
+            var crawlOptions = new CrawlOptions
+            {
+                MaxDepth = 0,
+                MaxPages = 1,
+                TimeoutMs = options.TimeoutSeconds * 1000,
+                UserAgent = options.UserAgent,
+                WaitForSelector = options.WaitForSelector,
+                UseDynamicRendering = options.UseDynamicRendering,
+                CustomHeaders = options.CustomHeaders
+            };
+
+            // 크롤링 실행 (재시도 로직 포함)
+            CrawlResult? crawlResult = null;
+            var retryCount = 0;
+
+            while (retryCount <= options.MaxRetries)
+            {
+                try
+                {
+                    crawlResult = await crawler.CrawlAsync(url, crawlOptions, cancellationToken).ConfigureAwait(false);
+
+                    if (crawlResult.IsSuccess)
+                    {
+                        break;
+                    }
+                }
+                catch (Exception ex) when (retryCount < options.MaxRetries)
+                {
+                    _logger.LogWarning(ex, "Crawl attempt {Attempt} failed for {Url}", retryCount + 1, url);
+                }
+
+                retryCount++;
+                if (retryCount <= options.MaxRetries)
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(Math.Pow(2, retryCount - 1)), cancellationToken).ConfigureAwait(false);
+                }
+            }
+
+            if (crawlResult == null || !crawlResult.IsSuccess)
+            {
+                var errorCode = crawlResult?.StatusCode != null
+                    ? ExtractErrorCodes.FromHttpStatusCode(crawlResult.StatusCode)
+                    : ExtractErrorCodes.NetworkError;
+
+                return ProcessingResult<ExtractedContent>.FromError(
+                    crawlResult?.ErrorMessage ?? "Failed to crawl URL",
+                    errorCode,
+                    sw.ElapsedMilliseconds);
+            }
+
+            if (string.IsNullOrWhiteSpace(crawlResult.Content))
+            {
+                return ProcessingResult<ExtractedContent>.FromError(
+                    "Empty content received",
+                    ExtractErrorCodes.EmptyContent,
+                    sw.ElapsedMilliseconds);
+            }
+
+            // 콘텐츠 추출
+            var extractor = _serviceFactory.CreateContentExtractor(crawlResult.ContentType ?? "text/html");
+            var extracted = await extractor.ExtractAutoAsync(
+                crawlResult.Content,
+                url,
+                crawlResult.ContentType ?? "text/html",
+                cancellationToken).ConfigureAwait(false);
+
+            // 포맷 변환
+            extracted = ApplyOutputFormat(extracted, options.Format, crawlResult.Content);
+
+            // 텍스트 길이 제한 적용
+            if (options.MaxTextLength.HasValue && extracted.MainContent?.Length > options.MaxTextLength.Value)
+            {
+                extracted.MainContent = extracted.MainContent.Substring(0, options.MaxTextLength.Value);
+            }
+
+            // 품질 평가 (옵션이 활성화된 경우)
+            if (options.EvaluateQuality)
+            {
+                var qualityEvaluator = _serviceFactory.TryCreateContentQualityEvaluator();
+                if (qualityEvaluator != null)
+                {
+                    extracted.Quality = await qualityEvaluator.EvaluateAsync(
+                        extracted,
+                        crawlResult.Content,
+                        cancellationToken).ConfigureAwait(false);
+                }
+            }
+
+            // Boilerplate 제거 적용
+            if (options.RemoveBoilerplate)
+            {
+                // 이미 추출기에서 MainContent로 본문 추출됨
+                // 추가 클리닝이 필요한 경우 여기서 처리
+            }
+
+            // 이미지/링크 포함 여부 처리
+            if (!options.IncludeImages)
+            {
+                extracted.ImageUrls = new List<string>();
+            }
+
+            // 메타데이터 포함 여부 처리
+            if (!options.IncludeMetadata)
+            {
+                extracted.Metadata = null;
+            }
+
+            extracted.ProcessingTimeMs = (int)sw.ElapsedMilliseconds;
+            extracted.OriginalHtml = crawlResult.Content;
+
+            // 캐시 저장
+            if (options.UseCache && cacheService != null)
+            {
+                var cacheKey = $"extract:{url}:{options.Format}";
+                await cacheService.SetAsync(
+                    cacheKey,
+                    extracted,
+                    TimeSpan.FromMinutes(options.CacheExpirationMinutes),
+                    cancellationToken).ConfigureAwait(false);
+            }
+
+            _logger.LogInformation(
+                "Extracted content from {Url}: {CharCount} chars in {ElapsedMs}ms",
+                url, extracted.MainContent?.Length ?? 0, sw.ElapsedMilliseconds);
+
+            return ProcessingResult<ExtractedContent>.Success(
+                extracted,
+                processingTimeMs: sw.ElapsedMilliseconds);
+        }
+        catch (OperationCanceledException)
+        {
+            return ProcessingResult<ExtractedContent>.FromError(
+                "Operation cancelled",
+                ExtractErrorCodes.Timeout,
+                sw.ElapsedMilliseconds);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to extract content from {Url}", url);
+            return ProcessingResult<ExtractedContent>.FromException(ex, sw.ElapsedMilliseconds);
+        }
+    }
+
+    /// <summary>
+    /// 여러 URL에서 콘텐츠를 배치 추출합니다
+    /// </summary>
+    public async Task<BatchExtractResult> ExtractBatchAsync(
+        IEnumerable<string> urls,
+        ExtractOptions? options = null,
+        CancellationToken cancellationToken = default)
+    {
+        var startTime = DateTimeOffset.UtcNow;
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        options ??= ExtractOptions.Default;
+
+        var urlList = urls.ToList();
+        var succeeded = new ConcurrentBag<ExtractedContent>();
+        var failed = new ConcurrentBag<FailedExtraction>();
+        var cacheHits = 0;
+        var processingTimes = new ConcurrentBag<long>();
+        var domainCounts = new ConcurrentDictionary<string, int>();
+
+        _logger.LogInformation("Starting batch extraction for {UrlCount} URLs", urlList.Count);
+
+        // Rate Limiter 생성
+        var rateLimiter = options.EnableDomainRateLimiting
+            ? _serviceFactory.TryCreateDomainRateLimiter()
+            : null;
+
+        // 병렬 처리
+        var semaphore = new SemaphoreSlim(options.MaxConcurrency);
+        var tasks = urlList.Select(async url =>
+        {
+            await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+
+            try
+            {
+                var domain = GetDomain(url);
+                domainCounts.AddOrUpdate(domain, 1, (_, count) => count + 1);
+
+                ProcessingResult<ExtractedContent> result;
+
+                if (rateLimiter != null && options.EnableDomainRateLimiting)
+                {
+                    result = await rateLimiter.ExecuteAsync(
+                        domain,
+                        () => ExtractContentAsync(url, options, cancellationToken),
+                        cancellationToken).ConfigureAwait(false);
+                }
+                else
+                {
+                    result = await ExtractContentAsync(url, options, cancellationToken).ConfigureAwait(false);
+                }
+
+                processingTimes.Add(result.ProcessingTimeMs);
+
+                if (result.IsSuccess && result.Data != null)
+                {
+                    succeeded.Add(result.Data);
+
+                    if (result.Metadata.TryGetValue("cacheHit", out var hit) && (bool)hit)
+                    {
+                        Interlocked.Increment(ref cacheHits);
+                    }
+                }
+                else
+                {
+                    failed.Add(new FailedExtraction
+                    {
+                        Url = url,
+                        ErrorCode = result.Error?.Code ?? ExtractErrorCodes.Unknown,
+                        ErrorMessage = result.Error?.Message ?? "Unknown error",
+                        RetryCount = options.MaxRetries,
+                        ProcessingTimeMs = result.ProcessingTimeMs,
+                        Exception = result.Error?.InnerException
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                failed.Add(new FailedExtraction
+                {
+                    Url = url,
+                    ErrorCode = ExtractErrorCodes.Unknown,
+                    ErrorMessage = ex.Message,
+                    Exception = ex
+                });
+            }
+            finally
+            {
+                semaphore.Release();
+            }
+        });
+
+        await Task.WhenAll(tasks).ConfigureAwait(false);
+
+        sw.Stop();
+
+        // 통계 계산
+        var succeededList = succeeded.ToList();
+        var failedList = failed.ToList();
+        var processingTimesList = processingTimes.ToList();
+
+        var statistics = new BatchStatistics
+        {
+            AverageProcessingTimeMs = processingTimesList.Count > 0 ? processingTimesList.Average() : 0,
+            TotalCharactersExtracted = succeededList.Sum(c => c.MainContent?.Length ?? 0),
+            CacheHitRate = urlList.Count > 0 ? (double)cacheHits / urlList.Count : 0,
+            CacheHits = cacheHits,
+            CacheMisses = urlList.Count - cacheHits,
+            ProcessedByDomain = domainCounts.ToDictionary(kvp => kvp.Key, kvp => kvp.Value),
+            FailuresByErrorCode = failedList
+                .GroupBy(f => f.ErrorCode)
+                .ToDictionary(g => g.Key, g => g.Count()),
+            MinProcessingTimeMs = processingTimesList.Count > 0 ? processingTimesList.Min() : 0,
+            MaxProcessingTimeMs = processingTimesList.Count > 0 ? processingTimesList.Max() : 0,
+            DynamicRenderingCount = options.UseDynamicRendering ? succeededList.Count : 0,
+            StaticRenderingCount = options.UseDynamicRendering ? 0 : succeededList.Count
+        };
+
+        var result = new BatchExtractResult
+        {
+            Succeeded = succeededList,
+            Failed = failedList,
+            TotalDurationMs = sw.ElapsedMilliseconds,
+            Statistics = statistics,
+            StartTime = startTime,
+            EndTime = DateTimeOffset.UtcNow
+        };
+
+        _logger.LogInformation(
+            "Batch extraction completed: {Succeeded}/{Total} succeeded ({SuccessRate:P0}) in {Duration}ms",
+            succeededList.Count, urlList.Count, result.SuccessRate, sw.ElapsedMilliseconds);
+
+        return result;
+    }
+
+    /// <summary>
+    /// 여러 URL에서 콘텐츠를 스트리밍으로 배치 추출합니다
+    /// </summary>
+    public async IAsyncEnumerable<ProcessingResult<ExtractedContent>> ExtractBatchStreamAsync(
+        IEnumerable<string> urls,
+        ExtractOptions? options = null,
+        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        options ??= ExtractOptions.Default;
+        var urlList = urls.ToList();
+
+        _logger.LogInformation("Starting streaming batch extraction for {UrlCount} URLs", urlList.Count);
+
+        // Rate Limiter 생성
+        var rateLimiter = options.EnableDomainRateLimiting
+            ? _serviceFactory.TryCreateDomainRateLimiter()
+            : null;
+
+        // 채널 기반 스트리밍
+        var channel = Channel.CreateUnbounded<ProcessingResult<ExtractedContent>>();
+        var writer = channel.Writer;
+        var reader = channel.Reader;
+
+        // 백그라운드에서 추출 작업 실행
+        var extractionTask = Task.Run(async () =>
+        {
+            var semaphore = new SemaphoreSlim(options.MaxConcurrency);
+            var tasks = urlList.Select(async url =>
+            {
+                await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+
+                try
+                {
+                    ProcessingResult<ExtractedContent> result;
+
+                    if (rateLimiter != null && options.EnableDomainRateLimiting)
+                    {
+                        var domain = GetDomain(url);
+                        result = await rateLimiter.ExecuteAsync(
+                            domain,
+                            () => ExtractContentAsync(url, options, cancellationToken),
+                            cancellationToken).ConfigureAwait(false);
+                    }
+                    else
+                    {
+                        result = await ExtractContentAsync(url, options, cancellationToken).ConfigureAwait(false);
+                    }
+
+                    await writer.WriteAsync(result, cancellationToken).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    var failedResult = ProcessingResult<ExtractedContent>.FromException(ex);
+                    await writer.WriteAsync(failedResult, cancellationToken).ConfigureAwait(false);
+                }
+                finally
+                {
+                    semaphore.Release();
+                }
+            });
+
+            await Task.WhenAll(tasks).ConfigureAwait(false);
+            writer.Complete();
+        }, cancellationToken);
+
+        // 결과 스트리밍
+        await foreach (var result in reader.ReadAllAsync(cancellationToken).ConfigureAwait(false))
+        {
+            yield return result;
+        }
+
+        await extractionTask.ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// 출력 포맷을 적용합니다
+    /// </summary>
+    private ExtractedContent ApplyOutputFormat(ExtractedContent content, OutputFormat format, string originalHtml)
+    {
+        switch (format)
+        {
+            case OutputFormat.Markdown:
+                // 이미 Markdown 형태인 경우 그대로 사용
+                // HTML에서 Markdown으로 변환이 필요한 경우 여기서 처리
+                // MainContent는 이미 텍스트 형태로 추출됨
+                break;
+
+            case OutputFormat.Html:
+                // HTML 원본 유지
+                content.MainContent = originalHtml;
+                break;
+
+            case OutputFormat.PlainText:
+                // 이미 텍스트 형태로 추출됨
+                // 추가 클리닝 (마크다운 마커 제거 등)
+                if (!string.IsNullOrEmpty(content.MainContent))
+                {
+                    content.MainContent = CleanPlainText(content.MainContent);
+                }
+                break;
+        }
+
+        return content;
+    }
+
+    /// <summary>
+    /// 텍스트를 플레인 텍스트로 정리합니다
+    /// </summary>
+    private static string CleanPlainText(string text)
+    {
+        // Markdown 마커 제거
+        text = System.Text.RegularExpressions.Regex.Replace(text, @"#{1,6}\s*", "");
+        text = System.Text.RegularExpressions.Regex.Replace(text, @"\*\*([^*]+)\*\*", "$1");
+        text = System.Text.RegularExpressions.Regex.Replace(text, @"\*([^*]+)\*", "$1");
+        text = System.Text.RegularExpressions.Regex.Replace(text, @"\[([^\]]+)\]\([^)]+\)", "$1");
+        text = System.Text.RegularExpressions.Regex.Replace(text, @"`([^`]+)`", "$1");
+
+        return text.Trim();
+    }
+
+    /// <summary>
+    /// URL에서 도메인을 추출합니다
+    /// </summary>
+    private static string GetDomain(string url)
+    {
+        if (Uri.TryCreate(url, UriKind.Absolute, out var uri))
+        {
+            return uri.Host.ToLowerInvariant();
+        }
+
+        return url.ToLowerInvariant();
+    }
+
+    #endregion
 }
 
 /// <summary>

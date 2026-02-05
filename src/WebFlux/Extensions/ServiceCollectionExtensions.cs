@@ -83,6 +83,9 @@ public static class ServiceCollectionExtensions
         // Phase 5C.2: 처리 최적화 서비스 등록
         services.AddWebFluxProcessingOptimization();
 
+        // 경량 추출 서비스 등록 (Rate Limiter, 품질 평가기)
+        services.AddWebFluxLightweightExtraction();
+
         // 로깅 구성
         services.AddLogging();
 
@@ -404,6 +407,23 @@ public static class ServiceCollectionExtensions
         // services.TryAddSingleton<IPerformanceMonitor, 구현체>();    // 성능 모니터링
         // services.TryAddSingleton<ITokenCountService, 구현체>();     // 토큰 계산
         // services.TryAddSingleton<ICacheService, 구현체>();          // 캐시 서비스
+
+        return services;
+    }
+
+    /// <summary>
+    /// 경량 추출 서비스를 등록합니다.
+    /// 도메인별 Rate Limiter, 콘텐츠 품질 평가기 등
+    /// </summary>
+    /// <param name="services">서비스 컬렉션</param>
+    /// <returns>서비스 컬렉션</returns>
+    public static IServiceCollection AddWebFluxLightweightExtraction(this IServiceCollection services)
+    {
+        // 도메인별 Rate Limiter 등록 (Singleton - 애플리케이션 전체에서 상태 공유)
+        services.TryAddSingleton<IDomainRateLimiter, DomainRateLimiter>();
+
+        // 콘텐츠 품질 평가기 등록 (Transient - 매번 새 인스턴스)
+        services.TryAddTransient<IContentQualityEvaluator, ContentQualityEvaluator>();
 
         return services;
     }

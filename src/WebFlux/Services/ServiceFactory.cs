@@ -68,4 +68,22 @@ public class ServiceFactory : IServiceFactory
         // AI 증강 서비스는 선택적이므로 GetService 사용 (등록되지 않은 경우 null 반환)
         return _serviceProvider.GetService<IAiEnhancementService>();
     }
+
+    public ICacheService? TryCreateCacheService()
+    {
+        // 캐시 서비스는 선택적 (Interface Provider 패턴)
+        return _serviceProvider.GetService<ICacheService>();
+    }
+
+    public IDomainRateLimiter? TryCreateDomainRateLimiter()
+    {
+        // Rate Limiter는 선택적
+        return _serviceProvider.GetService<IDomainRateLimiter>();
+    }
+
+    public IContentQualityEvaluator? TryCreateContentQualityEvaluator()
+    {
+        // 품질 평가기는 선택적
+        return _serviceProvider.GetService<IContentQualityEvaluator>();
+    }
 }

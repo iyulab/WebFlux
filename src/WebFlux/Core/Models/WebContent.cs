@@ -98,6 +98,17 @@ public class ExtractedContent
 
     /// <summary>읽기 시간 (분)</summary>
     public double ReadingTimeMinutes { get; set; }
+
+    /// <summary>
+    /// 콘텐츠 품질 정보
+    /// 콘텐츠 필터링 및 우선순위 결정에 사용
+    /// </summary>
+    public ContentQualityInfo? Quality { get; set; }
+
+    /// <summary>
+    /// 캐시에서 로드되었는지 여부
+    /// </summary>
+    public bool FromCache { get; set; }
 }
 
 /// <summary>

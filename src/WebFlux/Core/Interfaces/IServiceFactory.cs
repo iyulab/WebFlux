@@ -56,4 +56,23 @@ public interface IServiceFactory
     /// </summary>
     /// <returns>AI 증강 서비스 인스턴스 (서비스가 등록되지 않은 경우 null)</returns>
     IAiEnhancementService? CreateAiEnhancementService();
+
+    /// <summary>
+    /// 캐시 서비스 인스턴스를 생성합니다 (선택적).
+    /// Interface Provider 패턴 - 소비자가 등록하지 않은 경우 null 반환
+    /// </summary>
+    /// <returns>캐시 서비스 인스턴스 (등록되지 않은 경우 null)</returns>
+    ICacheService? TryCreateCacheService();
+
+    /// <summary>
+    /// 도메인 Rate Limiter 인스턴스를 생성합니다 (선택적).
+    /// </summary>
+    /// <returns>Rate Limiter 인스턴스 (등록되지 않은 경우 null)</returns>
+    IDomainRateLimiter? TryCreateDomainRateLimiter();
+
+    /// <summary>
+    /// 콘텐츠 품질 평가기 인스턴스를 생성합니다 (선택적).
+    /// </summary>
+    /// <returns>품질 평가기 인스턴스 (등록되지 않은 경우 null)</returns>
+    IContentQualityEvaluator? TryCreateContentQualityEvaluator();
 }
