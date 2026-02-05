@@ -32,10 +32,10 @@ jobs:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: 📦 Restore Dependencies
-        run: dotnet restore WebFlux.sln
+        run: dotnet restore WebFlux.slnx
 
       - name: 🔨 Build Solution
-        run: dotnet build WebFlux.sln --configuration ${{ env.BUILD_CONFIGURATION }} --no-restore
+        run: dotnet build WebFlux.slnx --configuration ${{ env.BUILD_CONFIGURATION }} --no-restore
 
       - name: ⚡ Run Performance Tests (excluding LongRunning)
         run: dotnet test tests/WebFlux.Tests/WebFlux.Tests.csproj --configuration ${{ env.BUILD_CONFIGURATION }} --no-build --verbosity normal --filter "Category=Performance&Category!=LongRunning"
@@ -62,10 +62,10 @@ jobs:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: 📦 Restore Dependencies
-        run: dotnet restore WebFlux.sln
+        run: dotnet restore WebFlux.slnx
 
       - name: 🔨 Build Solution
-        run: dotnet build WebFlux.sln --configuration ${{ env.BUILD_CONFIGURATION }} --no-restore
+        run: dotnet build WebFlux.slnx --configuration ${{ env.BUILD_CONFIGURATION }} --no-restore
 
       - name: 🕐 Run LongRunning Tests
         run: dotnet test tests/WebFlux.Tests/WebFlux.Tests.csproj --configuration ${{ env.BUILD_CONFIGURATION }} --no-build --verbosity normal --filter "Category=LongRunning"

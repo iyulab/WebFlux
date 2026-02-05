@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="src/WebFlux/WebFlux.csproj" />
+  <Project Path="tests/WebFlux.Tests/WebFlux.Tests.csproj" />
+  <Folder Name="/Solution Items/">
+    <File Path="Directory.Build.props" />
+  </Folder>
+</Solution>
