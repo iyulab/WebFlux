@@ -60,7 +60,8 @@ public class BatchExtractResult
     /// </summary>
     public override string ToString()
     {
-        return $"BatchExtractResult: {Succeeded.Count}/{TotalCount} succeeded ({SuccessRate:P0}), {TotalDurationMs}ms";
+        var percentage = (int)(SuccessRate * 100);
+        return $"BatchExtractResult: {Succeeded.Count}/{TotalCount} succeeded ({percentage}%), {TotalDurationMs}ms";
     }
 }
 
