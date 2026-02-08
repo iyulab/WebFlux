@@ -277,7 +277,8 @@ public class CompositeEventSubscription : IDisposable
     }
 }
 
-// 이벤트 클래스들 (기존 파일에서 이미 정의되어 있지 않다면)
+// 이벤트 클래스들 (하위 호환성 유지, Core/Models/Events/ 통합 이벤트 사용 권장)
+[Obsolete("Use CrawlingStartedEvent from Core.Models instead")]
 public class CrawlStartedEvent : ProcessingEvent
 {
     public override string EventType => "CrawlStarted";
@@ -308,6 +309,7 @@ public class UrlProcessingFailedEvent : ProcessingEvent
     public string Error { get; set; } = string.Empty;
 }
 
+[Obsolete("Use CrawlingCompletedEvent from Core.Models instead")]
 public class CrawlCompletedEvent : ProcessingEvent
 {
     public override string EventType => "CrawlCompleted";
@@ -317,6 +319,7 @@ public class CrawlCompletedEvent : ProcessingEvent
     public TimeSpan Duration { get; set; }
 }
 
+[Obsolete("Use ErrorOccurredEvent from Core.Models instead")]
 public class CrawlErrorEvent : ProcessingEvent
 {
     public override string EventType => "CrawlError";
@@ -324,6 +327,7 @@ public class CrawlErrorEvent : ProcessingEvent
     public string Error { get; set; } = string.Empty;
 }
 
+[Obsolete("Use CrawlWarningEventV2 from Core.Models.Events instead")]
 public class CrawlWarningEvent : ProcessingEvent
 {
     public override string EventType => "CrawlWarning";

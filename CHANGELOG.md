@@ -2,6 +2,41 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.0] - 2026-02-07
+
+### Added
+
+#### 옵션 검증 프레임워크
+- `IValidatable` 인터페이스 및 `ValidationResult` 모델 추가
+- 10개 옵션 클래스에 `Validate()` 메서드 구현 (`ChunkingOptions`, `CrawlOptions`, `ExtractOptions`, `AnalysisOptions`, `ReconstructOptions`, `PipelineOptions`, `MultimodalProcessingOptions`, `TextCompletionOptions`, `ImageToTextOptions`, `HtmlChunkingOptions`)
+- 진입점 메서드(`ProcessUrlAsync`, `ProcessWebsiteAsync`, `ExtractContentAsync`, `ExtractBatchAsync`)에서 자동 검증
+
+#### URL 정규화 및 패턴 필터링
+- `UrlNormalizer` 유틸리티 추가 (scheme/host 소문자화, www 제거, 기본 포트 제거, 후행 슬래시 정리, fragment 제거)
+- `BaseCrawler`의 URL 중복 체크가 정규화된 URL 기반으로 개선
+- `IncludeUrlPatterns` / `ExcludeUrlPatterns` 패턴 필터링 구현
+
+#### 인터페이스 분리 (ISP)
+- `IContentExtractService` 인터페이스 추가 (추출 전용 소비자용)
+- `IContentChunkService` 인터페이스 추가 (청킹 전용 소비자용)
+- `IWebContentProcessor`가 두 인터페이스를 상속하는 파사드로 변환
+- DI 등록 시 집중 인터페이스 자동 등록
+
+#### 이벤트 시스템 통합
+- `Core/Models/Events/` 디렉토리에 이벤트 통합 (`CrawlingEvents`, `ExtractionEvents`, `ChunkingEvents`, `ProcessorEvents`, `MonitoringEvents`)
+
+### Changed
+- `ContentExtractorFactory`가 콘텐츠 타입 기반 키드 서비스 선택 지원
+- `WebContentProcessor`에 선택적 `IResilienceService` 연동 (재시도 2회, Exponential Backoff)
+- `ProcessUrlsBatchAsync` 병렬 처리 구현 (기존 stub 대체)
+- `ProcessHtmlAsync` 실제 구현 (기존 stub 대체)
+
+### Deprecated
+- `CrawlOptions.IncludePatterns` / `ExcludePatterns` → `IncludeUrlPatterns` / `ExcludeUrlPatterns` 사용 권장
+- `EventPublisher.cs` 내 레거시 이벤트 클래스들 (`CrawlStartedEvent`, `CrawlCompletedEvent`, `CrawlErrorEvent`, `CrawlWarningEvent`)
+
+---
+
 ## [0.1.9] - 2026-01-19
 
 ### Changed

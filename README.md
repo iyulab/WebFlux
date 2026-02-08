@@ -136,6 +136,19 @@ await foreach (var chunk in processor.ProcessWebsiteAsync(url, crawlOptions, chu
 var results = await processor.ProcessUrlsBatchAsync(urls, chunkOptions);
 ```
 
+#### Focused Interfaces (ISP)
+For consumers that only need extraction or chunking:
+
+```csharp
+// Extraction only
+var extractor = provider.GetRequiredService<IContentExtractService>();
+var result = await extractor.ExtractContentAsync("https://example.com");
+
+// Chunking only
+var chunker = provider.GetRequiredService<IContentChunkService>();
+var chunks = await chunker.ProcessUrlAsync("https://example.com");
+```
+
 ### Extensibility
 
 #### IChunkingStrategy

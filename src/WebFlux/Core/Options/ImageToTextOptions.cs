@@ -1,9 +1,12 @@
+using WebFlux.Core.Interfaces;
+using WebFlux.Core.Models;
+
 namespace WebFlux.Core.Options;
 
 /// <summary>
 /// 이미지-텍스트 변환 옵션을 정의하는 클래스
 /// </summary>
-public class ImageToTextOptions
+public class ImageToTextOptions : IValidatable
 {
     /// <summary>
     /// 설명의 세부 정도 (Low, Medium, High)
@@ -39,6 +42,21 @@ public class ImageToTextOptions
     /// 컨텍스트 정보 (이미지가 포함된 문서의 제목, 섹션 등)
     /// </summary>
     public string? Context { get; set; }
+
+    /// <inheritdoc />
+    public ValidationResult Validate()
+    {
+        var errors = new List<string>();
+
+        if (MaxDescriptionLength <= 0)
+            errors.Add("MaxDescriptionLength must be greater than 0");
+
+        return new ValidationResult
+        {
+            IsValid = errors.Count == 0,
+            Errors = errors
+        };
+    }
 }
 
 /// <summary>

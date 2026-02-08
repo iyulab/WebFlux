@@ -4,135 +4,40 @@ using WebFlux.Core.Options;
 namespace WebFlux.Core.Interfaces;
 
 /// <summary>
-/// 메인 웹 콘텐츠 처리 파이프라인 인터페이스
-/// 크롤링부터 청킹까지의 전체 처리 과정을 관리
-/// 청킹 없는 경량 텍스트 추출 API 포함
+/// 메인 웹 콘텐츠 처리 파이프라인 인터페이스 (ISP 파사드)
+/// IContentExtractService + IContentChunkService를 상속하며,
+/// 작업 관리/진단 메서드를 직접 보유
 /// </summary>
-public interface IWebContentProcessor
+public interface IWebContentProcessor : IContentExtractService, IContentChunkService
 {
-    #region 경량 추출 API
-
     /// <summary>
-    /// 단일 URL에서 콘텐츠를 추출합니다 (청킹 없음).
-    /// AI 리서치 에이전트용 경량 추출 API
-    /// </summary>
-    /// <param name="url">추출할 URL</param>
-    /// <param name="options">추출 옵션</param>
-    /// <param name="cancellationToken">취소 토큰</param>
-    /// <returns>추출 결과 (성공/실패 래핑)</returns>
-    Task<ProcessingResult<ExtractedContent>> ExtractContentAsync(
-        string url,
-        ExtractOptions? options = null,
-        CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// 여러 URL에서 콘텐츠를 배치 추출합니다.
-    /// 10-50개 URL 배치 처리, 부분 실패 허용
-    /// </summary>
-    /// <param name="urls">추출할 URL 목록</param>
-    /// <param name="options">추출 옵션</param>
-    /// <param name="cancellationToken">취소 토큰</param>
-    /// <returns>배치 추출 결과 (성공/실패 분리)</returns>
-    Task<BatchExtractResult> ExtractBatchAsync(
-        IEnumerable<string> urls,
-        ExtractOptions? options = null,
-        CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// 여러 URL에서 콘텐츠를 스트리밍으로 배치 추출합니다.
-    /// 결과가 준비되는 대로 순차적으로 반환
-    /// </summary>
-    /// <param name="urls">추출할 URL 목록</param>
-    /// <param name="options">추출 옵션</param>
-    /// <param name="cancellationToken">취소 토큰</param>
-    /// <returns>추출 결과 스트림</returns>
-    IAsyncEnumerable<ProcessingResult<ExtractedContent>> ExtractBatchStreamAsync(
-        IEnumerable<string> urls,
-        ExtractOptions? options = null,
-        CancellationToken cancellationToken = default);
-
-    #endregion
-
-    #region 기존 청킹 처리 API
-    /// <summary>
-    /// 단일 URL을 처리하여 청크 목록을 반환합니다.
-    /// </summary>
-    /// <param name="url">처리할 웹 페이지 URL</param>
-    /// <param name="chunkingOptions">청킹 옵션</param>
-    /// <param name="cancellationToken">취소 토큰</param>
-    /// <returns>생성된 청크 목록</returns>
-    Task<IReadOnlyList<WebContentChunk>> ProcessUrlAsync(
-        string url,
-        ChunkingOptions? chunkingOptions = null,
-        CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// 여러 URL을 배치로 처리합니다.
-    /// </summary>
-    /// <param name="urls">처리할 URL 목록</param>
-    /// <param name="chunkingOptions">청킹 옵션</param>
-    /// <param name="cancellationToken">취소 토큰</param>
-    /// <returns>각 URL별 청크 목록</returns>
-    Task<IReadOnlyDictionary<string, IReadOnlyList<WebContentChunk>>> ProcessUrlsBatchAsync(
-        IEnumerable<string> urls,
-        ChunkingOptions? chunkingOptions = null,
-        CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// 웹사이트를 크롤링하여 처리합니다.
-    /// </summary>
-    /// <param name="startUrl">시작 URL</param>
-    /// <param name="crawlOptions">크롤링 옵션</param>
-    /// <param name="chunkingOptions">청킹 옵션</param>
-    /// <param name="cancellationToken">취소 토큰</param>
-    /// <returns>크롤링된 모든 페이지의 청크 스트림</returns>
-    IAsyncEnumerable<WebContentChunk> ProcessWebsiteAsync(
-        string startUrl,
-        CrawlOptions? crawlOptions = null,
-        ChunkingOptions? chunkingOptions = null,
-        CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// HTML 콘텐츠를 직접 처리합니다.
-    /// </summary>
-    /// <param name="htmlContent">HTML 콘텐츠</param>
-    /// <param name="sourceUrl">원본 URL</param>
-    /// <param name="chunkingOptions">청킹 옵션</param>
-    /// <param name="cancellationToken">취소 토큰</param>
-    /// <returns>생성된 청크 목록</returns>
-    Task<IReadOnlyList<WebContentChunk>> ProcessHtmlAsync(
-        string htmlContent,
-        string sourceUrl,
-        ChunkingOptions? chunkingOptions = null,
-        CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// 처리 진행률을 모니터링합니다.
+    /// 처리 진행률을 모니터링합니다
     /// </summary>
     /// <param name="jobId">작업 ID</param>
     /// <returns>진행률 정보 스트림</returns>
+    [Obsolete("Job monitoring is not yet implemented. Will be available in a future version.")]
     IAsyncEnumerable<ProcessingProgress> MonitorProgressAsync(string jobId);
 
     /// <summary>
-    /// 진행 중인 작업을 취소합니다.
+    /// 진행 중인 작업을 취소합니다
     /// </summary>
     /// <param name="jobId">작업 ID</param>
     /// <returns>취소 성공 여부</returns>
+    [Obsolete("Job cancellation is not yet implemented. Will be available in a future version.")]
     Task<bool> CancelJobAsync(string jobId);
 
     /// <summary>
-    /// 처리 통계를 반환합니다.
+    /// 처리 통계를 반환합니다
     /// </summary>
     /// <returns>처리 통계 정보</returns>
+    [Obsolete("Statistics tracking is not yet implemented. Will be available in a future version.")]
     Task<ProcessingStatistics> GetStatisticsAsync();
 
     /// <summary>
-    /// 사용된 청킹 전략 목록을 반환합니다.
+    /// 사용 가능한 청킹 전략 목록을 반환합니다
     /// </summary>
     /// <returns>사용 가능한 청킹 전략 목록</returns>
     IReadOnlyList<string> GetAvailableChunkingStrategies();
-
-    #endregion
 }
 
 /// <summary>

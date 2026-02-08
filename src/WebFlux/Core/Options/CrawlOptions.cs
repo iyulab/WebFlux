@@ -6,7 +6,7 @@ namespace WebFlux.Core.Options;
 /// <summary>
 /// 웹 크롤링 옵션을 정의하는 클래스
 /// </summary>
-public class CrawlOptions
+public class CrawlOptions : IValidatable
 {
     /// <summary>
     /// 최대 크롤링 페이지 수 (기본값: 100)
@@ -125,11 +125,13 @@ public class CrawlOptions
     /// <summary>
     /// 제외 패턴 (정규식)
     /// </summary>
+    [Obsolete("Use ExcludeUrlPatterns instead")]
     public List<string> ExcludePatterns { get; set; } = new();
 
     /// <summary>
     /// 포함 패턴 (정규식)
     /// </summary>
+    [Obsolete("Use IncludeUrlPatterns instead")]
     public List<string> IncludePatterns { get; set; } = new();
 
     /// <summary>
@@ -235,6 +237,39 @@ public class CrawlOptions
     /// 긴 문서의 경우 제목 + 헤딩 + 첫 N자를 사용합니다
     /// </summary>
     public int MetadataExtractionMaxChars { get; set; } = 8000;
+
+    /// <inheritdoc />
+    public ValidationResult Validate()
+    {
+        var errors = new List<string>();
+
+        if (MaxPages <= 0)
+            errors.Add("MaxPages must be greater than 0");
+
+        if (MaxDepth < 0)
+            errors.Add("MaxDepth must be greater than or equal to 0");
+
+        if (ConcurrentRequests <= 0)
+            errors.Add("ConcurrentRequests must be greater than 0");
+
+        if (TimeoutSeconds <= 0)
+            errors.Add("TimeoutSeconds must be greater than 0");
+
+        if (MinConfidence < 0 || MinConfidence > 1)
+            errors.Add("MinConfidence must be between 0 and 1");
+
+        if (MaxRetries < 0)
+            errors.Add("MaxRetries must be greater than or equal to 0");
+
+        if (DelayBetweenRequestsMs < 0)
+            errors.Add("DelayBetweenRequestsMs must be greater than or equal to 0");
+
+        return new ValidationResult
+        {
+            IsValid = errors.Count == 0,
+            Errors = errors
+        };
+    }
 }
 
 /// <summary>

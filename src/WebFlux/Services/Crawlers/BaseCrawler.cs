@@ -1,11 +1,13 @@
 using System.Collections.Concurrent;
 using System.Net;
 using System.Runtime.CompilerServices;
+using System.Text.RegularExpressions;
 using System.Threading.Channels;
 using System.Xml.Linq;
 using WebFlux.Core.Interfaces;
 using WebFlux.Core.Models;
 using WebFlux.Core.Options;
+using WebFlux.Core.Utilities;
 
 namespace WebFlux.Services.Crawlers;
 
@@ -205,10 +207,10 @@ public abstract class BaseCrawler : ICrawler
         {
             var (currentUrl, depth) = queue.Dequeue();
 
-            if (visited.Contains(currentUrl) || depth > maxDepth)
+            if (visited.Contains(UrlNormalizer.Normalize(currentUrl)) || depth > maxDepth)
                 continue;
 
-            visited.Add(currentUrl);
+            visited.Add(UrlNormalizer.Normalize(currentUrl));
 
             var originalResult = await CrawlAsync(currentUrl, options, cancellationToken);
             var result = new CrawlResult
@@ -240,7 +242,7 @@ public abstract class BaseCrawler : ICrawler
             {
                 foreach (var link in result.DiscoveredLinks)
                 {
-                    if (!visited.Contains(link) && ShouldCrawlUrl(link, startUrl))
+                    if (!visited.Contains(UrlNormalizer.Normalize(link)) && ShouldCrawlUrl(link, startUrl, options))
                     {
                         queue.Enqueue((link, depth + 1));
                     }
@@ -319,7 +321,7 @@ public abstract class BaseCrawler : ICrawler
                     var (url, depth) = item;
 
                     // 이미 방문했거나 최대 페이지 수 초과 시 스킵
-                    if (!visited.TryAdd(url, true) || Volatile.Read(ref completedCount) >= maxPages)
+                    if (!visited.TryAdd(UrlNormalizer.Normalize(url), true) || Volatile.Read(ref completedCount) >= maxPages)
                     {
                         continue;
                     }
@@ -372,7 +374,7 @@ public abstract class BaseCrawler : ICrawler
                             {
                                 foreach (var link in result.DiscoveredLinks)
                                 {
-                                    if (!visited.ContainsKey(link) && ShouldCrawlUrl(link, startUrl))
+                                    if (!visited.ContainsKey(UrlNormalizer.Normalize(link)) && ShouldCrawlUrl(link, startUrl, options))
                                     {
                                         pendingUrls.Enqueue((link, depth + 1));
                                     }
@@ -843,8 +845,9 @@ public abstract class BaseCrawler : ICrawler
     /// </summary>
     /// <param name="url">URL</param>
     /// <param name="baseUrl">기준 URL</param>
+    /// <param name="options">크롤링 옵션 (패턴 필터링용)</param>
     /// <returns>크롤링 여부</returns>
-    protected virtual bool ShouldCrawlUrl(string url, string? baseUrl = null)
+    protected virtual bool ShouldCrawlUrl(string url, string? baseUrl = null, CrawlOptions? options = null)
     {
         if (!IsValidUrl(url))
             return false;
@@ -857,6 +860,35 @@ public abstract class BaseCrawler : ICrawler
 
             if (!urlDomain.Equals(baseDomain, StringComparison.OrdinalIgnoreCase))
                 return false;
+        }
+
+        if (options != null)
+        {
+            // 제외 확장자 확인
+            var path = new Uri(url).AbsolutePath;
+            var extension = Path.GetExtension(path)?.ToLowerInvariant();
+            if (!string.IsNullOrEmpty(extension) && options.ExcludedExtensions.Contains(extension))
+                return false;
+
+            // 포함 URL 패턴 확인 (설정된 경우, 하나 이상 매치 필요)
+#pragma warning disable CS0618 // Obsolete 경고 억제 - 하위 호환성 유지
+            var includePatterns = options.IncludeUrlPatterns?.Count > 0 ? options.IncludeUrlPatterns : options.IncludePatterns;
+#pragma warning restore CS0618
+            if (includePatterns != null && includePatterns.Count > 0)
+            {
+                if (!includePatterns.Any(pattern => Regex.IsMatch(url, pattern, RegexOptions.IgnoreCase)))
+                    return false;
+            }
+
+            // 제외 URL 패턴 확인 (매치되면 제외)
+#pragma warning disable CS0618 // Obsolete 경고 억제 - 하위 호환성 유지
+            var excludePatterns = options.ExcludeUrlPatterns?.Count > 0 ? options.ExcludeUrlPatterns : options.ExcludePatterns;
+#pragma warning restore CS0618
+            if (excludePatterns != null && excludePatterns.Count > 0)
+            {
+                if (excludePatterns.Any(pattern => Regex.IsMatch(url, pattern, RegexOptions.IgnoreCase)))
+                    return false;
+            }
         }
 
         return true;

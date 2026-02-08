@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Configuration;
+using WebFlux.Core.Interfaces;
 using WebFlux.Core.Models;
 
 namespace WebFlux.Configuration;
@@ -7,7 +8,7 @@ namespace WebFlux.Configuration;
 /// WebFlux 옵션 설정 클래스
 /// appsettings.json이나 다른 구성 소스와 바인딩
 /// </summary>
-public class WebFluxOptions
+public class WebFluxOptions : IValidatable
 {
     /// <summary>
     /// 구성 섹션 이름
@@ -127,27 +128,6 @@ public class WebFluxOptions
 
         return errors;
     }
-}
-
-/// <summary>
-/// 검증 결과
-/// </summary>
-public class ValidationResult
-{
-    /// <summary>
-    /// 검증 성공 여부
-    /// </summary>
-    public bool IsValid { get; set; }
-
-    /// <summary>
-    /// 오류 목록
-    /// </summary>
-    public List<string> Errors { get; set; } = new();
-
-    /// <summary>
-    /// 경고 목록
-    /// </summary>
-    public List<string> Warnings { get; set; } = new();
 }
 
 /// <summary>

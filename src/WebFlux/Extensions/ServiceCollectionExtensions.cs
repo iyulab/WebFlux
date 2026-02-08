@@ -102,6 +102,10 @@ public static class ServiceCollectionExtensions
         // 메인 처리기 등록 (Scoped - 요청당 하나의 인스턴스)
         services.TryAddScoped<IWebContentProcessor, WebContentProcessor>();
 
+        // ISP 분리 인터페이스 등록 (동일 인스턴스를 통해 제공)
+        services.TryAddScoped<IContentExtractService>(sp => sp.GetRequiredService<IWebContentProcessor>());
+        services.TryAddScoped<IContentChunkService>(sp => sp.GetRequiredService<IWebContentProcessor>());
+
         // 서비스 팩토리 등록
         services.TryAddSingleton<IServiceFactory, ServiceFactory>();
 

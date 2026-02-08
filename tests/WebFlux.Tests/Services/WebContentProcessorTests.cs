@@ -72,7 +72,7 @@ public class WebContentProcessorTests
 
     #endregion
 
-    #region ProcessUrlsBatchAsync Tests (Stub)
+    #region ProcessUrlsBatchAsync Tests
 
     [Fact]
     public async Task ProcessUrlsBatchAsync_WithEmptyUrls_ShouldReturnEmptyDictionary()
@@ -89,17 +89,20 @@ public class WebContentProcessorTests
     }
 
     [Fact]
-    public async Task ProcessUrlsBatchAsync_WithUrls_ShouldReturnEmptyDictionary()
+    public async Task ProcessUrlsBatchAsync_WithUrls_ShouldReturnDictionaryWithEntries()
     {
-        // Arrange - Stub implementation returns empty
+        // Arrange
         var urls = new List<string> { "https://example.com", "https://test.com" };
+        SetupMocksForProcessUrl();
 
         // Act
         var result = await _processor.ProcessUrlsBatchAsync(urls);
 
-        // Assert - Stub returns empty dictionary
+        // Assert
         result.Should().NotBeNull();
-        result.Should().BeEmpty();
+        result.Should().HaveCount(2);
+        result.Should().ContainKey("https://example.com");
+        result.Should().ContainKey("https://test.com");
     }
 
     [Fact]
@@ -108,6 +111,7 @@ public class WebContentProcessorTests
         // Arrange
         var urls = new List<string> { "https://example.com" };
         using var cts = new CancellationTokenSource();
+        SetupMocksForProcessUrl();
 
         // Act
         var result = await _processor.ProcessUrlsBatchAsync(urls, cancellationToken: cts.Token);
@@ -200,37 +204,39 @@ public class WebContentProcessorTests
 
     #endregion
 
-    #region ProcessHtmlAsync Tests (Stub)
+    #region ProcessHtmlAsync Tests
 
     [Fact]
-    public async Task ProcessHtmlAsync_WithHtml_ShouldReturnEmptyList()
+    public async Task ProcessHtmlAsync_WithHtml_ShouldReturnChunks()
     {
         // Arrange
         var html = "<html><body>Test</body></html>";
         var sourceUrl = "https://example.com";
+        SetupMocksForHtmlProcessing(sourceUrl);
 
         // Act
         var result = await _processor.ProcessHtmlAsync(html, sourceUrl);
 
-        // Assert - Stub returns empty list
+        // Assert
         result.Should().NotBeNull();
-        result.Should().BeEmpty();
+        result.Should().NotBeEmpty();
     }
 
     [Fact]
-    public async Task ProcessHtmlAsync_WithOptions_ShouldReturnEmptyList()
+    public async Task ProcessHtmlAsync_WithOptions_ShouldReturnChunks()
     {
         // Arrange
         var html = "<html><body>Test content</body></html>";
         var sourceUrl = "https://example.com";
         var options = new ChunkingOptions { ChunkSize = 500 };
+        SetupMocksForHtmlProcessing(sourceUrl);
 
         // Act
         var result = await _processor.ProcessHtmlAsync(html, sourceUrl, options);
 
         // Assert
         result.Should().NotBeNull();
-        result.Should().BeEmpty();
+        result.Should().NotBeEmpty();
     }
 
     [Fact]
@@ -240,6 +246,7 @@ public class WebContentProcessorTests
         var html = "<html><body>Test</body></html>";
         var sourceUrl = "https://example.com";
         using var cts = new CancellationTokenSource();
+        SetupMocksForHtmlProcessing(sourceUrl);
 
         // Act
         var result = await _processor.ProcessHtmlAsync(html, sourceUrl, cancellationToken: cts.Token);
@@ -850,6 +857,55 @@ public class WebContentProcessorTests
             await Task.Yield();
             yield return item;
         }
+    }
+
+    /// <summary>
+    /// ProcessUrlAsync 위임을 위한 공통 mock 설정
+    /// </summary>
+    private void SetupMocksForProcessUrl()
+    {
+        var mockCrawler = new Mock<ICrawler>();
+        mockCrawler.Setup(c => c.CrawlWebsiteAsync(It.IsAny<string>(), It.IsAny<CrawlOptions>(), It.IsAny<CancellationToken>()))
+            .Returns<string, CrawlOptions, CancellationToken>((url, opts, ct) => ToAsyncEnumerable(new List<CrawlResult>
+            {
+                new CrawlResult { Url = url, Content = "<html><body>Test</body></html>", ContentType = "text/html", StatusCode = 200 }
+            }));
+
+        var mockExtractor = new Mock<IContentExtractor>();
+        mockExtractor.Setup(e => e.ExtractAutoAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ExtractedContent { Url = "https://example.com", Text = "Test", MainContent = "Test" });
+
+        var mockChunkingStrategy = new Mock<IChunkingStrategy>();
+        mockChunkingStrategy.Setup(s => s.ChunkAsync(It.IsAny<ExtractedContent>(), It.IsAny<ChunkingOptions>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<WebContentChunk>
+            {
+                new WebContentChunk { Id = "1", Content = "Test", SourceUrl = "https://example.com", StrategyInfo = new ChunkingStrategyInfo { StrategyName = "Auto" } }
+            });
+
+        _mockServiceFactory.Setup(f => f.CreateCrawler(It.IsAny<WebFlux.Core.Options.CrawlStrategy>())).Returns(mockCrawler.Object);
+        _mockServiceFactory.Setup(f => f.CreateContentExtractor(It.IsAny<string>())).Returns(mockExtractor.Object);
+        _mockServiceFactory.Setup(f => f.CreateChunkingStrategy(It.IsAny<string>())).Returns(mockChunkingStrategy.Object);
+        _mockServiceFactory.Setup(f => f.CreateAiEnhancementService()).Returns((IAiEnhancementService)null!);
+    }
+
+    /// <summary>
+    /// ProcessHtmlAsync를 위한 공통 mock 설정
+    /// </summary>
+    private void SetupMocksForHtmlProcessing(string sourceUrl)
+    {
+        var mockExtractor = new Mock<IContentExtractor>();
+        mockExtractor.Setup(e => e.ExtractAutoAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ExtractedContent { Url = sourceUrl, Text = "Test content", MainContent = "Test content" });
+
+        var mockChunkingStrategy = new Mock<IChunkingStrategy>();
+        mockChunkingStrategy.Setup(s => s.ChunkAsync(It.IsAny<ExtractedContent>(), It.IsAny<ChunkingOptions>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<WebContentChunk>
+            {
+                new WebContentChunk { Id = "1", Content = "Test content", SourceUrl = sourceUrl, StrategyInfo = new ChunkingStrategyInfo { StrategyName = "Auto" } }
+            });
+
+        _mockServiceFactory.Setup(f => f.CreateContentExtractor(It.IsAny<string>())).Returns(mockExtractor.Object);
+        _mockServiceFactory.Setup(f => f.CreateChunkingStrategy(It.IsAny<string>())).Returns(mockChunkingStrategy.Object);
     }
 
     #endregion

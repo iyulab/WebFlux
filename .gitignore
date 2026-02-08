@@ -370,6 +370,7 @@ claudedocs/
 .playwright-mcp/
 .serena/
 .local-docs/
+nul
 
 # WebFlux Samples - CI/CD에서 제외
 samples/*/bin/

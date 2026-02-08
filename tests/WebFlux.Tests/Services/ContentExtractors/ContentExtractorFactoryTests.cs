@@ -33,10 +33,10 @@ public class ContentExtractorFactoryTests
     [Fact]
     public void CreateExtractor_WithRegisteredExtractor_ShouldReturnRegisteredInstance()
     {
-        // Arrange
+        // Arrange - 키드 서비스로 등록
         var mockExtractor = new Mock<IContentExtractor>();
         var services = new ServiceCollection();
-        services.AddSingleton(typeof(IContentExtractor), mockExtractor.Object);
+        services.AddKeyedSingleton<IContentExtractor>("Html", mockExtractor.Object);
         var serviceProvider = services.BuildServiceProvider();
         var factory = new ContentExtractorFactory(serviceProvider);
 
@@ -49,16 +49,16 @@ public class ContentExtractorFactoryTests
     }
 
     [Theory]
-    [InlineData("text/html")]
-    [InlineData("text/plain")]
-    [InlineData("application/json")]
-    [InlineData("application/xml")]
-    public void CreateExtractor_WithDifferentContentTypes_ShouldReturnSameExtractor(string contentType)
+    [InlineData("text/html", "Html")]
+    [InlineData("text/plain", "Text")]
+    [InlineData("application/json", "Json")]
+    [InlineData("application/xml", "Xml")]
+    public void CreateExtractor_WithDifferentContentTypes_ShouldReturnMatchingExtractor(string contentType, string key)
     {
-        // Arrange - contentType 파라미터는 현재 구현에서 사용되지 않음
+        // Arrange - 각 콘텐츠 타입에 맞는 키드 서비스 등록
         var mockExtractor = new Mock<IContentExtractor>();
         var services = new ServiceCollection();
-        services.AddSingleton(typeof(IContentExtractor), mockExtractor.Object);
+        services.AddKeyedSingleton<IContentExtractor>(key, mockExtractor.Object);
         var serviceProvider = services.BuildServiceProvider();
         var factory = new ContentExtractorFactory(serviceProvider);
 
@@ -73,21 +73,19 @@ public class ContentExtractorFactoryTests
     [Fact]
     public void CreateExtractor_CalledMultipleTimes_ShouldReturnSameInstance()
     {
-        // Arrange - Singleton으로 등록된 경우
+        // Arrange - Singleton으로 등록된 경우 같은 키면 같은 인스턴스
         var mockExtractor = new Mock<IContentExtractor>();
         var services = new ServiceCollection();
-        services.AddSingleton(typeof(IContentExtractor), mockExtractor.Object);
+        services.AddKeyedSingleton<IContentExtractor>("Html", mockExtractor.Object);
         var serviceProvider = services.BuildServiceProvider();
         var factory = new ContentExtractorFactory(serviceProvider);
 
         // Act
         var extractor1 = factory.CreateExtractor("text/html");
         var extractor2 = factory.CreateExtractor("text/html");
-        var extractor3 = factory.CreateExtractor("text/plain");
 
         // Assert
         extractor1.Should().BeSameAs(extractor2);
-        extractor2.Should().BeSameAs(extractor3);
     }
 
     #endregion
@@ -169,10 +167,10 @@ public class ContentExtractorFactoryTests
     [Fact]
     public void CreateExtractor_ShouldFollowInterfaceProviderPattern()
     {
-        // Arrange - Interface Provider 패턴 검증
+        // Arrange - Interface Provider 패턴: 키드 서비스로 소비자가 구현체 제공
         var customExtractor = new Mock<IContentExtractor>();
         var services = new ServiceCollection();
-        services.AddTransient(typeof(IContentExtractor), sp => customExtractor.Object);
+        services.AddKeyedTransient<IContentExtractor>("Html", (sp, key) => customExtractor.Object);
         var serviceProvider = services.BuildServiceProvider();
         var factory = new ContentExtractorFactory(serviceProvider);
 
@@ -213,10 +211,10 @@ public class ContentExtractorFactoryTests
     [InlineData("   ")]
     public void CreateExtractor_WithNullOrEmptyContentType_ShouldStillWork(string? contentType)
     {
-        // Arrange - contentType 파라미터는 현재 사용되지 않으므로 null/empty도 동작
+        // Arrange - null/empty contentType일 때 "Default" 키로 폴백
         var mockExtractor = new Mock<IContentExtractor>();
         var services = new ServiceCollection();
-        services.AddSingleton(typeof(IContentExtractor), mockExtractor.Object);
+        services.AddKeyedSingleton<IContentExtractor>("Default", mockExtractor.Object);
         var serviceProvider = services.BuildServiceProvider();
         var factory = new ContentExtractorFactory(serviceProvider);
 

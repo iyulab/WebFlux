@@ -2,6 +2,7 @@ using System.Runtime.CompilerServices;
 using WebFlux.Core.Interfaces;
 using WebFlux.Core.Models;
 using WebFlux.Core.Options;
+using WebFlux.Core.Utilities;
 
 namespace WebFlux.Services.Crawlers;
 
@@ -39,10 +40,10 @@ public class DepthFirstCrawler : BaseCrawler
         {
             var (currentUrl, depth) = stack.Pop();
 
-            if (visited.Contains(currentUrl) || depth > maxDepth)
+            if (visited.Contains(UrlNormalizer.Normalize(currentUrl)) || depth > maxDepth)
                 continue;
 
-            visited.Add(currentUrl);
+            visited.Add(UrlNormalizer.Normalize(currentUrl));
 
             var originalResult = await CrawlAsync(currentUrl, options, cancellationToken);
             var result = new CrawlResult
@@ -74,7 +75,7 @@ public class DepthFirstCrawler : BaseCrawler
             {
                 // 깊이 우선: 링크들을 역순으로 스택에 추가하여 첫 번째 링크가 먼저 탐색되도록 함
                 var linksToAdd = result.DiscoveredLinks
-                    .Where(link => !visited.Contains(link) && ShouldCrawlUrl(link, startUrl))
+                    .Where(link => !visited.Contains(UrlNormalizer.Normalize(link)) && ShouldCrawlUrl(link, startUrl, options))
                     .Reverse()
                     .ToList();
 

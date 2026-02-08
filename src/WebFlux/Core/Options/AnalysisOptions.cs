@@ -1,10 +1,13 @@
+using WebFlux.Core.Interfaces;
+using WebFlux.Core.Models;
+
 namespace WebFlux.Core.Options;
 
 /// <summary>
 /// 콘텐츠 분석 옵션
 /// Stage 2 (Analyze) 단계 설정
 /// </summary>
-public class AnalysisOptions
+public class AnalysisOptions : IValidatable
 {
     /// <summary>
     /// 노이즈 제거 활성화
@@ -76,4 +79,28 @@ public class AnalysisOptions
     /// 추가 옵션 (확장 가능)
     /// </summary>
     public Dictionary<string, object> AdditionalOptions { get; set; } = new();
+
+    /// <inheritdoc />
+    public ValidationResult Validate()
+    {
+        var errors = new List<string>();
+
+        if (MinContentQuality < 0 || MinContentQuality > 1)
+            errors.Add("MinContentQuality must be between 0 and 1");
+
+        if (MinSectionLength <= 0)
+            errors.Add("MinSectionLength must be greater than 0");
+
+        if (MaxSectionDepth <= 0)
+            errors.Add("MaxSectionDepth must be greater than 0");
+
+        if (TimeoutMs <= 0)
+            errors.Add("TimeoutMs must be greater than 0");
+
+        return new ValidationResult
+        {
+            IsValid = errors.Count == 0,
+            Errors = errors
+        };
+    }
 }

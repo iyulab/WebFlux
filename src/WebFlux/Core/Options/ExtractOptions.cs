@@ -1,10 +1,13 @@
+using WebFlux.Core.Interfaces;
+using WebFlux.Core.Models;
+
 namespace WebFlux.Core.Options;
 
 /// <summary>
 /// 웹 콘텐츠 추출 옵션
 /// 청킹 없는 경량 텍스트 추출 API를 위한 설정
 /// </summary>
-public class ExtractOptions
+public class ExtractOptions : IValidatable
 {
     #region 크롤링 설정
 
@@ -158,6 +161,33 @@ public class ExtractOptions
         IncludeMetadata = true,
         MaxRetries = 3
     };
+
+    /// <inheritdoc />
+    public ValidationResult Validate()
+    {
+        var errors = new List<string>();
+
+        if (TimeoutSeconds <= 0)
+            errors.Add("TimeoutSeconds must be greater than 0");
+
+        if (MaxConcurrency <= 0)
+            errors.Add("MaxConcurrency must be greater than 0");
+
+        if (MaxRetries < 0)
+            errors.Add("MaxRetries must be greater than or equal to 0");
+
+        if (CacheExpirationMinutes <= 0)
+            errors.Add("CacheExpirationMinutes must be greater than 0");
+
+        if (DomainMinIntervalMs < 0)
+            errors.Add("DomainMinIntervalMs must be greater than or equal to 0");
+
+        return new ValidationResult
+        {
+            IsValid = errors.Count == 0,
+            Errors = errors
+        };
+    }
 }
 
 /// <summary>

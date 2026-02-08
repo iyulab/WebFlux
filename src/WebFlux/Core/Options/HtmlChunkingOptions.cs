@@ -1,10 +1,13 @@
+using WebFlux.Core.Interfaces;
+using WebFlux.Core.Models;
+
 namespace WebFlux.Core.Options;
 
 /// <summary>
 /// HTML DOM 구조 기반 청킹 옵션
 /// 시맨틱 태그를 활용하여 의미적으로 완결된 청크 생성
 /// </summary>
-public class HtmlChunkingOptions
+public class HtmlChunkingOptions : IValidatable
 {
     /// <summary>
     /// DOM 구조 기반 청킹 활성화
@@ -111,4 +114,25 @@ public class HtmlChunkingOptions
     /// 리스트를 단일 청크로 유지
     /// </summary>
     public bool KeepListsTogether { get; set; } = true;
+
+    /// <inheritdoc />
+    public ValidationResult Validate()
+    {
+        var errors = new List<string>();
+
+        if (MaxChunkSize <= 0)
+            errors.Add("MaxChunkSize must be greater than 0");
+
+        if (MinChunkSize <= 0)
+            errors.Add("MinChunkSize must be greater than 0");
+
+        if (MaxChunkSize <= MinChunkSize)
+            errors.Add("MaxChunkSize must be greater than MinChunkSize");
+
+        return new ValidationResult
+        {
+            IsValid = errors.Count == 0,
+            Errors = errors
+        };
+    }
 }

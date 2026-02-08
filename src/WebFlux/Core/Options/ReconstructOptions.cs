@@ -1,10 +1,13 @@
+using WebFlux.Core.Interfaces;
+using WebFlux.Core.Models;
+
 namespace WebFlux.Core.Options;
 
 /// <summary>
 /// 콘텐츠 재구성 옵션
 /// Stage 3 (Reconstruct) 단계 설정
 /// </summary>
-public class ReconstructOptions
+public class ReconstructOptions : IValidatable
 {
     /// <summary>
     /// 재구성 전략
@@ -92,4 +95,31 @@ public class ReconstructOptions
     /// 추가 옵션 (확장 가능)
     /// </summary>
     public Dictionary<string, object> AdditionalOptions { get; set; } = new();
+
+    /// <inheritdoc />
+    public ValidationResult Validate()
+    {
+        var errors = new List<string>();
+
+        if (QualityTarget < 0 || QualityTarget > 1)
+            errors.Add("QualityTarget must be between 0 and 1");
+
+        if (SummaryRatio <= 0 || SummaryRatio > 1)
+            errors.Add("SummaryRatio must be between 0 (exclusive) and 1 (inclusive)");
+
+        if (ExpansionRatio < 1.0)
+            errors.Add("ExpansionRatio must be greater than or equal to 1.0");
+
+        if (Temperature < 0 || Temperature > 2)
+            errors.Add("Temperature must be between 0 and 2");
+
+        if (TimeoutMs <= 0)
+            errors.Add("TimeoutMs must be greater than 0");
+
+        return new ValidationResult
+        {
+            IsValid = errors.Count == 0,
+            Errors = errors
+        };
+    }
 }

@@ -1,10 +1,13 @@
+using WebFlux.Core.Interfaces;
+using WebFlux.Core.Models;
+
 namespace WebFlux.Core.Options;
 
 /// <summary>
 /// 통합 파이프라인 옵션
 /// 모든 4단계 파이프라인 설정 통합
 /// </summary>
-public class PipelineOptions
+public class PipelineOptions : IValidatable
 {
     /// <summary>
     /// 크롤링 옵션 (Extract 단계 일부)
@@ -55,6 +58,27 @@ public class PipelineOptions
     /// 추가 옵션 (확장 가능)
     /// </summary>
     public Dictionary<string, object> AdditionalOptions { get; set; } = new();
+
+    /// <inheritdoc />
+    public ValidationResult Validate()
+    {
+        var errors = new List<string>();
+
+        if (MaxConcurrency <= 0)
+            errors.Add("MaxConcurrency must be greater than 0");
+
+        if (TotalTimeoutMs <= 0)
+            errors.Add("TotalTimeoutMs must be greater than 0");
+
+        if (ProgressReportIntervalMs <= 0)
+            errors.Add("ProgressReportIntervalMs must be greater than 0");
+
+        return new ValidationResult
+        {
+            IsValid = errors.Count == 0,
+            Errors = errors
+        };
+    }
 }
 
 /// <summary>

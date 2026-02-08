@@ -11,21 +11,24 @@ namespace WebFlux.Services;
 /// 웹 콘텐츠 처리 파이프라인 메인 클래스
 /// 크롤링 → 추출 → 청킹 전체 프로세스 오케스트레이션
 /// </summary>
-public class WebContentProcessor : IWebContentProcessor
+public class WebContentProcessor : IWebContentProcessor, IContentExtractService, IContentChunkService
 {
     private readonly IServiceFactory _serviceFactory;
     private readonly IEventPublisher _eventPublisher;
     private readonly ILogger<WebContentProcessor> _logger;
+    private readonly IResilienceService? _resilienceService;
     private readonly SemaphoreSlim _processingSlot;
 
     public WebContentProcessor(
         IServiceFactory serviceFactory,
         IEventPublisher eventPublisher,
-        ILogger<WebContentProcessor> logger)
+        ILogger<WebContentProcessor> logger,
+        IResilienceService? resilienceService = null)
     {
         _serviceFactory = serviceFactory ?? throw new ArgumentNullException(nameof(serviceFactory));
         _eventPublisher = eventPublisher ?? throw new ArgumentNullException(nameof(eventPublisher));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _resilienceService = resilienceService;
         _processingSlot = new SemaphoreSlim(Environment.ProcessorCount);
     }
 
@@ -291,17 +294,42 @@ public class WebContentProcessor : IWebContentProcessor
 
         try
         {
-            _logger.LogInformation("  🔍 Extracting from WebContent: {Url}, Input={InputLength} chars",
+            _logger.LogInformation("  Extracting from WebContent: {Url}, Input={InputLength} chars",
                 webContent.Url, webContent.Content?.Length ?? 0);
 
             var extractor = _serviceFactory.CreateContentExtractor(webContent.ContentType);
-            var extracted = await extractor.ExtractAutoAsync(
-                webContent.Content,
-                webContent.Url,
-                webContent.ContentType,
-                cancellationToken);
 
-            _logger.LogInformation("  ✅ Extraction complete: {Url}, Output={OutputLength} chars, MainContent={MainLength} chars",
+            ExtractedContent extracted;
+
+            // ResilienceService가 등록되어 있으면 재시도 정책 적용
+            if (_resilienceService != null)
+            {
+                var retryPolicy = new Core.Models.RetryPolicy
+                {
+                    MaxRetryAttempts = 2,
+                    BaseDelay = TimeSpan.FromSeconds(1),
+                    Strategy = Core.Models.RetryStrategy.ExponentialBackoff
+                };
+
+                extracted = await _resilienceService.ExecuteWithRetryAsync(
+                    async ct => await extractor.ExtractAutoAsync(
+                        webContent.Content,
+                        webContent.Url,
+                        webContent.ContentType,
+                        ct),
+                    retryPolicy,
+                    cancellationToken);
+            }
+            else
+            {
+                extracted = await extractor.ExtractAutoAsync(
+                    webContent.Content,
+                    webContent.Url,
+                    webContent.ContentType,
+                    cancellationToken);
+            }
+
+            _logger.LogInformation("  Extraction complete: {Url}, Output={OutputLength} chars, MainContent={MainLength} chars",
                 webContent.Url, extracted.Text?.Length ?? 0, extracted.MainContent?.Length ?? 0);
 
             await writer.WriteAsync(extracted, cancellationToken);
@@ -594,6 +622,13 @@ public class WebContentProcessor : IWebContentProcessor
         ChunkingOptions? chunkingOptions = null,
         CancellationToken cancellationToken = default)
     {
+        if (chunkingOptions != null)
+        {
+            var validation = chunkingOptions.Validate();
+            if (!validation.IsValid)
+                throw new ArgumentException($"Invalid chunking options: {string.Join(", ", validation.Errors)}");
+        }
+
         _logger.LogInformation("Processing single URL: {Url}", url);
 
         // WebFluxConfiguration 생성하여 단일 URL 처리
@@ -639,9 +674,42 @@ public class WebContentProcessor : IWebContentProcessor
         ChunkingOptions? chunkingOptions = null,
         CancellationToken cancellationToken = default)
     {
-        // Stub implementation
-        await Task.CompletedTask;
-        return new Dictionary<string, IReadOnlyList<WebContentChunk>>().AsReadOnly();
+        if (chunkingOptions != null)
+        {
+            var validation = chunkingOptions.Validate();
+            if (!validation.IsValid)
+                throw new ArgumentException($"Invalid chunking options: {string.Join(", ", validation.Errors)}");
+        }
+
+        var urlList = urls.ToList();
+        _logger.LogInformation("Processing batch of {UrlCount} URLs", urlList.Count);
+
+        var results = new ConcurrentDictionary<string, IReadOnlyList<WebContentChunk>>();
+        var semaphore = new SemaphoreSlim(Environment.ProcessorCount);
+
+        var tasks = urlList.Select(async url =>
+        {
+            await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+            try
+            {
+                var chunks = await ProcessUrlAsync(url, chunkingOptions, cancellationToken).ConfigureAwait(false);
+                results[url] = chunks;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to process URL in batch: {Url}", url);
+                results[url] = Array.Empty<WebContentChunk>();
+            }
+            finally
+            {
+                semaphore.Release();
+            }
+        });
+
+        await Task.WhenAll(tasks).ConfigureAwait(false);
+
+        _logger.LogInformation("Batch processing completed: {UrlCount} URLs processed", urlList.Count);
+        return results.ToDictionary(kvp => kvp.Key, kvp => kvp.Value).AsReadOnly();
     }
 
     public async IAsyncEnumerable<WebContentChunk> ProcessWebsiteAsync(
@@ -650,6 +718,20 @@ public class WebContentProcessor : IWebContentProcessor
         ChunkingOptions? chunkingOptions = null,
         [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
+        if (crawlOptions != null)
+        {
+            var crawlValidation = crawlOptions.Validate();
+            if (!crawlValidation.IsValid)
+                throw new ArgumentException($"Invalid crawl options: {string.Join(", ", crawlValidation.Errors)}");
+        }
+
+        if (chunkingOptions != null)
+        {
+            var chunkValidation = chunkingOptions.Validate();
+            if (!chunkValidation.IsValid)
+                throw new ArgumentException($"Invalid chunking options: {string.Join(", ", chunkValidation.Errors)}");
+        }
+
         _logger.LogInformation("Processing website: {Url} (Dynamic: {Dynamic})",
             startUrl, crawlOptions?.UseDynamicRendering ?? false);
 
@@ -754,9 +836,53 @@ public class WebContentProcessor : IWebContentProcessor
         ChunkingOptions? chunkingOptions = null,
         CancellationToken cancellationToken = default)
     {
-        // Stub implementation
-        await Task.CompletedTask;
-        return new List<WebContentChunk>().AsReadOnly();
+        if (string.IsNullOrWhiteSpace(htmlContent))
+            throw new ArgumentException("HTML content cannot be null or empty", nameof(htmlContent));
+
+        if (chunkingOptions != null)
+        {
+            var validation = chunkingOptions.Validate();
+            if (!validation.IsValid)
+                throw new ArgumentException($"Invalid chunking options: {string.Join(", ", validation.Errors)}");
+        }
+
+        _logger.LogInformation("Processing HTML content from {SourceUrl}, Length={Length} chars",
+            sourceUrl, htmlContent.Length);
+
+        // 콘텐츠 추출
+        var extractor = _serviceFactory.CreateContentExtractor("text/html");
+        var extracted = await extractor.ExtractAutoAsync(
+            htmlContent,
+            sourceUrl,
+            "text/html",
+            cancellationToken).ConfigureAwait(false);
+
+        if (string.IsNullOrEmpty(extracted.MainContent) && string.IsNullOrEmpty(extracted.Text))
+        {
+            _logger.LogWarning("No extractable content from HTML for {SourceUrl}", sourceUrl);
+            return Array.Empty<WebContentChunk>();
+        }
+
+        // 청킹
+        var effectiveOptions = chunkingOptions ?? new ChunkingOptions
+        {
+            MaxChunkSize = 1000,
+            ChunkOverlap = 50,
+            PreserveHeaders = true
+        };
+
+        var chunkingStrategy = _serviceFactory.CreateChunkingStrategy(
+            effectiveOptions.Strategy.ToString());
+
+        var chunks = await chunkingStrategy.ChunkAsync(
+            extracted,
+            effectiveOptions,
+            cancellationToken).ConfigureAwait(false);
+
+        _logger.LogInformation("Generated {ChunkCount} chunks from HTML for {SourceUrl}",
+            chunks.Count, sourceUrl);
+
+        return chunks;
     }
 
     public async IAsyncEnumerable<ProcessingProgress> MonitorProgressAsync(string jobId)
@@ -799,6 +925,10 @@ public class WebContentProcessor : IWebContentProcessor
         var startTime = DateTimeOffset.UtcNow;
         var sw = System.Diagnostics.Stopwatch.StartNew();
         options ??= ExtractOptions.Default;
+
+        var optionsValidation = options.Validate();
+        if (!optionsValidation.IsValid)
+            throw new ArgumentException($"Invalid extract options: {string.Join(", ", optionsValidation.Errors)}");
 
         try
         {
@@ -992,6 +1122,10 @@ public class WebContentProcessor : IWebContentProcessor
         var startTime = DateTimeOffset.UtcNow;
         var sw = System.Diagnostics.Stopwatch.StartNew();
         options ??= ExtractOptions.Default;
+
+        var optionsValidation = options.Validate();
+        if (!optionsValidation.IsValid)
+            throw new ArgumentException($"Invalid extract options: {string.Join(", ", optionsValidation.Errors)}");
 
         var urlList = urls.ToList();
         var succeeded = new ConcurrentBag<ExtractedContent>();

@@ -1,9 +1,12 @@
+using WebFlux.Core.Interfaces;
+using WebFlux.Core.Models;
+
 namespace WebFlux.Core.Options;
 
 /// <summary>
 /// 멀티모달 처리 옵션 (Phase 5A.2)
 /// </summary>
-public class MultimodalProcessingOptions
+public class MultimodalProcessingOptions : IValidatable
 {
     /// <summary>처리할 최대 이미지 수 (기본값: 10)</summary>
     public int MaxImages { get; set; } = 10;
@@ -37,6 +40,33 @@ public class MultimodalProcessingOptions
 
     /// <summary>품질 향상 모드 활성화</summary>
     public bool EnableQualityEnhancement { get; set; } = true;
+
+    /// <inheritdoc />
+    public ValidationResult Validate()
+    {
+        var errors = new List<string>();
+
+        if (MaxImages <= 0)
+            errors.Add("MaxImages must be greater than 0");
+
+        if (MinimumConfidence < 0 || MinimumConfidence > 1)
+            errors.Add("MinimumConfidence must be between 0 and 1");
+
+        if (TimeoutSeconds <= 0)
+            errors.Add("TimeoutSeconds must be greater than 0");
+
+        if (MaxConcurrentImages <= 0)
+            errors.Add("MaxConcurrentImages must be greater than 0");
+
+        if (RetryCount < 0)
+            errors.Add("RetryCount must be greater than or equal to 0");
+
+        return new ValidationResult
+        {
+            IsValid = errors.Count == 0,
+            Errors = errors
+        };
+    }
 }
 
 /// <summary>

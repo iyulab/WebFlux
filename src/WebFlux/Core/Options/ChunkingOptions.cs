@@ -1,9 +1,12 @@
+using WebFlux.Core.Interfaces;
+using WebFlux.Core.Models;
+
 namespace WebFlux.Core.Options;
 
 /// <summary>
 /// 청킹 옵션을 정의하는 클래스
 /// </summary>
-public class ChunkingOptions
+public class ChunkingOptions : IValidatable
 {
     /// <summary>
     /// 청킹 전략 유형
@@ -130,6 +133,42 @@ public class ChunkingOptions
     /// EnableMultimodalProcessing이 true일 때만 사용됨
     /// </summary>
     public MultimodalProcessingOptions? MultimodalOptions { get; set; }
+
+    /// <inheritdoc />
+    public ValidationResult Validate()
+    {
+        var errors = new List<string>();
+
+        if (MaxChunkSize <= 0)
+            errors.Add("MaxChunkSize must be greater than 0");
+
+        if (MinChunkSize <= 0)
+            errors.Add("MinChunkSize must be greater than 0");
+
+        if (MaxChunkSize <= MinChunkSize)
+            errors.Add("MaxChunkSize must be greater than MinChunkSize");
+
+        if (ChunkOverlap < 0)
+            errors.Add("ChunkOverlap must be greater than or equal to 0");
+
+        if (ChunkOverlap >= MaxChunkSize)
+            errors.Add("ChunkOverlap must be less than MaxChunkSize");
+
+        if (SemanticThreshold < 0 || SemanticThreshold > 1)
+            errors.Add("SemanticThreshold must be between 0 and 1");
+
+        if (QualityThreshold < 0 || QualityThreshold > 1)
+            errors.Add("QualityThreshold must be between 0 and 1");
+
+        if (MaxParallelism <= 0)
+            errors.Add("MaxParallelism must be greater than 0");
+
+        return new ValidationResult
+        {
+            IsValid = errors.Count == 0,
+            Errors = errors
+        };
+    }
 }
 
 /// <summary>
