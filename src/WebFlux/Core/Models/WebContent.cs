@@ -100,6 +100,18 @@ public class ExtractedContent
     public double ReadingTimeMinutes { get; set; }
 
     /// <summary>
+    /// HTML→Markdown 직접 변환 결과 (구조 완전 보존)
+    /// HtmlContentCleaner 적용 후 ReverseMarkdown 변환
+    /// </summary>
+    public string? RawMarkdown { get; set; }
+
+    /// <summary>
+    /// 보일러플레이트 제거 후 핵심 콘텐츠 Markdown
+    /// TextDensityFilter 적용 후 변환 결과
+    /// </summary>
+    public string? FitMarkdown { get; set; }
+
+    /// <summary>
     /// 콘텐츠 품질 정보
     /// 콘텐츠 필터링 및 우선순위 결정에 사용
     /// </summary>

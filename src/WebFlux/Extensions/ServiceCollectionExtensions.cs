@@ -175,15 +175,23 @@ public static class ServiceCollectionExtensions
     /// <returns>서비스 컬렉션</returns>
     public static IServiceCollection AddWebFluxContentExtraction(this IServiceCollection services)
     {
-        // 기본 콘텐츠 추출기 등록 (BasicContentExtractor)
+        // 기본 콘텐츠 추출기 등록
         services.TryAddTransient<BasicContentExtractor>();
+        services.TryAddTransient<HtmlToMarkdownExtractor>();
 
-        // 키드 서비스로 콘텐츠 추출기 등록 (모든 콘텐츠 타입에 BasicContentExtractor 사용)
-        services.AddKeyedTransient<IContentExtractor, BasicContentExtractor>("Html");
+        // HTML 정리기 및 텍스트 밀도 필터 등록
+        services.TryAddTransient<HtmlContentCleaner>();
+        services.TryAddTransient<TextDensityFilter>();
+
+        // 키드 서비스로 콘텐츠 추출기 등록
+        // Html: HtmlToMarkdownExtractor (구조 보존 Markdown 변환)
+        services.AddKeyedTransient<IContentExtractor, HtmlToMarkdownExtractor>("Html");
+        // 기타 콘텐츠 타입은 BasicContentExtractor 유지
         services.AddKeyedTransient<IContentExtractor, BasicContentExtractor>("Text");
         services.AddKeyedTransient<IContentExtractor, BasicContentExtractor>("Json");
         services.AddKeyedTransient<IContentExtractor, BasicContentExtractor>("Markdown");
         services.AddKeyedTransient<IContentExtractor, BasicContentExtractor>("Xml");
+        // Default 폴백도 BasicContentExtractor
         services.AddKeyedTransient<IContentExtractor, BasicContentExtractor>("Default");
 
         // 콘텐츠 추출기 팩토리 등록

@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>프로그래밍 언어 - 나무위키 스타일</title>
+    <meta name="description" content="프로그래밍 언어에 대한 종합 백과사전 문서">
+    <link rel="stylesheet" href="/styles/wiki.css">
+</head>
+<body>
+    <header>
+        <nav role="navigation" class="gnb">
+            <a href="/">위키 홈</a>
+            <a href="/recent">최근 변경</a>
+            <a href="/random">랜덤</a>
+        </nav>
+        <div role="search">
+            <input type="search" placeholder="문서 검색..." />
+        </div>
+    </header>
+
+    <main>
+        <article>
+            <h1>프로그래밍 언어</h1>
+
+            <div class="wiki-toc">
+                <h2>목차</h2>
+                <ol>
+                    <li><a href="#overview">개요</a></li>
+                    <li><a href="#history">역사</a>
+                        <ol>
+                            <li><a href="#early">초기 언어</a></li>
+                            <li><a href="#modern">현대 언어</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#classification">분류</a>
+                        <ol>
+                            <li><a href="#paradigm">패러다임별</a></li>
+                            <li><a href="#typing">타입 시스템별</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#popular">주요 언어</a></li>
+                    <li><a href="#comparison">언어 비교</a></li>
+                    <li><a href="#future">미래 전망</a></li>
+                </ol>
+            </div>
+
+            <h2 id="overview">1. 개요</h2>
+
+            <p><strong>프로그래밍 언어</strong>(Programming Language)는 컴퓨터에 명령을 전달하기 위해 사용되는 형식 언어이다. 인간이 이해할 수 있는 형태로 알고리즘을 표현하며, 컴파일러나 인터프리터를 통해 기계어로 변환되어 실행된다.</p>
+
+            <p>현재 전 세계적으로 수백 가지의 프로그래밍 언어가 존재하며, 각각 고유한 특성과 용도를 가지고 있다. TIOBE 인덱스 기준 2024년 6월 현재 Python, C, C++, Java, C# 순으로 인기가 높다.</p>
+
+            <h2 id="history">2. 역사</h2>
+
+            <h3 id="early">2.1. 초기 언어</h3>
+
+            <p>최초의 프로그래밍 언어는 1950년대에 등장했다. FORTRAN(1957)은 과학 계산용으로, COBOL(1959)은 비즈니스 데이터 처리용으로 개발되었다.</p>
+
+            <details>
+                <summary>초기 프로그래밍 언어 연표 (클릭하여 펼치기)</summary>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>연도</th>
+                            <th>언어</th>
+                            <th>개발자</th>
+                            <th>특징</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>1957</td>
+                            <td>FORTRAN</td>
+                            <td>IBM (John Backus)</td>
+                            <td>최초의 고급 프로그래밍 언어</td>
+                        </tr>
+                        <tr>
+                            <td>1958</td>
+                            <td>LISP</td>
+                            <td>John McCarthy</td>
+                            <td>함수형 프로그래밍의 시초</td>
+                        </tr>
+                        <tr>
+                            <td>1959</td>
+                            <td>COBOL</td>
+                            <td>Grace Hopper 외</td>
+                            <td>비즈니스 데이터 처리</td>
+                        </tr>
+                        <tr>
+                            <td>1964</td>
+                            <td>BASIC</td>
+                            <td>Kemeny, Kurtz</td>
+                            <td>교육용 프로그래밍 언어</td>
+                        </tr>
+                        <tr>
+                            <td>1970</td>
+                            <td>Pascal</td>
+                            <td>Niklaus Wirth</td>
+                            <td>구조적 프로그래밍 교육용</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </details>
+
+            <h3 id="modern">2.2. 현대 언어</h3>
+
+            <p>1990년대 이후 인터넷의 발전과 함께 다양한 현대 프로그래밍 언어가 등장했다. Java(1995), Python(1991), JavaScript(1995), C#(2000) 등이 대표적이다.</p>
+
+            <p>특히 2010년대 이후에는 Rust(2010), Go(2009), Kotlin(2011), Swift(2014), TypeScript(2012) 등 기존 언어의 단점을 보완한 새로운 언어들이 빠르게 성장하고 있다.</p>
+
+            <h2 id="classification">3. 분류</h2>
+
+            <h3 id="paradigm">3.1. 패러다임별 분류</h3>
+
+            <ul>
+                <li><strong>절차적 프로그래밍</strong>: C, Pascal, FORTRAN
+                    <ul>
+                        <li>순차적 명령 실행에 중점</li>
+                        <li>함수/프로시저 단위로 코드 구조화</li>
+                    </ul>
+                </li>
+                <li><strong>객체지향 프로그래밍</strong>: Java, C#, Python, C++
+                    <ul>
+                        <li>객체(데이터 + 메서드) 중심 설계</li>
+                        <li>캡슐화, 상속, 다형성 지원</li>
+                    </ul>
+                </li>
+                <li><strong>함수형 프로그래밍</strong>: Haskell, Erlang, F#, Clojure
+                    <ul>
+                        <li>불변성과 순수 함수 중심</li>
+                        <li>부작용 최소화</li>
+                    </ul>
+                </li>
+                <li><strong>논리형 프로그래밍</strong>: Prolog
+                    <ul>
+                        <li>논리적 규칙 기반 문제 해결</li>
+                    </ul>
+                </li>
+            </ul>
+
+            <h3 id="typing">3.2. 타입 시스템별 분류</h3>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>분류</th>
+                        <th>설명</th>
+                        <th>예시</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>정적 타입</td>
+                        <td>컴파일 시 타입 검사</td>
+                        <td>Java, C#, C++, Go, Rust</td>
+                    </tr>
+                    <tr>
+                        <td>동적 타입</td>
+                        <td>런타임에 타입 결정</td>
+                        <td>Python, JavaScript, Ruby</td>
+                    </tr>
+                    <tr>
+                        <td>강타입</td>
+                        <td>암시적 타입 변환 제한</td>
+                        <td>Python, Java, Rust</td>
+                    </tr>
+                    <tr>
+                        <td>약타입</td>
+                        <td>암시적 타입 변환 허용</td>
+                        <td>JavaScript, PHP, C</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2 id="popular">4. 주요 언어</h2>
+
+            <details>
+                <summary>Python (클릭하여 상세 보기)</summary>
+                <p>1991년 귀도 반 로섬(Guido van Rossum)이 개발한 범용 프로그래밍 언어. 간결한 문법과 풍부한 라이브러리 생태계로 데이터 과학, 웹 개발, 자동화 등 다양한 분야에서 활용된다.</p>
+                <pre><code class="language-python"># Python 예제
+def fibonacci(n):
+    a, b = 0, 1
+    for _ in range(n):
+        yield a
+        a, b = b, a + b
+
+for num in fibonacci(10):
+    print(num)</code></pre>
+            </details>
+
+            <details>
+                <summary>C# (클릭하여 상세 보기)</summary>
+                <p>2000년 Microsoft가 .NET 플랫폼을 위해 개발한 객체지향 프로그래밍 언어. Anders Hejlsberg가 설계했으며, Java의 영향을 받았으나 독자적인 발전을 이루었다.</p>
+                <pre><code class="language-csharp">// C# 예제
+public static IEnumerable&lt;int&gt; Fibonacci(int count)
+{
+    int a = 0, b = 1;
+    for (int i = 0; i &lt; count; i++)
+    {
+        yield return a;
+        (a, b) = (b, a + b);
+    }
+}
+
+foreach (var num in Fibonacci(10))
+    Console.WriteLine(num);</code></pre>
+            </details>
+
+            <h2 id="comparison">5. 언어 비교</h2>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>언어</th>
+                        <th>성능</th>
+                        <th>생산성</th>
+                        <th>학습 난이도</th>
+                        <th>주요 용도</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>C</td>
+                        <td>매우 높음</td>
+                        <td>낮음</td>
+                        <td>높음</td>
+                        <td>시스템 프로그래밍, 임베디드</td>
+                    </tr>
+                    <tr>
+                        <td>Python</td>
+                        <td>낮음</td>
+                        <td>매우 높음</td>
+                        <td>낮음</td>
+                        <td>데이터 과학, 웹, 자동화</td>
+                    </tr>
+                    <tr>
+                        <td>Java</td>
+                        <td>높음</td>
+                        <td>중간</td>
+                        <td>중간</td>
+                        <td>엔터프라이즈, Android</td>
+                    </tr>
+                    <tr>
+                        <td>C#</td>
+                        <td>높음</td>
+                        <td>높음</td>
+                        <td>중간</td>
+                        <td>엔터프라이즈, 게임, 웹</td>
+                    </tr>
+                    <tr>
+                        <td>Rust</td>
+                        <td>매우 높음</td>
+                        <td>중간</td>
+                        <td>매우 높음</td>
+                        <td>시스템, WebAssembly</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2 id="future">6. 미래 전망</h2>
+
+            <p>AI와 머신러닝의 발전으로 프로그래밍 언어의 역할도 변화하고 있다. AI 기반 코드 생성 도구의 등장으로 프로그래밍의 진입 장벽은 낮아지는 반면, 시스템 수준의 이해와 아키텍처 설계 능력의 중요성은 더욱 커질 전망이다.</p>
+        </article>
+    </main>
+
+    <aside class="sidebar">
+        <div class="widget menu">
+            <h3>관련 문서</h3>
+            <ul>
+                <li><a href="/wiki/compiler">컴파일러</a></li>
+                <li><a href="/wiki/interpreter">인터프리터</a></li>
+                <li><a href="/wiki/oop">객체지향 프로그래밍</a></li>
+            </ul>
+        </div>
+    </aside>
+
+    <footer>
+        <nav>
+            <a href="/terms">이용약관</a>
+            <a href="/privacy">개인정보처리방침</a>
+            <a href="/contact">문의</a>
+        </nav>
+        <p>이 문서의 내용은 CC BY-NC-SA 2.0 KR에 따라 이용할 수 있습니다.</p>
+    </footer>
+</body>
+</html>

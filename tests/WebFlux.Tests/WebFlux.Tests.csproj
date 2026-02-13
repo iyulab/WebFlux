@@ -27,4 +27,9 @@
     <ProjectReference Include="..\..\src\WebFlux\WebFlux.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="Fixtures\HtmlSnapshots\**" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Fixtures\GoldenFiles\**" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

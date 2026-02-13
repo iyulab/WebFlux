@@ -39,6 +39,9 @@
     <!-- 마크다운 문서 처리 -->
     <PackageReference Include="Markdig" />
 
+    <!-- HTML → Markdown 변환 -->
+    <PackageReference Include="ReverseMarkdown" />
+
     <!-- YAML 설정 파일 분석 -->
     <PackageReference Include="YamlDotNet" />
 

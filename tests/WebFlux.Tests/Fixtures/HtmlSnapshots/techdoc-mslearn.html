@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Getting started with ASP.NET Core - Microsoft Learn</title>
+    <meta name="description" content="Learn how to create a web app with ASP.NET Core using this step-by-step tutorial.">
+    <link rel="stylesheet" href="/styles/docs.css">
+</head>
+<body>
+    <header id="ms-header">
+        <nav role="navigation">
+            <a href="/">Microsoft Learn</a>
+            <a href="/dotnet">.NET</a>
+            <a href="/azure">Azure</a>
+            <a href="/training">Training</a>
+        </nav>
+        <div role="search">
+            <input type="search" placeholder="Search Microsoft Learn..." />
+        </div>
+    </header>
+
+    <div class="breadcrumb">
+        <a href="/">Home</a> &gt; <a href="/dotnet">.NET</a> &gt; <a href="/aspnet">ASP.NET Core</a>
+    </div>
+
+    <aside class="sidebar">
+        <nav>
+            <h3>In this article</h3>
+            <ul>
+                <li><a href="#prerequisites">Prerequisites</a></li>
+                <li><a href="#create-project">Create a project</a></li>
+                <li><a href="#run-app">Run the app</a></li>
+                <li><a href="#next-steps">Next steps</a></li>
+            </ul>
+        </nav>
+    </aside>
+
+    <main>
+        <article>
+            <h1>Getting started with ASP.NET Core</h1>
+
+            <div class="metadata">
+                <span>Article</span>
+                <span>Last updated: 06/15/2024</span>
+                <span>12 min read</span>
+            </div>
+
+            <p>This tutorial teaches you the basics of building a web app with ASP.NET Core. You'll learn how to create a project, add a controller, and run your first application.</p>
+
+            <div class="note">
+                <p><strong>Note:</strong> This tutorial uses .NET 8. Make sure you have the latest SDK installed.</p>
+            </div>
+
+            <h2 id="prerequisites">Prerequisites</h2>
+
+            <ul>
+                <li><a href="/dotnet/download">.NET 8 SDK</a> or later</li>
+                <li>Visual Studio 2022 or Visual Studio Code</li>
+                <li>C# Dev Kit extension (for VS Code)</li>
+            </ul>
+
+            <h2 id="create-project">Create a web app project</h2>
+
+            <p>Open a terminal and run the following commands:</p>
+
+            <div class="code-tabs">
+                <div class="tab active" data-tab="cli">.NET CLI</div>
+                <div class="tab" data-tab="vs">Visual Studio</div>
+            </div>
+
+            <pre><code class="language-bash">dotnet new webapp -o MyWebApp
+cd MyWebApp</code></pre>
+
+            <p>The <code>dotnet new webapp</code> command creates a new ASP.NET Core web app in the <code>MyWebApp</code> directory. The project template includes:</p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>File/Folder</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>Program.cs</code></td>
+                        <td>App entry point and middleware configuration</td>
+                    </tr>
+                    <tr>
+                        <td><code>Pages/</code></td>
+                        <td>Razor Pages for the UI</td>
+                    </tr>
+                    <tr>
+                        <td><code>wwwroot/</code></td>
+                        <td>Static files (CSS, JS, images)</td>
+                    </tr>
+                    <tr>
+                        <td><code>appsettings.json</code></td>
+                        <td>Configuration settings</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>Examine Program.cs</h3>
+
+            <pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+
+// Add services to the container.
+builder.Services.AddRazorPages();
+
+var app = builder.Build();
+
+// Configure the HTTP request pipeline.
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler("/Error");
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+app.UseRouting();
+app.UseAuthorization();
+app.MapRazorPages();
+
+app.Run();</code></pre>
+
+            <p>The preceding code:</p>
+
+            <ol>
+                <li>Creates a <code>WebApplicationBuilder</code> with preconfigured defaults</li>
+                <li>Adds Razor Pages services to the dependency injection container</li>
+                <li>Builds the app and configures the HTTP request pipeline</li>
+                <li>Maps Razor Pages endpoints and runs the app</li>
+            </ol>
+
+            <h2 id="run-app">Run the app</h2>
+
+            <pre><code class="language-bash">dotnet run</code></pre>
+
+            <p>Open a browser and navigate to <code>https://localhost:5001</code>. You should see the default ASP.NET Core welcome page.</p>
+
+            <div class="important">
+                <p><strong>Important:</strong> In production, always use HTTPS and configure proper security headers.</p>
+            </div>
+
+            <h2 id="next-steps">Next steps</h2>
+
+            <ul>
+                <li><a href="/aspnet/razor-pages">Introduction to Razor Pages</a></li>
+                <li><a href="/aspnet/mvc">Get started with MVC</a></li>
+                <li><a href="/aspnet/web-api">Create a web API</a></li>
+                <li><a href="/aspnet/blazor">Build interactive web UIs with Blazor</a></li>
+            </ul>
+
+            <div class="feedback">
+                <p>Was this article helpful?</p>
+                <button>Yes</button>
+                <button>No</button>
+            </div>
+        </article>
+    </main>
+
+    <div class="newsletter">
+        <h3>Stay informed</h3>
+        <p>Sign up for the .NET newsletter</p>
+        <input type="email" placeholder="Enter your email" />
+        <button>Subscribe</button>
+    </div>
+
+    <footer>
+        <nav>
+            <a href="/terms">Terms of Use</a>
+            <a href="/privacy">Privacy</a>
+            <a href="/trademark">Trademarks</a>
+        </nav>
+        <p>&copy; Microsoft 2024</p>
+    </footer>
+</body>
+</html>

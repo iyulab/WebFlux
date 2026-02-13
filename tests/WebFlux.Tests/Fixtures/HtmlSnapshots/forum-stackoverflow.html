@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>How to implement dependency injection in .NET 8 minimal API? - Developer Forum</title>
+    <meta name="description" content="Q&A about implementing DI in .NET 8 minimal APIs.">
+    <link rel="stylesheet" href="/styles/forum.css">
+</head>
+<body>
+    <header>
+        <nav role="navigation">
+            <a href="/">Forum</a>
+            <a href="/questions">Questions</a>
+            <a href="/tags">Tags</a>
+            <a href="/users">Users</a>
+        </nav>
+        <div role="search">
+            <input type="search" placeholder="Search..." />
+        </div>
+    </header>
+
+    <main>
+        <article class="question">
+            <div class="vote-cell">
+                <button class="vote-up">&#9650;</button>
+                <span class="vote-count">47</span>
+                <button class="vote-down">&#9660;</button>
+                <button class="bookmark">&#9734;</button>
+            </div>
+
+            <div class="post-body">
+                <h1>How to implement dependency injection in .NET 8 minimal API?</h1>
+
+                <div class="tags">
+                    <a href="/tags/dotnet">.net</a>
+                    <a href="/tags/csharp">c#</a>
+                    <a href="/tags/dependency-injection">dependency-injection</a>
+                    <a href="/tags/minimal-api">minimal-api</a>
+                </div>
+
+                <p>I'm migrating from a traditional ASP.NET Core MVC application to .NET 8 minimal APIs. In MVC, I used constructor injection in controllers, but I'm unsure how to properly implement DI in minimal API endpoints.</p>
+
+                <p>Here's what I currently have:</p>
+
+                <pre><code class="language-csharp">// My service interface
+public interface IUserService
+{
+    Task&lt;User?&gt; GetByIdAsync(int id);
+    Task&lt;IEnumerable&lt;User&gt;&gt; GetAllAsync();
+}
+
+// Registration in Program.cs
+builder.Services.AddScoped&lt;IUserService, UserService&gt;();
+
+// How do I inject IUserService into my endpoint?
+app.MapGet("/users/{id}", /* ??? */);</code></pre>
+
+                <p>What's the recommended way to inject services into minimal API endpoints? Is there a difference between injecting from the DI container vs. using parameter binding?</p>
+
+                <div class="post-meta">
+                    <span>asked Jun 15, 2024</span>
+                    <span class="author">NewToDotNet - 1,234 reputation</span>
+                </div>
+            </div>
+        </article>
+
+        <div class="answers">
+            <h2>3 Answers</h2>
+
+            <article class="answer accepted">
+                <div class="vote-cell">
+                    <button class="vote-up">&#9650;</button>
+                    <span class="vote-count">89</span>
+                    <button class="vote-down">&#9660;</button>
+                    <span class="accepted-check">&#10004;</span>
+                </div>
+
+                <div class="post-body">
+                    <p>In .NET 8 minimal APIs, you can inject services directly as parameters in your endpoint handlers. The framework will automatically resolve them from the DI container:</p>
+
+                    <pre><code class="language-csharp">// Method 1: Direct parameter injection (recommended)
+app.MapGet("/users/{id}", async (int id, IUserService userService) =&gt;
+{
+    var user = await userService.GetByIdAsync(id);
+    return user is not null ? Results.Ok(user) : Results.NotFound();
+});
+
+// Method 2: Using [FromServices] attribute (explicit)
+app.MapGet("/users", async ([FromServices] IUserService userService) =&gt;
+{
+    return Results.Ok(await userService.GetAllAsync());
+});</code></pre>
+
+                    <p>The first approach is recommended because .NET 8 automatically recognizes registered services and injects them without needing any attribute.</p>
+
+                    <h3>Advanced: Using Endpoint Filters for Cross-Cutting Concerns</h3>
+
+                    <pre><code class="language-csharp">app.MapGet("/users/{id}", async (int id, IUserService userService) =&gt;
+{
+    return await userService.GetByIdAsync(id);
+})
+.AddEndpointFilter(async (context, next) =&gt;
+{
+    var logger = context.HttpContext.RequestServices.GetRequiredService&lt;ILogger&lt;Program&gt;&gt;();
+    logger.LogInformation("Endpoint called: {Path}", context.HttpContext.Request.Path);
+    return await next(context);
+});</code></pre>
+
+                    <p>For more complex scenarios, you can also use <strong>typed endpoint handlers</strong>:</p>
+
+                    <pre><code class="language-csharp">public class UserEndpoints
+{
+    public static async Task&lt;IResult&gt; GetById(int id, IUserService userService)
+    {
+        var user = await userService.GetByIdAsync(id);
+        return user is not null ? Results.Ok(user) : Results.NotFound();
+    }
+}
+
+// Registration
+app.MapGet("/users/{id}", UserEndpoints.GetById);</code></pre>
+
+                    <div class="post-meta">
+                        <span>answered Jun 15, 2024</span>
+                        <span class="author">DotNetExpert - 45,678 reputation</span>
+                    </div>
+                </div>
+            </article>
+
+            <article class="answer">
+                <div class="vote-cell">
+                    <button class="vote-up">&#9650;</button>
+                    <span class="vote-count">23</span>
+                    <button class="vote-down">&#9660;</button>
+                </div>
+
+                <div class="post-body">
+                    <p>Adding to the accepted answer, if you need to organize your endpoints into groups (like controllers), you can use <code>MapGroup</code>:</p>
+
+                    <pre><code class="language-csharp">var users = app.MapGroup("/users");
+
+users.MapGet("/", async (IUserService service) =&gt; await service.GetAllAsync());
+users.MapGet("/{id}", async (int id, IUserService service) =&gt; await service.GetByIdAsync(id));</code></pre>
+
+                    <div class="post-meta">
+                        <span>answered Jun 16, 2024</span>
+                        <span class="author">CSharpDev - 12,345 reputation</span>
+                    </div>
+                </div>
+            </article>
+        </div>
+    </main>
+
+    <aside class="sidebar widget">
+        <h3>Related Questions</h3>
+        <ul>
+            <li><a href="/q/1001">Difference between AddScoped vs AddTransient</a></li>
+            <li><a href="/q/1002">How to register multiple implementations</a></li>
+            <li><a href="/q/1003">DI in background services</a></li>
+        </ul>
+    </aside>
+
+    <div class="social-links">
+        <a href="/rss">RSS</a>
+        <a href="https://twitter.com">Twitter</a>
+    </div>
+
+    <footer>
+        <nav>
+            <a href="/about">About</a>
+            <a href="/legal">Legal</a>
+            <a href="/privacy">Privacy Policy</a>
+            <a href="/terms">Terms of Service</a>
+        </nav>
+        <p>&copy; 2024 Developer Forum</p>
+    </footer>
+</body>
+</html>

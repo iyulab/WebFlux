@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Building a REST API with .NET 8 - DEV Community Style</title>
+    <meta name="description" content="A step-by-step guide to building a REST API with .NET 8 minimal APIs.">
+    <link rel="stylesheet" href="/styles/devto.css">
+</head>
+<body>
+    <header>
+        <nav role="navigation">
+            <a href="/" class="logo">DEV</a>
+            <div role="search"><input type="search" placeholder="Search..." /></div>
+            <a href="/enter">Log in</a>
+            <a href="/enter?state=new-user">Create account</a>
+        </nav>
+    </header>
+
+    <aside class="sidebar widget">
+        <nav>
+            <ul>
+                <li><a href="/">Home</a></li>
+                <li><a href="/podcasts">Podcasts</a></li>
+                <li><a href="/videos">Videos</a></li>
+                <li><a href="/tags">Tags</a></li>
+                <li><a href="/faq">FAQ</a></li>
+            </ul>
+        </nav>
+        <div class="menu">
+            <h3>Popular Tags</h3>
+            <a href="/t/javascript">#javascript</a>
+            <a href="/t/dotnet">#dotnet</a>
+            <a href="/t/webdev">#webdev</a>
+            <a href="/t/react">#react</a>
+        </div>
+    </aside>
+
+    <main>
+        <article>
+            <div class="article-header">
+                <img src="/avatars/dotnet-dev.jpg" alt="Author" />
+                <div>
+                    <a href="/dotnetdev">DotNetDev</a>
+                    <time datetime="2024-06-15">Jun 15</time>
+                </div>
+            </div>
+
+            <h1>Building a REST API with .NET 8</h1>
+
+            <div class="tags">
+                <a href="/t/dotnet">#dotnet</a>
+                <a href="/t/csharp">#csharp</a>
+                <a href="/t/api">#api</a>
+                <a href="/t/tutorial">#tutorial</a>
+            </div>
+
+            <div class="reactions">
+                <button>&#x2764; 156</button>
+                <button>&#x1f4ac; 23</button>
+                <button>&#x1f516; 89</button>
+            </div>
+
+            <p>.NET 8 introduced significant improvements for building REST APIs with minimal APIs. In this tutorial, I'll walk you through creating a complete CRUD API from scratch.</p>
+
+            <h2>Project Setup</h2>
+
+            <p>First, create a new project:</p>
+
+            <pre><code class="language-bash">dotnet new webapi -o TodoApi --use-minimal-apis
+cd TodoApi</code></pre>
+
+            <h2>Defining the Model</h2>
+
+            <p>Create a simple Todo model:</p>
+
+            <pre><code class="language-csharp">public record Todo(int Id, string Title, bool IsCompleted);</code></pre>
+
+            <h2>Creating Endpoints</h2>
+
+            <p>With minimal APIs, you can define endpoints directly in <code>Program.cs</code>:</p>
+
+            <pre><code class="language-csharp">var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
+
+var todos = new List&lt;Todo&gt;();
+
+app.MapGet("/todos", () =&gt; todos);
+
+app.MapGet("/todos/{id}", (int id) =&gt;
+    todos.FirstOrDefault(t =&gt; t.Id == id) is Todo todo
+        ? Results.Ok(todo)
+        : Results.NotFound());
+
+app.MapPost("/todos", (Todo todo) =&gt;
+{
+    todos.Add(todo);
+    return Results.Created($"/todos/{todo.Id}", todo);
+});
+
+app.MapPut("/todos/{id}", (int id, Todo updated) =&gt;
+{
+    var index = todos.FindIndex(t =&gt; t.Id == id);
+    if (index == -1) return Results.NotFound();
+    todos[index] = updated;
+    return Results.NoContent();
+});
+
+app.MapDelete("/todos/{id}", (int id) =&gt;
+{
+    var todo = todos.FirstOrDefault(t =&gt; t.Id == id);
+    if (todo is null) return Results.NotFound();
+    todos.Remove(todo);
+    return Results.NoContent();
+});
+
+app.Run();</code></pre>
+
+            <h2>Adding Validation</h2>
+
+            <p>For production APIs, you should add proper validation. Here's a simple approach:</p>
+
+            <pre><code class="language-csharp">app.MapPost("/todos", (Todo todo) =&gt;
+{
+    if (string.IsNullOrWhiteSpace(todo.Title))
+        return Results.BadRequest("Title is required");
+
+    todos.Add(todo);
+    return Results.Created($"/todos/{todo.Id}", todo);
+});</code></pre>
+
+            <h2>Testing the API</h2>
+
+            <p>Use <code>curl</code> or any HTTP client to test:</p>
+
+            <pre><code class="language-bash"># Create a todo
+curl -X POST https://localhost:5001/todos \
+  -H "Content-Type: application/json" \
+  -d '{"id": 1, "title": "Learn .NET 8", "isCompleted": false}'
+
+# Get all todos
+curl https://localhost:5001/todos</code></pre>
+
+            <h2>Summary</h2>
+
+            <p>Minimal APIs in .NET 8 make it incredibly easy to build REST APIs with minimal boilerplate. Key takeaways:</p>
+
+            <ol>
+                <li>Use <code>record</code> types for immutable data models</li>
+                <li>Map HTTP methods directly with <code>MapGet</code>, <code>MapPost</code>, etc.</li>
+                <li>Use <code>Results</code> helper class for standardized responses</li>
+                <li>Always add validation for production code</li>
+            </ol>
+
+            <p>Happy coding! Let me know in the comments if you have any questions.</p>
+        </article>
+    </main>
+
+    <div class="reactions">
+        <button>&#x2764; Like</button>
+        <button>&#x1f4ac; Comment</button>
+        <button>&#x1f516; Save</button>
+    </div>
+
+    <section class="comment-section" id="comments">
+        <h3>Discussion (23)</h3>
+        <div class="comment">
+            <img src="/avatars/user1.jpg" alt="User1" />
+            <p>This is great! Could you add a section about authentication?</p>
+        </div>
+        <div class="comment">
+            <img src="/avatars/user2.jpg" alt="User2" />
+            <p>Nice tutorial. I'd recommend using FluentValidation instead of manual checks.</p>
+        </div>
+    </section>
+
+    <aside class="sidebar widget">
+        <h3>Read next</h3>
+        <ul>
+            <li><a href="/post1">Understanding Dependency Injection in .NET</a></li>
+            <li><a href="/post2">Entity Framework Core Tips and Tricks</a></li>
+        </ul>
+    </aside>
+
+    <footer>
+        <nav>
+            <a href="/about">About</a>
+            <a href="/contact">Contact</a>
+            <a href="/guides">Guides</a>
+            <a href="/terms">Terms</a>
+            <a href="/privacy">Privacy</a>
+        </nav>
+        <p>Built with love and code</p>
+    </footer>
+</body>
+</html>

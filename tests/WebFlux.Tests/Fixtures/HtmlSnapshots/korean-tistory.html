@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>C# 비동기 프로그래밍 완벽 가이드 - async/await의 모든 것</title>
+    <meta name="description" content="C#의 async/await 패턴을 실무 예제와 함께 상세히 알아봅니다.">
+    <link rel="stylesheet" href="/skin/style.css">
+</head>
+<body>
+    <div id="container">
+        <div id="header_area">
+            <div class="blog-title">
+                <a href="/">개발자의 기록</a>
+            </div>
+            <div class="gnb">
+                <a href="/">홈</a>
+                <a href="/category">카테고리</a>
+                <a href="/tag">태그</a>
+                <a href="/guestbook">방명록</a>
+            </div>
+        </div>
+
+        <div id="content">
+            <div class="sidebar" id="sidebar">
+                <div class="widget">
+                    <h3>카테고리</h3>
+                    <ul>
+                        <li><a href="/category/csharp">C# (42)</a></li>
+                        <li><a href="/category/dotnet">.NET (38)</a></li>
+                        <li><a href="/category/aspnet">ASP.NET (25)</a></li>
+                        <li><a href="/category/database">데이터베이스 (18)</a></li>
+                        <li><a href="/category/devops">DevOps (12)</a></li>
+                    </ul>
+                </div>
+                <div class="widget">
+                    <h3>최근 글</h3>
+                    <ul>
+                        <li><a href="/post/100">EF Core 성능 최적화 팁</a></li>
+                        <li><a href="/post/99">Docker로 .NET 앱 배포하기</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <main>
+                <article class="post-content entry">
+                    <h1>C# 비동기 프로그래밍 완벽 가이드 - async/await의 모든 것</h1>
+
+                    <div class="post-meta">
+                        <span class="date">2024. 6. 15. 14:30</span>
+                        <span class="category"><a href="/category/csharp">C#</a></span>
+                    </div>
+
+                    <p>C#에서 비동기 프로그래밍은 현대 애플리케이션 개발의 핵심입니다. 이 글에서는 async/await 패턴의 기본 개념부터 고급 활용법까지 실무 예제와 함께 상세히 알아보겠습니다.</p>
+
+                    <h2>1. 비동기 프로그래밍이란?</h2>
+
+                    <p>비동기 프로그래밍은 시간이 오래 걸리는 작업(I/O, 네트워크 요청 등)을 실행하는 동안 스레드를 차단하지 않고 다른 작업을 수행할 수 있게 하는 프로그래밍 패러다임입니다. 이를 통해 애플리케이션의 응답성과 처리량을 크게 향상시킬 수 있습니다.</p>
+
+                    <h2>2. async/await 기본 문법</h2>
+
+                    <p><code>async</code> 키워드는 메서드가 비동기임을 나타내고, <code>await</code> 키워드는 비동기 작업의 완료를 기다립니다.</p>
+
+                    <pre><code class="language-csharp">// 기본적인 async/await 사용법
+public async Task&lt;string&gt; FetchDataAsync(string url)
+{
+    using var httpClient = new HttpClient();
+    var response = await httpClient.GetStringAsync(url);
+    return response;
+}
+
+// 호출하는 측
+var data = await FetchDataAsync("https://api.example.com/data");</code></pre>
+
+                    <h3>핵심 규칙</h3>
+
+                    <ol>
+                        <li><code>async</code> 메서드는 반드시 <code>Task</code>, <code>Task&lt;T&gt;</code>, 또는 <code>ValueTask&lt;T&gt;</code>를 반환해야 합니다</li>
+                        <li><code>await</code>는 <code>async</code> 메서드 내부에서만 사용할 수 있습니다</li>
+                        <li>비동기 메서드 이름에는 <code>Async</code> 접미사를 붙이는 것이 관례입니다</li>
+                        <li><code>async void</code>는 이벤트 핸들러에서만 사용하고, 일반적으로는 피해야 합니다</li>
+                    </ol>
+
+                    <h2>3. 병렬 비동기 실행</h2>
+
+                    <p>여러 비동기 작업을 동시에 실행하려면 <code>Task.WhenAll</code>을 사용합니다.</p>
+
+                    <pre><code class="language-csharp">public async Task&lt;DashboardData&gt; GetDashboardAsync()
+{
+    // 세 개의 API 호출을 동시에 실행
+    var usersTask = GetUsersAsync();
+    var ordersTask = GetOrdersAsync();
+    var statsTask = GetStatsAsync();
+
+    await Task.WhenAll(usersTask, ordersTask, statsTask);
+
+    return new DashboardData
+    {
+        Users = await usersTask,
+        Orders = await ordersTask,
+        Stats = await statsTask
+    };
+}</code></pre>
+
+                    <h2>4. CancellationToken 활용</h2>
+
+                    <p>장시간 실행되는 비동기 작업에는 반드시 <code>CancellationToken</code>을 전달하여 취소 가능하게 만들어야 합니다.</p>
+
+                    <pre><code class="language-csharp">public async Task ProcessDataAsync(CancellationToken cancellationToken = default)
+{
+    foreach (var item in largeDataSet)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        await ProcessItemAsync(item, cancellationToken);
+    }
+}</code></pre>
+
+                    <h2>5. 흔한 실수와 해결법</h2>
+
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>실수</th>
+                                <th>문제점</th>
+                                <th>해결법</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>.Result</code> 또는 <code>.Wait()</code> 사용</td>
+                                <td>데드락 발생 가능</td>
+                                <td><code>await</code> 사용</td>
+                            </tr>
+                            <tr>
+                                <td><code>async void</code> 메서드</td>
+                                <td>예외 처리 불가</td>
+                                <td><code>async Task</code> 사용</td>
+                            </tr>
+                            <tr>
+                                <td>불필요한 <code>async/await</code></td>
+                                <td>오버헤드 추가</td>
+                                <td>Task를 직접 반환</td>
+                            </tr>
+                            <tr>
+                                <td><code>ConfigureAwait(false)</code> 누락</td>
+                                <td>라이브러리에서 데드락</td>
+                                <td>라이브러리 코드에 추가</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h2>마무리</h2>
+
+                    <p>비동기 프로그래밍은 처음에는 복잡하게 느껴질 수 있지만, 기본 원칙을 이해하면 강력하고 효율적인 애플리케이션을 만들 수 있는 필수 도구입니다. 특히 웹 서버, 데이터베이스 작업, 파일 I/O 등에서 비동기 패턴을 적극 활용하시기 바랍니다.</p>
+
+                    <div class="post-tags">
+                        <a href="/tag/csharp">#C#</a>
+                        <a href="/tag/async">#비동기</a>
+                        <a href="/tag/dotnet">#dotnet</a>
+                        <a href="/tag/programming">#프로그래밍</a>
+                    </div>
+                </article>
+            </main>
+        </div>
+
+        <div class="social-share share-buttons">
+            <button>카카오톡 공유</button>
+            <button>페이스북 공유</button>
+            <button>트위터 공유</button>
+        </div>
+
+        <div class="related-posts">
+            <h3>관련 글</h3>
+            <ul>
+                <li><a href="/post/95">C# LINQ 완벽 가이드</a></li>
+                <li><a href="/post/90">Task vs ValueTask 비교</a></li>
+            </ul>
+        </div>
+
+        <section class="comment-section" id="comments">
+            <h3>댓글 15개</h3>
+            <div class="comment">
+                <span>개발초보:</span> 정말 잘 정리된 글이네요! 감사합니다.
+            </div>
+        </section>
+
+        <div id="footer_area">
+            <p>&copy; 2024 개발자의 기록. Powered by Tistory.</p>
+        </div>
+    </div>
+</body>
+</html>

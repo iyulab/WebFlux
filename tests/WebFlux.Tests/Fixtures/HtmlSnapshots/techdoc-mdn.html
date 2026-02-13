@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Array.prototype.map() - JavaScript | Web Docs</title>
+    <meta name="description" content="The map() method creates a new array populated with the results of calling a provided function on every element.">
+    <link rel="stylesheet" href="/styles/docs.css">
+</head>
+<body>
+    <header>
+        <nav role="navigation" class="main-nav">
+            <a href="/">Home</a>
+            <a href="/docs/Web">Web Technologies</a>
+            <a href="/docs/Web/JavaScript">JavaScript</a>
+            <a href="/docs/Web/API">Web APIs</a>
+        </nav>
+        <div role="search">
+            <input type="search" placeholder="Search docs..." />
+        </div>
+    </header>
+
+    <aside class="sidebar">
+        <nav class="sidebar-nav">
+            <h3>JavaScript Reference</h3>
+            <ul>
+                <li><a href="/Array">Array</a></li>
+                <li><a href="/Array/from">Array.from()</a></li>
+                <li><a href="/Array/isArray">Array.isArray()</a></li>
+                <li><a href="/Array/map" class="active">Array.prototype.map()</a></li>
+                <li><a href="/Array/filter">Array.prototype.filter()</a></li>
+                <li><a href="/Array/reduce">Array.prototype.reduce()</a></li>
+                <li><a href="/Array/forEach">Array.prototype.forEach()</a></li>
+            </ul>
+        </nav>
+    </aside>
+
+    <main>
+        <article>
+            <div class="breadcrumb">
+                <a href="/docs">Docs</a> &gt; <a href="/docs/JavaScript">JavaScript</a> &gt; <a href="/docs/Array">Array</a>
+            </div>
+
+            <h1>Array.prototype.map()</h1>
+
+            <div class="note">
+                <p>The <code>map()</code> method of <code>Array</code> instances creates a new array populated with the results of calling a provided function on every element in the calling array.</p>
+            </div>
+
+            <h2>Syntax</h2>
+
+            <pre><code class="language-javascript">map(callbackFn)
+map(callbackFn, thisArg)</code></pre>
+
+            <h3>Parameters</h3>
+
+            <dl>
+                <dt><code>callbackFn</code></dt>
+                <dd>A function to execute for each element in the array. Its return value is added as a single element in the new array. The function is called with the following arguments:
+                    <dl>
+                        <dt><code>element</code></dt>
+                        <dd>The current element being processed in the array.</dd>
+                        <dt><code>index</code></dt>
+                        <dd>The index of the current element being processed in the array.</dd>
+                        <dt><code>array</code></dt>
+                        <dd>The array <code>map()</code> was called upon.</dd>
+                    </dl>
+                </dd>
+                <dt><code>thisArg</code> <span class="optional">Optional</span></dt>
+                <dd>A value to use as <code>this</code> when executing <code>callbackFn</code>.</dd>
+            </dl>
+
+            <h3>Return value</h3>
+
+            <p>A new array with each element being the result of the callback function.</p>
+
+            <h2>Description</h2>
+
+            <p>The <code>map()</code> method is an iterative method. It calls a provided <code>callbackFn</code> function once for each element in an array and constructs a new array from the results. <code>callbackFn</code> is invoked only for indexes of the array which have assigned values. It is not invoked for empty slots in sparse arrays.</p>
+
+            <p>The <code>map()</code> method is a copying method. It does not alter <code>this</code>. However, the function provided as <code>callbackFn</code> can mutate the array. Note, however, that the length of the array is saved before the first invocation of <code>callbackFn</code>.</p>
+
+            <h2>Examples</h2>
+
+            <h3>Mapping an array of numbers to an array of square roots</h3>
+
+            <pre><code class="language-javascript">const numbers = [1, 4, 9];
+const roots = numbers.map((num) =&gt; Math.sqrt(num));
+
+// roots is now     [1, 2, 3]
+// numbers is still [1, 4, 9]</code></pre>
+
+            <h3>Using map to reformat objects in an array</h3>
+
+            <pre><code class="language-javascript">const kvArray = [
+  { key: 1, value: 10 },
+  { key: 2, value: 20 },
+  { key: 3, value: 30 },
+];
+
+const reformattedArray = kvArray.map(({ key, value }) =&gt; ({
+  [key]: value,
+}));
+
+console.log(reformattedArray);
+// [{ 1: 10 }, { 2: 20 }, { 3: 30 }]</code></pre>
+
+            <h3>Using map generically</h3>
+
+            <pre><code class="language-javascript">const map = Array.prototype.map;
+const charCodes = map.call("Hello World", (x) =&gt; x.charCodeAt(0));
+// charCodes now equals [72, 101, 108, 108, 111, 32, 87, 111, 114, 108, 100]</code></pre>
+
+            <h2>Specifications</h2>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Specification</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>ECMAScript Language Specification # sec-array.prototype.map</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2>Browser Compatibility</h2>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Browser</th>
+                        <th>Version</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Chrome</td>
+                        <td>1</td>
+                    </tr>
+                    <tr>
+                        <td>Firefox</td>
+                        <td>1.5</td>
+                    </tr>
+                    <tr>
+                        <td>Safari</td>
+                        <td>3</td>
+                    </tr>
+                    <tr>
+                        <td>Edge</td>
+                        <td>12</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2>See Also</h2>
+            <ul>
+                <li><a href="/Array/filter">Array.prototype.filter()</a></li>
+                <li><a href="/Array/forEach">Array.prototype.forEach()</a></li>
+                <li><a href="/Array/reduce">Array.prototype.reduce()</a></li>
+            </ul>
+        </article>
+    </main>
+
+    <footer>
+        <nav>
+            <a href="/terms">Terms</a>
+            <a href="/privacy">Privacy</a>
+            <a href="/cookies">Cookies</a>
+        </nav>
+        <p>&copy; Contributors. Licensed under CC-BY-SA 2.5.</p>
+    </footer>
+</body>
+</html>
