@@ -484,57 +484,57 @@ public class AiTxtModelsTests
     public void AiAction_ShouldHaveAllValues()
     {
         // Assert
-        Enum.IsDefined(typeof(AiAction), AiAction.Read).Should().BeTrue();
-        Enum.IsDefined(typeof(AiAction), AiAction.Index).Should().BeTrue();
-        Enum.IsDefined(typeof(AiAction), AiAction.Training).Should().BeTrue();
-        Enum.IsDefined(typeof(AiAction), AiAction.FineTuning).Should().BeTrue();
-        Enum.IsDefined(typeof(AiAction), AiAction.Inference).Should().BeTrue();
-        Enum.IsDefined(typeof(AiAction), AiAction.Analysis).Should().BeTrue();
-        Enum.IsDefined(typeof(AiAction), AiAction.Summarization).Should().BeTrue();
-        Enum.IsDefined(typeof(AiAction), AiAction.Translation).Should().BeTrue();
-        Enum.IsDefined(typeof(AiAction), AiAction.Search).Should().BeTrue();
-        Enum.IsDefined(typeof(AiAction), AiAction.Caching).Should().BeTrue();
+        Enum.IsDefined<AiAction>(AiAction.Read).Should().BeTrue();
+        Enum.IsDefined<AiAction>(AiAction.Index).Should().BeTrue();
+        Enum.IsDefined<AiAction>(AiAction.Training).Should().BeTrue();
+        Enum.IsDefined<AiAction>(AiAction.FineTuning).Should().BeTrue();
+        Enum.IsDefined<AiAction>(AiAction.Inference).Should().BeTrue();
+        Enum.IsDefined<AiAction>(AiAction.Analysis).Should().BeTrue();
+        Enum.IsDefined<AiAction>(AiAction.Summarization).Should().BeTrue();
+        Enum.IsDefined<AiAction>(AiAction.Translation).Should().BeTrue();
+        Enum.IsDefined<AiAction>(AiAction.Search).Should().BeTrue();
+        Enum.IsDefined<AiAction>(AiAction.Caching).Should().BeTrue();
     }
 
     [Fact]
     public void OrganizationType_ShouldHaveAllValues()
     {
         // Assert
-        Enum.IsDefined(typeof(OrganizationType), OrganizationType.Individual).Should().BeTrue();
-        Enum.IsDefined(typeof(OrganizationType), OrganizationType.Corporation).Should().BeTrue();
-        Enum.IsDefined(typeof(OrganizationType), OrganizationType.NonProfit).Should().BeTrue();
-        Enum.IsDefined(typeof(OrganizationType), OrganizationType.Government).Should().BeTrue();
-        Enum.IsDefined(typeof(OrganizationType), OrganizationType.Educational).Should().BeTrue();
-        Enum.IsDefined(typeof(OrganizationType), OrganizationType.Research).Should().BeTrue();
-        Enum.IsDefined(typeof(OrganizationType), OrganizationType.Other).Should().BeTrue();
+        Enum.IsDefined<OrganizationType>(OrganizationType.Individual).Should().BeTrue();
+        Enum.IsDefined<OrganizationType>(OrganizationType.Corporation).Should().BeTrue();
+        Enum.IsDefined<OrganizationType>(OrganizationType.NonProfit).Should().BeTrue();
+        Enum.IsDefined<OrganizationType>(OrganizationType.Government).Should().BeTrue();
+        Enum.IsDefined<OrganizationType>(OrganizationType.Educational).Should().BeTrue();
+        Enum.IsDefined<OrganizationType>(OrganizationType.Research).Should().BeTrue();
+        Enum.IsDefined<OrganizationType>(OrganizationType.Other).Should().BeTrue();
     }
 
     [Fact]
     public void LicenseType_ShouldHaveAllValues()
     {
         // Assert
-        Enum.IsDefined(typeof(LicenseType), LicenseType.Proprietary).Should().BeTrue();
-        Enum.IsDefined(typeof(LicenseType), LicenseType.CreativeCommons).Should().BeTrue();
-        Enum.IsDefined(typeof(LicenseType), LicenseType.MIT).Should().BeTrue();
-        Enum.IsDefined(typeof(LicenseType), LicenseType.GPL).Should().BeTrue();
-        Enum.IsDefined(typeof(LicenseType), LicenseType.Apache).Should().BeTrue();
-        Enum.IsDefined(typeof(LicenseType), LicenseType.BSD).Should().BeTrue();
-        Enum.IsDefined(typeof(LicenseType), LicenseType.PublicDomain).Should().BeTrue();
-        Enum.IsDefined(typeof(LicenseType), LicenseType.Custom).Should().BeTrue();
+        Enum.IsDefined<LicenseType>(LicenseType.Proprietary).Should().BeTrue();
+        Enum.IsDefined<LicenseType>(LicenseType.CreativeCommons).Should().BeTrue();
+        Enum.IsDefined<LicenseType>(LicenseType.MIT).Should().BeTrue();
+        Enum.IsDefined<LicenseType>(LicenseType.GPL).Should().BeTrue();
+        Enum.IsDefined<LicenseType>(LicenseType.Apache).Should().BeTrue();
+        Enum.IsDefined<LicenseType>(LicenseType.BSD).Should().BeTrue();
+        Enum.IsDefined<LicenseType>(LicenseType.PublicDomain).Should().BeTrue();
+        Enum.IsDefined<LicenseType>(LicenseType.Custom).Should().BeTrue();
     }
 
     [Fact]
     public void DataUsageType_ShouldHaveAllValues()
     {
         // Assert
-        Enum.IsDefined(typeof(DataUsageType), DataUsageType.Training).Should().BeTrue();
-        Enum.IsDefined(typeof(DataUsageType), DataUsageType.FineTuning).Should().BeTrue();
-        Enum.IsDefined(typeof(DataUsageType), DataUsageType.Inference).Should().BeTrue();
-        Enum.IsDefined(typeof(DataUsageType), DataUsageType.Research).Should().BeTrue();
-        Enum.IsDefined(typeof(DataUsageType), DataUsageType.Commercial).Should().BeTrue();
-        Enum.IsDefined(typeof(DataUsageType), DataUsageType.Personal).Should().BeTrue();
-        Enum.IsDefined(typeof(DataUsageType), DataUsageType.Analytics).Should().BeTrue();
-        Enum.IsDefined(typeof(DataUsageType), DataUsageType.Caching).Should().BeTrue();
+        Enum.IsDefined<DataUsageType>(DataUsageType.Training).Should().BeTrue();
+        Enum.IsDefined<DataUsageType>(DataUsageType.FineTuning).Should().BeTrue();
+        Enum.IsDefined<DataUsageType>(DataUsageType.Inference).Should().BeTrue();
+        Enum.IsDefined<DataUsageType>(DataUsageType.Research).Should().BeTrue();
+        Enum.IsDefined<DataUsageType>(DataUsageType.Commercial).Should().BeTrue();
+        Enum.IsDefined<DataUsageType>(DataUsageType.Personal).Should().BeTrue();
+        Enum.IsDefined<DataUsageType>(DataUsageType.Analytics).Should().BeTrue();
+        Enum.IsDefined<DataUsageType>(DataUsageType.Caching).Should().BeTrue();
     }
 
     #endregion

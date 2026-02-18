@@ -242,7 +242,7 @@ public class LargeDocumentStabilityTests
         {
             if (i % 50 == 0)
             {
-                html.AppendLine($"<h2>Section {i / 50 + 1}</h2>");
+                html.AppendLine(System.Globalization.CultureInfo.InvariantCulture, $"<h2>Section {i / 50 + 1}</h2>");
             }
 
             html.AppendLine($"<p>This is paragraph {i}. Lorem ipsum dolor sit amet, consectetur adipiscing elit. " +

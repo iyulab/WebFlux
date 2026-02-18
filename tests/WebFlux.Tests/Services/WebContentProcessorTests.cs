@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Logging;
-using Moq;
+using NSubstitute;
 using WebFlux.Core.Interfaces;
 using WebFlux.Core.Models;
 using WebFlux.Core.Options;
@@ -13,23 +13,23 @@ namespace WebFlux.Tests.Services;
 /// WebContentProcessor 단위 테스트
 /// 파이프라인 오케스트레이션 stub 구현 검증
 /// </summary>
-public class WebContentProcessorTests
+public class WebContentProcessorTests : IDisposable
 {
-    private readonly Mock<IServiceFactory> _mockServiceFactory;
-    private readonly Mock<IEventPublisher> _mockEventPublisher;
-    private readonly Mock<ILogger<WebContentProcessor>> _mockLogger;
+    private readonly IServiceFactory _mockServiceFactory;
+    private readonly IEventPublisher _mockEventPublisher;
+    private readonly ILogger<WebContentProcessor> _mockLogger;
     private readonly WebContentProcessor _processor;
 
     public WebContentProcessorTests()
     {
-        _mockServiceFactory = new Mock<IServiceFactory>();
-        _mockEventPublisher = new Mock<IEventPublisher>();
-        _mockLogger = new Mock<ILogger<WebContentProcessor>>();
+        _mockServiceFactory = Substitute.For<IServiceFactory>();
+        _mockEventPublisher = Substitute.For<IEventPublisher>();
+        _mockLogger = Substitute.For<ILogger<WebContentProcessor>>();
 
         _processor = new WebContentProcessor(
-            _mockServiceFactory.Object,
-            _mockEventPublisher.Object,
-            _mockLogger.Object);
+            _mockServiceFactory,
+            _mockEventPublisher,
+            _mockLogger);
     }
 
     #region Constructor Tests
@@ -39,7 +39,7 @@ public class WebContentProcessorTests
     {
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() =>
-            new WebContentProcessor(null!, _mockEventPublisher.Object, _mockLogger.Object));
+            new WebContentProcessor(null!, _mockEventPublisher, _mockLogger));
     }
 
     [Fact]
@@ -47,7 +47,7 @@ public class WebContentProcessorTests
     {
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() =>
-            new WebContentProcessor(_mockServiceFactory.Object, null!, _mockLogger.Object));
+            new WebContentProcessor(_mockServiceFactory, null!, _mockLogger));
     }
 
     [Fact]
@@ -55,7 +55,7 @@ public class WebContentProcessorTests
     {
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() =>
-            new WebContentProcessor(_mockServiceFactory.Object, _mockEventPublisher.Object, null!));
+            new WebContentProcessor(_mockServiceFactory, _mockEventPublisher, null!));
     }
 
     [Fact]
@@ -63,9 +63,9 @@ public class WebContentProcessorTests
     {
         // Act & Assert
         var processor = new WebContentProcessor(
-            _mockServiceFactory.Object,
-            _mockEventPublisher.Object,
-            _mockLogger.Object);
+            _mockServiceFactory,
+            _mockEventPublisher,
+            _mockLogger);
 
         processor.Should().NotBeNull();
     }
@@ -131,12 +131,12 @@ public class WebContentProcessorTests
         var startUrl = "https://example.com";
 
         // Setup mock crawler to return empty results
-        var mockCrawler = new Mock<ICrawler>();
-        mockCrawler.Setup(c => c.CrawlWebsiteAsync(It.IsAny<string>(), It.IsAny<CrawlOptions>(), It.IsAny<CancellationToken>()))
+        var mockCrawler = Substitute.For<ICrawler>();
+        mockCrawler.CrawlWebsiteAsync(Arg.Any<string>(), Arg.Any<CrawlOptions>(), Arg.Any<CancellationToken>())
             .Returns(ToAsyncEnumerable(new List<CrawlResult>()));
 
-        _mockServiceFactory.Setup(f => f.CreateCrawler(It.IsAny<WebFlux.Core.Options.CrawlStrategy>()))
-            .Returns(mockCrawler.Object);
+        _mockServiceFactory.CreateCrawler(Arg.Any<WebFlux.Core.Options.CrawlStrategy>())
+            .Returns(mockCrawler);
 
         // Act
         var chunks = new List<WebContentChunk>();
@@ -158,12 +158,12 @@ public class WebContentProcessorTests
         var chunkingOptions = new ChunkingOptions { ChunkSize = 1000 };
 
         // Setup mock crawler to return empty results
-        var mockCrawler = new Mock<ICrawler>();
-        mockCrawler.Setup(c => c.CrawlWebsiteAsync(It.IsAny<string>(), It.IsAny<CrawlOptions>(), It.IsAny<CancellationToken>()))
+        var mockCrawler = Substitute.For<ICrawler>();
+        mockCrawler.CrawlWebsiteAsync(Arg.Any<string>(), Arg.Any<CrawlOptions>(), Arg.Any<CancellationToken>())
             .Returns(ToAsyncEnumerable(new List<CrawlResult>()));
 
-        _mockServiceFactory.Setup(f => f.CreateCrawler(It.IsAny<WebFlux.Core.Options.CrawlStrategy>()))
-            .Returns(mockCrawler.Object);
+        _mockServiceFactory.CreateCrawler(Arg.Any<WebFlux.Core.Options.CrawlStrategy>())
+            .Returns(mockCrawler);
 
         // Act
         var chunks = new List<WebContentChunk>();
@@ -184,12 +184,12 @@ public class WebContentProcessorTests
         using var cts = new CancellationTokenSource();
 
         // Setup mock crawler to return empty results
-        var mockCrawler = new Mock<ICrawler>();
-        mockCrawler.Setup(c => c.CrawlWebsiteAsync(It.IsAny<string>(), It.IsAny<CrawlOptions>(), It.IsAny<CancellationToken>()))
+        var mockCrawler = Substitute.For<ICrawler>();
+        mockCrawler.CrawlWebsiteAsync(Arg.Any<string>(), Arg.Any<CrawlOptions>(), Arg.Any<CancellationToken>())
             .Returns(ToAsyncEnumerable(new List<CrawlResult>()));
 
-        _mockServiceFactory.Setup(f => f.CreateCrawler(It.IsAny<WebFlux.Core.Options.CrawlStrategy>()))
-            .Returns(mockCrawler.Object);
+        _mockServiceFactory.CreateCrawler(Arg.Any<WebFlux.Core.Options.CrawlStrategy>())
+            .Returns(mockCrawler);
 
         // Act
         var chunks = new List<WebContentChunk>();
@@ -257,110 +257,6 @@ public class WebContentProcessorTests
 
     #endregion
 
-    #region MonitorProgressAsync Tests (Stub)
-
-    [Fact]
-    public async Task MonitorProgressAsync_ShouldReturnEmptyStream()
-    {
-        // Arrange
-        var jobId = "test-job-123";
-
-        // Act
-        var progressUpdates = new List<ProcessingProgress>();
-        await foreach (var progress in _processor.MonitorProgressAsync(jobId))
-        {
-            progressUpdates.Add(progress);
-        }
-
-        // Assert - Stub returns empty stream
-        progressUpdates.Should().BeEmpty();
-    }
-
-    [Fact]
-    public async Task MonitorProgressAsync_WithMultipleCalls_ShouldAlwaysReturnEmpty()
-    {
-        // Arrange
-        var jobId1 = "job-1";
-        var jobId2 = "job-2";
-
-        // Act
-        var updates1 = new List<ProcessingProgress>();
-        var updates2 = new List<ProcessingProgress>();
-
-        await foreach (var p in _processor.MonitorProgressAsync(jobId1))
-            updates1.Add(p);
-
-        await foreach (var p in _processor.MonitorProgressAsync(jobId2))
-            updates2.Add(p);
-
-        // Assert
-        updates1.Should().BeEmpty();
-        updates2.Should().BeEmpty();
-    }
-
-    #endregion
-
-    #region CancelJobAsync Tests (Stub)
-
-    [Fact]
-    public async Task CancelJobAsync_ShouldReturnTrue()
-    {
-        // Arrange
-        var jobId = "test-job-123";
-
-        // Act
-        var result = await _processor.CancelJobAsync(jobId);
-
-        // Assert - Stub always returns true
-        result.Should().BeTrue();
-    }
-
-    [Fact]
-    public async Task CancelJobAsync_WithDifferentJobIds_ShouldAlwaysReturnTrue()
-    {
-        // Arrange
-        var jobId1 = "job-1";
-        var jobId2 = "job-2";
-
-        // Act
-        var result1 = await _processor.CancelJobAsync(jobId1);
-        var result2 = await _processor.CancelJobAsync(jobId2);
-
-        // Assert
-        result1.Should().BeTrue();
-        result2.Should().BeTrue();
-    }
-
-    #endregion
-
-    #region GetStatisticsAsync Tests (Stub)
-
-    [Fact]
-    public async Task GetStatisticsAsync_ShouldReturnEmptyStatistics()
-    {
-        // Act
-        var result = await _processor.GetStatisticsAsync();
-
-        // Assert - Stub returns default statistics
-        result.Should().NotBeNull();
-        result.Should().BeOfType<ProcessingStatistics>();
-    }
-
-    [Fact]
-    public async Task GetStatisticsAsync_WithMultipleCalls_ShouldReturnNewInstanceEachTime()
-    {
-        // Act
-        var result1 = await _processor.GetStatisticsAsync();
-        var result2 = await _processor.GetStatisticsAsync();
-
-        // Assert
-        result1.Should().NotBeNull();
-        result2.Should().NotBeNull();
-        result1.Should().NotBeSameAs(result2);
-    }
-
-    #endregion
-
     #region GetAvailableChunkingStrategies Tests
 
     [Fact]
@@ -409,9 +305,9 @@ public class WebContentProcessorTests
     {
         // Arrange
         var processor = new WebContentProcessor(
-            _mockServiceFactory.Object,
-            _mockEventPublisher.Object,
-            _mockLogger.Object);
+            _mockServiceFactory,
+            _mockEventPublisher,
+            _mockLogger);
 
         // Act & Assert
         processor.Invoking(p => p.Dispose()).Should().NotThrow();
@@ -422,9 +318,9 @@ public class WebContentProcessorTests
     {
         // Arrange
         var processor = new WebContentProcessor(
-            _mockServiceFactory.Object,
-            _mockEventPublisher.Object,
-            _mockLogger.Object);
+            _mockServiceFactory,
+            _mockEventPublisher,
+            _mockLogger);
 
         // Act & Assert
         processor.Invoking(p =>
@@ -437,61 +333,6 @@ public class WebContentProcessorTests
 
     #endregion
 
-    #region ProcessingProgress Model Tests
-
-    [Fact]
-    public void ProcessingProgress_ShouldSetProperties()
-    {
-        // Arrange & Act
-        var progress = new ProcessingProgress
-        {
-            JobId = "test-job",
-            Progress = 0.75,
-            CurrentStage = "Chunking",
-            ProcessedPages = 15,
-            TotalPages = 20,
-            GeneratedChunks = 150,
-            ProcessingRate = 5.5,
-            EstimatedCompletion = DateTimeOffset.UtcNow.AddMinutes(5),
-            Errors = new List<string> { "Error 1", "Error 2" }
-        };
-
-        // Assert
-        progress.JobId.Should().Be("test-job");
-        progress.Progress.Should().Be(0.75);
-        progress.CurrentStage.Should().Be("Chunking");
-        progress.ProcessedPages.Should().Be(15);
-        progress.TotalPages.Should().Be(20);
-        progress.GeneratedChunks.Should().Be(150);
-        progress.ProcessingRate.Should().Be(5.5);
-        progress.EstimatedCompletion.Should().NotBeNull();
-        progress.Errors.Should().HaveCount(2);
-    }
-
-    [Fact]
-    public void ProcessingProgress_WithDefaults_ShouldHaveDefaultValues()
-    {
-        // Arrange & Act
-        var progress = new ProcessingProgress
-        {
-            JobId = "test"
-        };
-
-        // Assert
-        progress.JobId.Should().Be("test");
-        progress.Progress.Should().Be(0);
-        progress.CurrentStage.Should().Be(string.Empty);
-        progress.ProcessedPages.Should().Be(0);
-        progress.TotalPages.Should().BeNull();
-        progress.GeneratedChunks.Should().Be(0);
-        progress.ProcessingRate.Should().Be(0);
-        progress.EstimatedCompletion.Should().BeNull();
-        progress.LastUpdated.Should().BeCloseTo(DateTimeOffset.UtcNow, TimeSpan.FromSeconds(2));
-        progress.Errors.Should().BeEmpty();
-    }
-
-    #endregion
-
     #region ProcessUrlAsync Tests (Implemented Method)
 
     [Fact]
@@ -499,9 +340,9 @@ public class WebContentProcessorTests
     {
         // Arrange
         var url = "https://example.com";
-        var mockCrawler = new Mock<ICrawler>();
-        var mockExtractor = new Mock<IContentExtractor>();
-        var mockChunkingStrategy = new Mock<IChunkingStrategy>();
+        var mockCrawler = Substitute.For<ICrawler>();
+        var mockExtractor = Substitute.For<IContentExtractor>();
+        var mockChunkingStrategy = Substitute.For<IChunkingStrategy>();
 
         // Setup crawler to return web content
         var crawlResults = new List<CrawlResult>
@@ -514,7 +355,7 @@ public class WebContentProcessorTests
                 StatusCode = 200
             }
         };
-        mockCrawler.Setup(c => c.CrawlWebsiteAsync(It.IsAny<string>(), It.IsAny<CrawlOptions>(), It.IsAny<CancellationToken>()))
+        mockCrawler.CrawlWebsiteAsync(Arg.Any<string>(), Arg.Any<CrawlOptions>(), Arg.Any<CancellationToken>())
             .Returns(ToAsyncEnumerable(crawlResults));
 
         // Setup extractor
@@ -524,8 +365,8 @@ public class WebContentProcessorTests
             Text = "Test content",
             MainContent = "Test content"
         };
-        mockExtractor.Setup(e => e.ExtractAutoAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(extractedContent);
+        mockExtractor.ExtractAutoAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(extractedContent);
 
         // Setup chunking strategy
         var chunks = new List<WebContentChunk>
@@ -538,14 +379,14 @@ public class WebContentProcessorTests
                 StrategyInfo = new ChunkingStrategyInfo { StrategyName = "Auto" }
             }
         };
-        mockChunkingStrategy.Setup(s => s.ChunkAsync(It.IsAny<ExtractedContent>(), It.IsAny<ChunkingOptions>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(chunks);
+        mockChunkingStrategy.ChunkAsync(Arg.Any<ExtractedContent>(), Arg.Any<ChunkingOptions>(), Arg.Any<CancellationToken>())
+            .Returns(chunks);
 
         // Setup service factory
-        _mockServiceFactory.Setup(f => f.CreateCrawler(It.IsAny<WebFlux.Core.Options.CrawlStrategy>())).Returns(mockCrawler.Object);
-        _mockServiceFactory.Setup(f => f.CreateContentExtractor(It.IsAny<string>())).Returns(mockExtractor.Object);
-        _mockServiceFactory.Setup(f => f.CreateChunkingStrategy(It.IsAny<string>())).Returns(mockChunkingStrategy.Object);
-        _mockServiceFactory.Setup(f => f.CreateAiEnhancementService()).Returns((IAiEnhancementService)null!);
+        _mockServiceFactory.CreateCrawler(Arg.Any<WebFlux.Core.Options.CrawlStrategy>()).Returns(mockCrawler);
+        _mockServiceFactory.CreateContentExtractor(Arg.Any<string>()).Returns(mockExtractor);
+        _mockServiceFactory.CreateChunkingStrategy(Arg.Any<string>()).Returns(mockChunkingStrategy);
+        _mockServiceFactory.CreateAiEnhancementService().Returns((IAiEnhancementService)null!);
 
         // Act
         var result = await _processor.ProcessUrlAsync(url);
@@ -561,22 +402,22 @@ public class WebContentProcessorTests
         // Arrange
         var url = "https://example.com";
         var options = new ChunkingOptions { MaxChunkSize = 500 };
-        var mockCrawler = new Mock<ICrawler>();
-        var mockExtractor = new Mock<IContentExtractor>();
-        var mockChunkingStrategy = new Mock<IChunkingStrategy>();
+        var mockCrawler = Substitute.For<ICrawler>();
+        var mockExtractor = Substitute.For<IContentExtractor>();
+        var mockChunkingStrategy = Substitute.For<IChunkingStrategy>();
 
         // Setup minimal mocks to allow processing
-        mockCrawler.Setup(c => c.CrawlWebsiteAsync(It.IsAny<string>(), It.IsAny<CrawlOptions>(), It.IsAny<CancellationToken>()))
+        mockCrawler.CrawlWebsiteAsync(Arg.Any<string>(), Arg.Any<CrawlOptions>(), Arg.Any<CancellationToken>())
             .Returns(ToAsyncEnumerable(new List<CrawlResult>
             {
                 new CrawlResult { Url = url, Content = "<html><body>Test</body></html>", ContentType = "text/html", StatusCode = 200 }
             }));
 
-        mockExtractor.Setup(e => e.ExtractAutoAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new ExtractedContent { Url = url, Text = "Test", MainContent = "Test" });
+        mockExtractor.ExtractAutoAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new ExtractedContent { Url = url, Text = "Test", MainContent = "Test" });
 
-        mockChunkingStrategy.Setup(s => s.ChunkAsync(It.IsAny<ExtractedContent>(), It.IsAny<ChunkingOptions>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<WebContentChunk>
+        mockChunkingStrategy.ChunkAsync(Arg.Any<ExtractedContent>(), Arg.Any<ChunkingOptions>(), Arg.Any<CancellationToken>())
+            .Returns(new List<WebContentChunk>
             {
                 new WebContentChunk
                 {
@@ -587,10 +428,10 @@ public class WebContentProcessorTests
                 }
             });
 
-        _mockServiceFactory.Setup(f => f.CreateCrawler(It.IsAny<WebFlux.Core.Options.CrawlStrategy>())).Returns(mockCrawler.Object);
-        _mockServiceFactory.Setup(f => f.CreateContentExtractor(It.IsAny<string>())).Returns(mockExtractor.Object);
-        _mockServiceFactory.Setup(f => f.CreateChunkingStrategy(It.IsAny<string>())).Returns(mockChunkingStrategy.Object);
-        _mockServiceFactory.Setup(f => f.CreateAiEnhancementService()).Returns((IAiEnhancementService)null!);
+        _mockServiceFactory.CreateCrawler(Arg.Any<WebFlux.Core.Options.CrawlStrategy>()).Returns(mockCrawler);
+        _mockServiceFactory.CreateContentExtractor(Arg.Any<string>()).Returns(mockExtractor);
+        _mockServiceFactory.CreateChunkingStrategy(Arg.Any<string>()).Returns(mockChunkingStrategy);
+        _mockServiceFactory.CreateAiEnhancementService().Returns((IAiEnhancementService)null!);
 
         // Act
         var result = await _processor.ProcessUrlAsync(url, options);
@@ -607,12 +448,12 @@ public class WebContentProcessorTests
         using var cts = new CancellationTokenSource();
         cts.Cancel(); // Cancel immediately
 
-        var mockCrawler = new Mock<ICrawler>();
-        mockCrawler.Setup(c => c.CrawlWebsiteAsync(It.IsAny<string>(), It.IsAny<CrawlOptions>(), It.IsAny<CancellationToken>()))
+        var mockCrawler = Substitute.For<ICrawler>();
+        mockCrawler.CrawlWebsiteAsync(Arg.Any<string>(), Arg.Any<CrawlOptions>(), Arg.Any<CancellationToken>())
             .Returns(ToAsyncEnumerable(new List<CrawlResult>()));
 
-        _mockServiceFactory.Setup(f => f.CreateCrawler(It.IsAny<WebFlux.Core.Options.CrawlStrategy>())).Returns(mockCrawler.Object);
-        _mockServiceFactory.Setup(f => f.CreateAiEnhancementService()).Returns((IAiEnhancementService)null!);
+        _mockServiceFactory.CreateCrawler(Arg.Any<WebFlux.Core.Options.CrawlStrategy>()).Returns(mockCrawler);
+        _mockServiceFactory.CreateAiEnhancementService().Returns((IAiEnhancementService)null!);
 
         // Act & Assert
         await Assert.ThrowsAnyAsync<OperationCanceledException>(async () =>
@@ -631,21 +472,21 @@ public class WebContentProcessorTests
         var html = "<html><head><title>My Page Title</title></head><body>Content</body></html>";
 
         // Arrange - Create a minimal test that will trigger ExtractTitle
-        var mockCrawler = new Mock<ICrawler>();
+        var mockCrawler = Substitute.For<ICrawler>();
         var crawlResults = new List<CrawlResult>
         {
             new CrawlResult { Url = "https://test.com", Content = html, ContentType = "text/html", StatusCode = 200 }
         };
-        mockCrawler.Setup(c => c.CrawlWebsiteAsync(It.IsAny<string>(), It.IsAny<CrawlOptions>(), It.IsAny<CancellationToken>()))
+        mockCrawler.CrawlWebsiteAsync(Arg.Any<string>(), Arg.Any<CrawlOptions>(), Arg.Any<CancellationToken>())
             .Returns(ToAsyncEnumerable(crawlResults));
 
-        var mockExtractor = new Mock<IContentExtractor>();
-        mockExtractor.Setup(e => e.ExtractAutoAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new ExtractedContent { Url = "https://test.com", Text = "Content", MainContent = "Content" });
+        var mockExtractor = Substitute.For<IContentExtractor>();
+        mockExtractor.ExtractAutoAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new ExtractedContent { Url = "https://test.com", Text = "Content", MainContent = "Content" });
 
-        var mockChunkingStrategy = new Mock<IChunkingStrategy>();
-        mockChunkingStrategy.Setup(s => s.ChunkAsync(It.IsAny<ExtractedContent>(), It.IsAny<ChunkingOptions>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<WebContentChunk>
+        var mockChunkingStrategy = Substitute.For<IChunkingStrategy>();
+        mockChunkingStrategy.ChunkAsync(Arg.Any<ExtractedContent>(), Arg.Any<ChunkingOptions>(), Arg.Any<CancellationToken>())
+            .Returns(new List<WebContentChunk>
             {
                 new WebContentChunk
                 {
@@ -656,10 +497,10 @@ public class WebContentProcessorTests
                 }
             });
 
-        _mockServiceFactory.Setup(f => f.CreateCrawler(It.IsAny<WebFlux.Core.Options.CrawlStrategy>())).Returns(mockCrawler.Object);
-        _mockServiceFactory.Setup(f => f.CreateContentExtractor(It.IsAny<string>())).Returns(mockExtractor.Object);
-        _mockServiceFactory.Setup(f => f.CreateChunkingStrategy(It.IsAny<string>())).Returns(mockChunkingStrategy.Object);
-        _mockServiceFactory.Setup(f => f.CreateAiEnhancementService()).Returns((IAiEnhancementService)null!);
+        _mockServiceFactory.CreateCrawler(Arg.Any<WebFlux.Core.Options.CrawlStrategy>()).Returns(mockCrawler);
+        _mockServiceFactory.CreateContentExtractor(Arg.Any<string>()).Returns(mockExtractor);
+        _mockServiceFactory.CreateChunkingStrategy(Arg.Any<string>()).Returns(mockChunkingStrategy);
+        _mockServiceFactory.CreateAiEnhancementService().Returns((IAiEnhancementService)null!);
 
         // Act - This will trigger ExtractTitle internally
         var task = _processor.ProcessUrlAsync("https://test.com");
@@ -677,20 +518,20 @@ public class WebContentProcessorTests
     {
         // Arrange
         var url = "https://example.com";
-        var mockCrawler = new Mock<ICrawler>();
-        mockCrawler.Setup(c => c.CrawlWebsiteAsync(It.IsAny<string>(), It.IsAny<CrawlOptions>(), It.IsAny<CancellationToken>()))
+        var mockCrawler = Substitute.For<ICrawler>();
+        mockCrawler.CrawlWebsiteAsync(Arg.Any<string>(), Arg.Any<CrawlOptions>(), Arg.Any<CancellationToken>())
             .Returns(ToAsyncEnumerable(new List<CrawlResult>
             {
                 new CrawlResult { Url = url, Content = "<html><body>Test</body></html>", ContentType = "text/html", StatusCode = 200 }
             }));
 
-        var mockExtractor = new Mock<IContentExtractor>();
-        mockExtractor.Setup(e => e.ExtractAutoAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new ExtractedContent { Url = url, Text = "Test", MainContent = "Test" });
+        var mockExtractor = Substitute.For<IContentExtractor>();
+        mockExtractor.ExtractAutoAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new ExtractedContent { Url = url, Text = "Test", MainContent = "Test" });
 
-        var mockChunkingStrategy = new Mock<IChunkingStrategy>();
-        mockChunkingStrategy.Setup(s => s.ChunkAsync(It.IsAny<ExtractedContent>(), It.IsAny<ChunkingOptions>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<WebContentChunk>
+        var mockChunkingStrategy = Substitute.For<IChunkingStrategy>();
+        mockChunkingStrategy.ChunkAsync(Arg.Any<ExtractedContent>(), Arg.Any<ChunkingOptions>(), Arg.Any<CancellationToken>())
+            .Returns(new List<WebContentChunk>
             {
                 new WebContentChunk
                 {
@@ -701,18 +542,18 @@ public class WebContentProcessorTests
                 }
             });
 
-        _mockServiceFactory.Setup(f => f.CreateCrawler(It.IsAny<WebFlux.Core.Options.CrawlStrategy>())).Returns(mockCrawler.Object);
-        _mockServiceFactory.Setup(f => f.CreateContentExtractor(It.IsAny<string>())).Returns(mockExtractor.Object);
-        _mockServiceFactory.Setup(f => f.CreateChunkingStrategy(It.IsAny<string>())).Returns(mockChunkingStrategy.Object);
-        _mockServiceFactory.Setup(f => f.CreateAiEnhancementService()).Returns((IAiEnhancementService)null!);
+        _mockServiceFactory.CreateCrawler(Arg.Any<WebFlux.Core.Options.CrawlStrategy>()).Returns(mockCrawler);
+        _mockServiceFactory.CreateContentExtractor(Arg.Any<string>()).Returns(mockExtractor);
+        _mockServiceFactory.CreateChunkingStrategy(Arg.Any<string>()).Returns(mockChunkingStrategy);
+        _mockServiceFactory.CreateAiEnhancementService().Returns((IAiEnhancementService)null!);
 
         // Act
         await _processor.ProcessUrlAsync(url);
 
         // Assert
-        _mockEventPublisher.Verify(p => p.PublishAsync(
-            It.IsAny<ProcessingStartedEvent>(),
-            It.IsAny<CancellationToken>()), Times.Once);
+        await _mockEventPublisher.Received(1).PublishAsync(
+            Arg.Any<ProcessingStartedEvent>(),
+            Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -720,20 +561,20 @@ public class WebContentProcessorTests
     {
         // Arrange
         var url = "https://example.com";
-        var mockCrawler = new Mock<ICrawler>();
-        mockCrawler.Setup(c => c.CrawlWebsiteAsync(It.IsAny<string>(), It.IsAny<CrawlOptions>(), It.IsAny<CancellationToken>()))
+        var mockCrawler = Substitute.For<ICrawler>();
+        mockCrawler.CrawlWebsiteAsync(Arg.Any<string>(), Arg.Any<CrawlOptions>(), Arg.Any<CancellationToken>())
             .Returns(ToAsyncEnumerable(new List<CrawlResult>
             {
                 new CrawlResult { Url = url, Content = "<html><body>Test</body></html>", ContentType = "text/html", StatusCode = 200 }
             }));
 
-        var mockExtractor = new Mock<IContentExtractor>();
-        mockExtractor.Setup(e => e.ExtractAutoAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new ExtractedContent { Url = url, Text = "Test", MainContent = "Test" });
+        var mockExtractor = Substitute.For<IContentExtractor>();
+        mockExtractor.ExtractAutoAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new ExtractedContent { Url = url, Text = "Test", MainContent = "Test" });
 
-        var mockChunkingStrategy = new Mock<IChunkingStrategy>();
-        mockChunkingStrategy.Setup(s => s.ChunkAsync(It.IsAny<ExtractedContent>(), It.IsAny<ChunkingOptions>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<WebContentChunk>
+        var mockChunkingStrategy = Substitute.For<IChunkingStrategy>();
+        mockChunkingStrategy.ChunkAsync(Arg.Any<ExtractedContent>(), Arg.Any<ChunkingOptions>(), Arg.Any<CancellationToken>())
+            .Returns(new List<WebContentChunk>
             {
                 new WebContentChunk
                 {
@@ -744,18 +585,18 @@ public class WebContentProcessorTests
                 }
             });
 
-        _mockServiceFactory.Setup(f => f.CreateCrawler(It.IsAny<WebFlux.Core.Options.CrawlStrategy>())).Returns(mockCrawler.Object);
-        _mockServiceFactory.Setup(f => f.CreateContentExtractor(It.IsAny<string>())).Returns(mockExtractor.Object);
-        _mockServiceFactory.Setup(f => f.CreateChunkingStrategy(It.IsAny<string>())).Returns(mockChunkingStrategy.Object);
-        _mockServiceFactory.Setup(f => f.CreateAiEnhancementService()).Returns((IAiEnhancementService)null!);
+        _mockServiceFactory.CreateCrawler(Arg.Any<WebFlux.Core.Options.CrawlStrategy>()).Returns(mockCrawler);
+        _mockServiceFactory.CreateContentExtractor(Arg.Any<string>()).Returns(mockExtractor);
+        _mockServiceFactory.CreateChunkingStrategy(Arg.Any<string>()).Returns(mockChunkingStrategy);
+        _mockServiceFactory.CreateAiEnhancementService().Returns((IAiEnhancementService)null!);
 
         // Act
         await _processor.ProcessUrlAsync(url);
 
         // Assert
-        _mockEventPublisher.Verify(p => p.PublishAsync(
-            It.IsAny<ProcessingCompletedEvent>(),
-            It.IsAny<CancellationToken>()), Times.Once);
+        await _mockEventPublisher.Received(1).PublishAsync(
+            Arg.Any<ProcessingCompletedEvent>(),
+            Arg.Any<CancellationToken>());
     }
 
     #endregion
@@ -864,28 +705,28 @@ public class WebContentProcessorTests
     /// </summary>
     private void SetupMocksForProcessUrl()
     {
-        var mockCrawler = new Mock<ICrawler>();
-        mockCrawler.Setup(c => c.CrawlWebsiteAsync(It.IsAny<string>(), It.IsAny<CrawlOptions>(), It.IsAny<CancellationToken>()))
-            .Returns<string, CrawlOptions, CancellationToken>((url, opts, ct) => ToAsyncEnumerable(new List<CrawlResult>
+        var mockCrawler = Substitute.For<ICrawler>();
+        mockCrawler.CrawlWebsiteAsync(Arg.Any<string>(), Arg.Any<CrawlOptions>(), Arg.Any<CancellationToken>())
+            .Returns(callInfo => ToAsyncEnumerable(new List<CrawlResult>
             {
-                new CrawlResult { Url = url, Content = "<html><body>Test</body></html>", ContentType = "text/html", StatusCode = 200 }
+                new CrawlResult { Url = (string)callInfo[0], Content = "<html><body>Test</body></html>", ContentType = "text/html", StatusCode = 200 }
             }));
 
-        var mockExtractor = new Mock<IContentExtractor>();
-        mockExtractor.Setup(e => e.ExtractAutoAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new ExtractedContent { Url = "https://example.com", Text = "Test", MainContent = "Test" });
+        var mockExtractor = Substitute.For<IContentExtractor>();
+        mockExtractor.ExtractAutoAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new ExtractedContent { Url = "https://example.com", Text = "Test", MainContent = "Test" });
 
-        var mockChunkingStrategy = new Mock<IChunkingStrategy>();
-        mockChunkingStrategy.Setup(s => s.ChunkAsync(It.IsAny<ExtractedContent>(), It.IsAny<ChunkingOptions>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<WebContentChunk>
+        var mockChunkingStrategy = Substitute.For<IChunkingStrategy>();
+        mockChunkingStrategy.ChunkAsync(Arg.Any<ExtractedContent>(), Arg.Any<ChunkingOptions>(), Arg.Any<CancellationToken>())
+            .Returns(new List<WebContentChunk>
             {
                 new WebContentChunk { Id = "1", Content = "Test", SourceUrl = "https://example.com", StrategyInfo = new ChunkingStrategyInfo { StrategyName = "Auto" } }
             });
 
-        _mockServiceFactory.Setup(f => f.CreateCrawler(It.IsAny<WebFlux.Core.Options.CrawlStrategy>())).Returns(mockCrawler.Object);
-        _mockServiceFactory.Setup(f => f.CreateContentExtractor(It.IsAny<string>())).Returns(mockExtractor.Object);
-        _mockServiceFactory.Setup(f => f.CreateChunkingStrategy(It.IsAny<string>())).Returns(mockChunkingStrategy.Object);
-        _mockServiceFactory.Setup(f => f.CreateAiEnhancementService()).Returns((IAiEnhancementService)null!);
+        _mockServiceFactory.CreateCrawler(Arg.Any<WebFlux.Core.Options.CrawlStrategy>()).Returns(mockCrawler);
+        _mockServiceFactory.CreateContentExtractor(Arg.Any<string>()).Returns(mockExtractor);
+        _mockServiceFactory.CreateChunkingStrategy(Arg.Any<string>()).Returns(mockChunkingStrategy);
+        _mockServiceFactory.CreateAiEnhancementService().Returns((IAiEnhancementService)null!);
     }
 
     /// <summary>
@@ -893,20 +734,26 @@ public class WebContentProcessorTests
     /// </summary>
     private void SetupMocksForHtmlProcessing(string sourceUrl)
     {
-        var mockExtractor = new Mock<IContentExtractor>();
-        mockExtractor.Setup(e => e.ExtractAutoAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new ExtractedContent { Url = sourceUrl, Text = "Test content", MainContent = "Test content" });
+        var mockExtractor = Substitute.For<IContentExtractor>();
+        mockExtractor.ExtractAutoAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new ExtractedContent { Url = sourceUrl, Text = "Test content", MainContent = "Test content" });
 
-        var mockChunkingStrategy = new Mock<IChunkingStrategy>();
-        mockChunkingStrategy.Setup(s => s.ChunkAsync(It.IsAny<ExtractedContent>(), It.IsAny<ChunkingOptions>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<WebContentChunk>
+        var mockChunkingStrategy = Substitute.For<IChunkingStrategy>();
+        mockChunkingStrategy.ChunkAsync(Arg.Any<ExtractedContent>(), Arg.Any<ChunkingOptions>(), Arg.Any<CancellationToken>())
+            .Returns(new List<WebContentChunk>
             {
                 new WebContentChunk { Id = "1", Content = "Test content", SourceUrl = sourceUrl, StrategyInfo = new ChunkingStrategyInfo { StrategyName = "Auto" } }
             });
 
-        _mockServiceFactory.Setup(f => f.CreateContentExtractor(It.IsAny<string>())).Returns(mockExtractor.Object);
-        _mockServiceFactory.Setup(f => f.CreateChunkingStrategy(It.IsAny<string>())).Returns(mockChunkingStrategy.Object);
+        _mockServiceFactory.CreateContentExtractor(Arg.Any<string>()).Returns(mockExtractor);
+        _mockServiceFactory.CreateChunkingStrategy(Arg.Any<string>()).Returns(mockChunkingStrategy);
     }
 
     #endregion
+
+    public void Dispose()
+    {
+        _processor.Dispose();
+        GC.SuppressFinalize(this);
+    }
 }

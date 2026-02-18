@@ -68,7 +68,7 @@ public class MetadataExtractor : IMetadataExtractor
     /// <summary>
     /// 기본 HTML 메타데이터 추출
     /// </summary>
-    private BasicHtmlMetadata ExtractBasicMetadata(HtmlDocument doc)
+    private static BasicHtmlMetadata ExtractBasicMetadata(HtmlDocument doc)
     {
         var title = doc.DocumentNode.SelectSingleNode("//title")?.InnerText?.Trim();
         var description = GetMetaContent(doc, "description");
@@ -76,18 +76,18 @@ public class MetadataExtractor : IMetadataExtractor
             .Select(k => k.Trim()).ToArray() ?? Array.Empty<string>();
         var author = GetMetaContent(doc, "author");
         var robots = GetMetaContent(doc, "robots");
-        var language = doc.DocumentNode.GetAttributeValue("lang", null) ?? GetMetaContent(doc, "language");
-        var charset = GetMetaContent(doc, "charset") ?? doc.DocumentNode.SelectSingleNode("//meta[@charset]")?.GetAttributeValue("charset", null);
+        var language = doc.DocumentNode.GetAttributeValue("lang", string.Empty) is { Length: > 0 } langVal ? langVal : GetMetaContent(doc, "language");
+        var charset = GetMetaContent(doc, "charset") ?? (doc.DocumentNode.SelectSingleNode("//meta[@charset]")?.GetAttributeValue("charset", string.Empty) is { Length: > 0 } charsetVal ? charsetVal : null);
         var viewport = GetMetaContent(doc, "viewport");
         var themeColor = GetMetaContent(doc, "theme-color");
-        var canonical = doc.DocumentNode.SelectSingleNode("//link[@rel='canonical']")?.GetAttributeValue("href", null);
+        var canonical = doc.DocumentNode.SelectSingleNode("//link[@rel='canonical']")?.GetAttributeValue("href", string.Empty) is { Length: > 0 } canonicalVal ? canonicalVal : null;
 
         // Extract alternate languages
         var alternateLanguages = doc.DocumentNode.SelectNodes("//link[@rel='alternate' and @hreflang]")
             ?.Select(node => new AlternateLanguage
             {
-                Language = node.GetAttributeValue("hreflang", null),
-                Url = node.GetAttributeValue("href", null)
+                Language = node.GetAttributeValue("hreflang", string.Empty) is { Length: > 0 } hreflangVal ? hreflangVal : null,
+                Url = node.GetAttributeValue("href", string.Empty) is { Length: > 0 } hrefVal ? hrefVal : null
             }).ToArray() ?? Array.Empty<AlternateLanguage>();
 
         // Parse dates
@@ -115,7 +115,7 @@ public class MetadataExtractor : IMetadataExtractor
     /// <summary>
     /// Open Graph 메타데이터 추출
     /// </summary>
-    private OpenGraphMetadata ExtractOpenGraphMetadata(HtmlDocument doc)
+    private static OpenGraphMetadata ExtractOpenGraphMetadata(HtmlDocument doc)
     {
         return new OpenGraphMetadata
         {
@@ -136,7 +136,7 @@ public class MetadataExtractor : IMetadataExtractor
     /// <summary>
     /// Twitter Cards 메타데이터 추출
     /// </summary>
-    private TwitterCardsMetadata ExtractTwitterCardsMetadata(HtmlDocument doc)
+    private static TwitterCardsMetadata ExtractTwitterCardsMetadata(HtmlDocument doc)
     {
         return new TwitterCardsMetadata
         {
@@ -155,11 +155,12 @@ public class MetadataExtractor : IMetadataExtractor
     /// <summary>
     /// Schema.org 구조화 데이터 추출
     /// </summary>
-    private Task<SchemaOrgMetadata> ExtractSchemaOrgMetadataAsync(HtmlDocument doc, CancellationToken cancellationToken)
+    private static Task<SchemaOrgMetadata> ExtractSchemaOrgMetadataAsync(HtmlDocument doc, CancellationToken cancellationToken)
     {
         var jsonLdScripts = doc.DocumentNode.SelectNodes("//script[@type='application/ld+json']")
             ?.Select(script => script.InnerText?.Trim())
             .Where(text => !string.IsNullOrEmpty(text))
+            .Cast<string>()
             .ToArray() ?? Array.Empty<string>();
 
         var metadata = new SchemaOrgMetadata
@@ -337,7 +338,7 @@ public class MetadataExtractor : IMetadataExtractor
     /// <summary>
     /// Dublin Core 메타데이터 추출
     /// </summary>
-    private DublinCoreMetadata ExtractDublinCoreMetadata(HtmlDocument doc)
+    private static DublinCoreMetadata ExtractDublinCoreMetadata(HtmlDocument doc)
     {
         return new DublinCoreMetadata
         {
@@ -358,14 +359,14 @@ public class MetadataExtractor : IMetadataExtractor
     /// <summary>
     /// 문서 구조 정보 추출
     /// </summary>
-    private DocumentStructure ExtractDocumentStructure(HtmlDocument doc)
+    private static DocumentStructure ExtractDocumentStructure(HtmlDocument doc)
     {
         var headings = doc.DocumentNode.SelectNodes("//h1 | //h2 | //h3 | //h4 | //h5 | //h6")
             ?.Select(node => new HeadingInfo
             {
-                Level = int.Parse(node.Name.Substring(1)),
+                Level = int.Parse(node.Name.AsSpan(1), System.Globalization.CultureInfo.InvariantCulture),
                 Text = node.InnerText?.Trim(),
-                Id = node.GetAttributeValue("id", null)
+                Id = node.GetAttributeValue("id", string.Empty) is { Length: > 0 } idVal ? idVal : null
             }).ToArray() ?? Array.Empty<HeadingInfo>();
 
         var sectionCount = doc.DocumentNode.SelectNodes("//section")?.Count ?? 0;
@@ -378,7 +379,7 @@ public class MetadataExtractor : IMetadataExtractor
 
         // Calculate reading time
         var textContent = doc.DocumentNode.InnerText;
-        var wordCount = WordCountRegex.Matches(textContent).Count;
+        var wordCount = WordCountRegex.Count(textContent);
         var readingTime = (int)Math.Ceiling(wordCount * ReadingSpeed.TotalMinutes);
 
         // Calculate complexity score
@@ -402,16 +403,16 @@ public class MetadataExtractor : IMetadataExtractor
     /// <summary>
     /// 사이트 네비게이션 정보 추출
     /// </summary>
-    private SiteNavigation ExtractSiteNavigation(HtmlDocument doc)
+    private static SiteNavigation ExtractSiteNavigation(HtmlDocument doc)
     {
         var mainNav = ExtractNavigationLinks(doc, "//nav", "//header//a");
         var footerNav = ExtractNavigationLinks(doc, "//footer//a");
         var sidebarNav = ExtractNavigationLinks(doc, "//aside//a", "//sidebar//a");
         var relatedLinks = ExtractNavigationLinks(doc, "//a[contains(@class, 'related')]");
 
-        var homeUrl = doc.DocumentNode.SelectSingleNode("//a[contains(@class, 'home') or contains(@href, '/') and not(contains(@href, '/'))]")?.GetAttributeValue("href", null);
-        var sitemapUrl = doc.DocumentNode.SelectSingleNode("//a[contains(@href, 'sitemap')]")?.GetAttributeValue("href", null);
-        var rssUrl = doc.DocumentNode.SelectSingleNode("//link[@type='application/rss+xml']")?.GetAttributeValue("href", null);
+        var homeUrl = doc.DocumentNode.SelectSingleNode("//a[contains(@class, 'home') or contains(@href, '/') and not(contains(@href, '/'))]")?.GetAttributeValue("href", string.Empty) is { Length: > 0 } homeVal ? homeVal : null;
+        var sitemapUrl = doc.DocumentNode.SelectSingleNode("//a[contains(@href, 'sitemap')]")?.GetAttributeValue("href", string.Empty) is { Length: > 0 } sitemapVal ? sitemapVal : null;
+        var rssUrl = doc.DocumentNode.SelectSingleNode("//link[@type='application/rss+xml']")?.GetAttributeValue("href", string.Empty) is { Length: > 0 } rssVal ? rssVal : null;
 
         return new SiteNavigation
         {
@@ -428,10 +429,10 @@ public class MetadataExtractor : IMetadataExtractor
     /// <summary>
     /// 기술적 메타데이터 추출
     /// </summary>
-    private TechnicalMetadata ExtractTechnicalMetadata(HtmlDocument doc, string sourceUrl)
+    private static TechnicalMetadata ExtractTechnicalMetadata(HtmlDocument doc, string sourceUrl)
     {
         var isHttps = sourceUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase);
-        var requiresJs = doc.DocumentNode.SelectNodes("//script[not(@type) or @type='text/javascript' or @type='application/javascript']")?.Any() == true;
+        var requiresJs = doc.DocumentNode.SelectNodes("//script[not(@type) or @type='text/javascript' or @type='application/javascript']")?.Count > 0;
         var isMobileFriendly = !string.IsNullOrEmpty(GetMetaContent(doc, "viewport"));
         var isPwa = doc.DocumentNode.SelectSingleNode("//link[@rel='manifest']") != null;
         // Check for AMP (amp attribute or link to amphtml)
@@ -454,7 +455,7 @@ public class MetadataExtractor : IMetadataExtractor
     /// <summary>
     /// 콘텐츠 분류 정보 추출
     /// </summary>
-    private ContentClassification ExtractContentClassification(HtmlDocument doc)
+    private static ContentClassification ExtractContentClassification(HtmlDocument doc)
     {
         var categories = ExtractCategories(doc);
         var tags = ExtractTags(doc);
@@ -471,7 +472,7 @@ public class MetadataExtractor : IMetadataExtractor
     /// <summary>
     /// 접근성 메타데이터 추출
     /// </summary>
-    private AccessibilityMetadata ExtractAccessibilityMetadata(HtmlDocument doc)
+    private static AccessibilityMetadata ExtractAccessibilityMetadata(HtmlDocument doc)
     {
         var images = doc.DocumentNode.SelectNodes("//img");
         var imagesWithAlt = doc.DocumentNode.SelectNodes("//img[@alt]");
@@ -481,7 +482,7 @@ public class MetadataExtractor : IMetadataExtractor
         var hasProperStructure = ValidateHeadingStructure(headings);
 
         var hasSkipNav = doc.DocumentNode.SelectSingleNode("//a[contains(@class, 'skip') or contains(@href, '#main') or contains(@href, '#content')]") != null;
-        var usesAria = doc.DocumentNode.SelectNodes("//*[@aria-label or @aria-labelledby or @aria-describedby]")?.Any() == true;
+        var usesAria = doc.DocumentNode.SelectNodes("//*[@aria-label or @aria-labelledby or @aria-describedby]")?.Count > 0;
 
         var accessibilityScore = CalculateAccessibilityScore(altTextCoverage, hasProperStructure, hasSkipNav, usesAria);
 
@@ -498,7 +499,7 @@ public class MetadataExtractor : IMetadataExtractor
     /// <summary>
     /// 메타데이터 품질 점수 계산
     /// </summary>
-    public double CalculateQualityScore(WebMetadata metadata)
+    public static double CalculateQualityScore(WebMetadata metadata)
     {
         var scores = new List<double>();
 
@@ -573,22 +574,22 @@ public class MetadataExtractor : IMetadataExtractor
     }
 
     // Helper methods
-    private string? GetMetaContent(HtmlDocument doc, string name)
+    private static string? GetMetaContent(HtmlDocument doc, string name)
     {
-        return doc.DocumentNode.SelectSingleNode($"//meta[@name='{name}']")?.GetAttributeValue("content", null);
+        return doc.DocumentNode.SelectSingleNode($"//meta[@name='{name}']")?.GetAttributeValue("content", string.Empty) is { Length: > 0 } val ? val : null;
     }
 
-    private string? GetMetaProperty(HtmlDocument doc, string property)
+    private static string? GetMetaProperty(HtmlDocument doc, string property)
     {
-        return doc.DocumentNode.SelectSingleNode($"//meta[@property='{property}']")?.GetAttributeValue("content", null);
+        return doc.DocumentNode.SelectSingleNode($"//meta[@property='{property}']")?.GetAttributeValue("content", string.Empty) is { Length: > 0 } val ? val : null;
     }
 
-    private string? GetMetaName(HtmlDocument doc, string name)
+    private static string? GetMetaName(HtmlDocument doc, string name)
     {
-        return doc.DocumentNode.SelectSingleNode($"//meta[@name='{name}']")?.GetAttributeValue("content", null);
+        return doc.DocumentNode.SelectSingleNode($"//meta[@name='{name}']")?.GetAttributeValue("content", string.Empty) is { Length: > 0 } val ? val : null;
     }
 
-    private ImageDimensions? ExtractImageDimensions(HtmlDocument doc, string widthProperty, string heightProperty)
+    private static ImageDimensions? ExtractImageDimensions(HtmlDocument doc, string widthProperty, string heightProperty)
     {
         var widthStr = GetMetaProperty(doc, widthProperty);
         var heightStr = GetMetaProperty(doc, heightProperty);
@@ -601,7 +602,7 @@ public class MetadataExtractor : IMetadataExtractor
         return null;
     }
 
-    private DateTimeOffset? ParseDate(string? dateString)
+    private static DateTimeOffset? ParseDate(string? dateString)
     {
         if (string.IsNullOrEmpty(dateString))
             return null;
@@ -612,7 +613,7 @@ public class MetadataExtractor : IMetadataExtractor
         return null;
     }
 
-    private OrganizationInfo? ExtractOrganizationInfo(JsonElement element)
+    private static OrganizationInfo? ExtractOrganizationInfo(JsonElement element)
     {
         return new OrganizationInfo
         {
@@ -623,7 +624,7 @@ public class MetadataExtractor : IMetadataExtractor
         };
     }
 
-    private PersonInfo? ExtractPersonInfo(JsonElement element)
+    private static PersonInfo? ExtractPersonInfo(JsonElement element)
     {
         return new PersonInfo
         {
@@ -634,7 +635,7 @@ public class MetadataExtractor : IMetadataExtractor
         };
     }
 
-    private ArticleInfo? ExtractArticleInfo(JsonElement element)
+    private static ArticleInfo? ExtractArticleInfo(JsonElement element)
     {
         return new ArticleInfo
         {
@@ -648,7 +649,7 @@ public class MetadataExtractor : IMetadataExtractor
         };
     }
 
-    private SoftwareInfo? ExtractSoftwareInfo(JsonElement element)
+    private static SoftwareInfo? ExtractSoftwareInfo(JsonElement element)
     {
         return new SoftwareInfo
         {
@@ -661,7 +662,7 @@ public class MetadataExtractor : IMetadataExtractor
         };
     }
 
-    private ProductInfo? ExtractProductInfo(JsonElement element)
+    private static ProductInfo? ExtractProductInfo(JsonElement element)
     {
         return new ProductInfo
         {
@@ -671,7 +672,7 @@ public class MetadataExtractor : IMetadataExtractor
         };
     }
 
-    private WebSiteInfo? ExtractWebSiteInfo(JsonElement element)
+    private static WebSiteInfo? ExtractWebSiteInfo(JsonElement element)
     {
         return new WebSiteInfo
         {
@@ -680,7 +681,7 @@ public class MetadataExtractor : IMetadataExtractor
         };
     }
 
-    private string? ExtractAuthorName(JsonElement element)
+    private static string? ExtractAuthorName(JsonElement element)
     {
         if (element.TryGetProperty("author", out var author))
         {
@@ -692,7 +693,7 @@ public class MetadataExtractor : IMetadataExtractor
         return null;
     }
 
-    private string? ExtractPublisherName(JsonElement element)
+    private static string? ExtractPublisherName(JsonElement element)
     {
         if (element.TryGetProperty("publisher", out var publisher))
         {
@@ -704,7 +705,7 @@ public class MetadataExtractor : IMetadataExtractor
         return null;
     }
 
-    private string? ExtractBrandName(JsonElement element)
+    private static string? ExtractBrandName(JsonElement element)
     {
         if (element.TryGetProperty("brand", out var brand))
         {
@@ -716,27 +717,27 @@ public class MetadataExtractor : IMetadataExtractor
         return null;
     }
 
-    private IReadOnlyList<string> ExtractKeywordsFromJsonElement(JsonElement element)
+    private static List<string> ExtractKeywordsFromJsonElement(JsonElement element)
     {
         if (element.TryGetProperty("keywords", out var keywords))
         {
             if (keywords.ValueKind == JsonValueKind.String)
             {
                 return keywords.GetString()?.Split(',', StringSplitOptions.RemoveEmptyEntries)
-                    .Select(k => k.Trim()).ToArray() ?? Array.Empty<string>();
+                    .Select(k => k.Trim()).ToList() ?? [];
             }
             if (keywords.ValueKind == JsonValueKind.Array)
             {
                 return keywords.EnumerateArray()
                     .Select(k => k.GetString())
                     .Where(k => !string.IsNullOrEmpty(k))
-                    .ToArray()!;
+                    .ToList()!;
             }
         }
-        return Array.Empty<string>();
+        return [];
     }
 
-    private IReadOnlyList<BreadcrumbItem> ExtractBreadcrumbs(HtmlDocument doc)
+    private static List<BreadcrumbItem> ExtractBreadcrumbs(HtmlDocument doc)
     {
         var breadcrumbs = new List<BreadcrumbItem>();
 
@@ -748,8 +749,8 @@ public class MetadataExtractor : IMetadataExtractor
             {
                 breadcrumbs.Add(new BreadcrumbItem
                 {
-                    Text = node.InnerText?.Trim(),
-                    Url = node.GetAttributeValue("href", null)
+                    Text = node.InnerText?.Trim() ?? string.Empty,
+                    Url = node.GetAttributeValue("href", string.Empty)
                 });
             }
         }
@@ -757,7 +758,7 @@ public class MetadataExtractor : IMetadataExtractor
         return breadcrumbs;
     }
 
-    private IReadOnlyList<FaqItem> ExtractFaqItems(HtmlDocument doc)
+    private static List<FaqItem> ExtractFaqItems(HtmlDocument doc)
     {
         var faqItems = new List<FaqItem>();
 
@@ -784,7 +785,7 @@ public class MetadataExtractor : IMetadataExtractor
         return faqItems;
     }
 
-    private IReadOnlyList<NavigationLink> ExtractNavigationLinks(HtmlDocument doc, params string[] xpaths)
+    private static List<NavigationLink> ExtractNavigationLinks(HtmlDocument doc, params string[] xpaths)
     {
         var links = new List<NavigationLink>();
 
@@ -795,24 +796,24 @@ public class MetadataExtractor : IMetadataExtractor
             {
                 foreach (var node in nodes)
                 {
-                    var href = node.GetAttributeValue("href", null);
+                    var href = node.GetAttributeValue("href", string.Empty);
                     if (!string.IsNullOrEmpty(href))
                     {
                         links.Add(new NavigationLink
                         {
                             Text = node.InnerText?.Trim(),
                             Url = href,
-                            Title = node.GetAttributeValue("title", null)
+                            Title = node.GetAttributeValue("title", string.Empty) is { Length: > 0 } titleVal ? titleVal : null
                         });
                     }
                 }
             }
         }
 
-        return links.Distinct().ToArray();
+        return links.Distinct().ToList();
     }
 
-    private IReadOnlyList<string> ExtractCategories(HtmlDocument doc)
+    private static List<string> ExtractCategories(HtmlDocument doc)
     {
         var categories = new List<string>();
 
@@ -830,10 +831,10 @@ public class MetadataExtractor : IMetadataExtractor
             categories.Add(articleCategory);
         }
 
-        return categories.Distinct().ToArray();
+        return categories.Distinct().ToList();
     }
 
-    private IReadOnlyList<string> ExtractTags(HtmlDocument doc)
+    private static List<string> ExtractTags(HtmlDocument doc)
     {
         var tags = new List<string>();
 
@@ -851,10 +852,10 @@ public class MetadataExtractor : IMetadataExtractor
             tags.AddRange(tagElements.Select(t => t.InnerText?.Trim()).Where(t => !string.IsNullOrEmpty(t))!);
         }
 
-        return tags.Distinct().ToArray();
+        return tags.Distinct().ToList();
     }
 
-    private string? DetermineContentType(HtmlDocument doc)
+    private static string? DetermineContentType(HtmlDocument doc)
     {
         // Check for article indicators
         if (doc.DocumentNode.SelectSingleNode("//article") != null ||
@@ -879,7 +880,7 @@ public class MetadataExtractor : IMetadataExtractor
         return "Webpage";
     }
 
-    private double CalculateComplexityScore(int headings, int paragraphs, int links, int images, int tables, int codeBlocks)
+    private static double CalculateComplexityScore(int headings, int paragraphs, int links, int images, int tables, int codeBlocks)
     {
         var score = 0.0;
 
@@ -896,12 +897,12 @@ public class MetadataExtractor : IMetadataExtractor
         return Math.Min(score, 1.0);
     }
 
-    private bool ValidateHeadingStructure(HtmlNodeCollection? headings)
+    private static bool ValidateHeadingStructure(HtmlNodeCollection? headings)
     {
         if (headings == null || headings.Count == 0)
             return false;
 
-        var levels = headings.Select(h => int.Parse(h.Name.Substring(1))).ToArray();
+        var levels = headings.Select(h => int.Parse(h.Name.AsSpan(1), System.Globalization.CultureInfo.InvariantCulture)).ToArray();
 
         // Check if starts with H1
         if (levels[0] != 1)
@@ -917,7 +918,7 @@ public class MetadataExtractor : IMetadataExtractor
         return true;
     }
 
-    private int CalculateAccessibilityScore(double altTextCoverage, bool hasProperStructure, bool hasSkipNav, bool usesAria)
+    private static int CalculateAccessibilityScore(double altTextCoverage, bool hasProperStructure, bool hasSkipNav, bool usesAria)
     {
         var score = 0;
 
@@ -929,7 +930,7 @@ public class MetadataExtractor : IMetadataExtractor
         return Math.Min(score, 100);
     }
 
-    private double CalculateBasicMetadataScore(BasicHtmlMetadata basic)
+    private static double CalculateBasicMetadataScore(BasicHtmlMetadata basic)
     {
         var score = 0.0;
 
@@ -943,7 +944,7 @@ public class MetadataExtractor : IMetadataExtractor
         return Math.Min(score, 1.0);
     }
 
-    private double CalculateOpenGraphScore(OpenGraphMetadata og)
+    private static double CalculateOpenGraphScore(OpenGraphMetadata og)
     {
         var score = 0.0;
 
@@ -956,7 +957,7 @@ public class MetadataExtractor : IMetadataExtractor
         return Math.Min(score, 1.0);
     }
 
-    private double CalculateTwitterCardsScore(TwitterCardsMetadata twitter)
+    private static double CalculateTwitterCardsScore(TwitterCardsMetadata twitter)
     {
         var score = 0.0;
 
@@ -968,7 +969,7 @@ public class MetadataExtractor : IMetadataExtractor
         return Math.Min(score, 1.0);
     }
 
-    private double CalculateSchemaOrgScore(SchemaOrgMetadata schema)
+    private static double CalculateSchemaOrgScore(SchemaOrgMetadata schema)
     {
         var score = 0.0;
 
@@ -982,7 +983,7 @@ public class MetadataExtractor : IMetadataExtractor
         return Math.Min(score, 1.0);
     }
 
-    private double CalculateStructureScore(DocumentStructure structure)
+    private static double CalculateStructureScore(DocumentStructure structure)
     {
         var score = 0.0;
 
@@ -994,7 +995,7 @@ public class MetadataExtractor : IMetadataExtractor
         return Math.Min(score, 1.0);
     }
 
-    private double CalculateTechnicalScore(TechnicalMetadata technical)
+    private static double CalculateTechnicalScore(TechnicalMetadata technical)
     {
         var score = 0.0;
 

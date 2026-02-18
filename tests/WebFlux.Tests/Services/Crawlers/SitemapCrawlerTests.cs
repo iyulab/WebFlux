@@ -1,5 +1,5 @@
 using System.Net;
-using Moq;
+using NSubstitute;
 using WebFlux.Core.Interfaces;
 using WebFlux.Core.Models;
 using WebFlux.Core.Options;
@@ -15,20 +15,20 @@ namespace WebFlux.Tests.Services.Crawlers;
 /// </summary>
 public class SitemapCrawlerTests : IDisposable
 {
-    private readonly Mock<IHttpClientService> _mockHttpClient;
-    private readonly Mock<IEventPublisher> _mockEventPublisher;
+    private readonly IHttpClientService _mockHttpClient;
+    private readonly IEventPublisher _mockEventPublisher;
     private readonly SitemapCrawler _crawler;
 
     public SitemapCrawlerTests()
     {
-        _mockHttpClient = new Mock<IHttpClientService>();
-        _mockEventPublisher = new Mock<IEventPublisher>();
-        _crawler = new SitemapCrawler(_mockHttpClient.Object, _mockEventPublisher.Object);
+        _mockHttpClient = Substitute.For<IHttpClientService>();
+        _mockEventPublisher = Substitute.For<IEventPublisher>();
+        _crawler = new SitemapCrawler(_mockHttpClient, _mockEventPublisher);
     }
 
     public void Dispose()
     {
-        // Cleanup if needed
+        GC.SuppressFinalize(this);
     }
 
     #region Constructor Tests
@@ -38,7 +38,7 @@ public class SitemapCrawlerTests : IDisposable
     {
         // Act & Assert
         var ex = Assert.Throws<ArgumentNullException>(() =>
-            new SitemapCrawler(null!, _mockEventPublisher.Object));
+            new SitemapCrawler(null!, _mockEventPublisher));
 
         ex.ParamName.Should().Be("httpClient");
     }
@@ -48,7 +48,7 @@ public class SitemapCrawlerTests : IDisposable
     {
         // Act & Assert
         var ex = Assert.Throws<ArgumentNullException>(() =>
-            new SitemapCrawler(_mockHttpClient.Object, null!));
+            new SitemapCrawler(_mockHttpClient, null!));
 
         ex.ParamName.Should().Be("eventPublisher");
     }
@@ -70,8 +70,8 @@ public class SitemapCrawlerTests : IDisposable
             RequestMessage = new HttpRequestMessage { RequestUri = new Uri(url) }
         };
 
-        _mockHttpClient.Setup(c => c.GetAsync(url, null, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(response);
+        _mockHttpClient.GetAsync(url, null, Arg.Any<CancellationToken>())
+            .Returns(response);
 
         // Act
         var result = await _crawler.CrawlAsync(url);
@@ -217,8 +217,8 @@ public class SitemapCrawlerTests : IDisposable
             response.Content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(contentType);
         }
 
-        _mockHttpClient.Setup(c => c.GetAsync(url, null, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(response);
+        _mockHttpClient.GetAsync(url, null, Arg.Any<CancellationToken>())
+            .Returns(response);
     }
 
     #endregion

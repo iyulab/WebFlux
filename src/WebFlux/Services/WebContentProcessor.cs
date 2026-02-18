@@ -11,7 +11,7 @@ namespace WebFlux.Services;
 /// 웹 콘텐츠 처리 파이프라인 메인 클래스
 /// 크롤링 → 추출 → 청킹 전체 프로세스 오케스트레이션
 /// </summary>
-public class WebContentProcessor : IWebContentProcessor, IContentExtractService, IContentChunkService
+public partial class WebContentProcessor : IWebContentProcessor, IContentExtractService, IContentChunkService, IDisposable
 {
     private readonly IServiceFactory _serviceFactory;
     private readonly IEventPublisher _eventPublisher;
@@ -45,8 +45,7 @@ public class WebContentProcessor : IWebContentProcessor, IContentExtractService,
         var startTime = DateTimeOffset.UtcNow;
         var processedCount = 0;
 
-        _logger.LogInformation("Starting web content processing with {UrlCount} URLs",
-            configuration.Crawling.StartUrls.Count);
+        LogStartingWebContentProcessing(_logger, configuration.Crawling.StartUrls.Count);
 
         await _eventPublisher.PublishAsync(new ProcessingStartedEvent
         {
@@ -107,8 +106,7 @@ public class WebContentProcessor : IWebContentProcessor, IContentExtractService,
                 Timestamp = DateTimeOffset.UtcNow
             }, cancellationToken);
 
-            _logger.LogInformation("Web content processing completed. Processed {ChunkCount} chunks in {Duration}",
-                processedCount, DateTimeOffset.UtcNow - startTime);
+            LogWebContentProcessingCompleted(_logger, processedCount, DateTimeOffset.UtcNow - startTime);
         }
         catch
         {
@@ -149,7 +147,7 @@ public class WebContentProcessor : IWebContentProcessor, IContentExtractService,
 
         if (startUrls.Count == 0)
         {
-            _logger.LogWarning("No URLs to crawl");
+            LogNoUrlsToCrawl(_logger);
             yield break;
         }
 
@@ -161,7 +159,7 @@ public class WebContentProcessor : IWebContentProcessor, IContentExtractService,
         // 각 URL을 병렬로 크롤링
         var crawlTasks = startUrls.Select(async url =>
         {
-            _logger.LogDebug("Starting parallel crawl: {Url}", url);
+            LogStartingParallelCrawl(_logger, url);
 
             try
             {
@@ -185,15 +183,14 @@ public class WebContentProcessor : IWebContentProcessor, IContentExtractService,
                         }
                     };
 
-                    _logger.LogInformation("  📄 CrawlResult → WebContent: {Url}, Content={ContentLength} chars",
-                        crawlResult.Url, crawlResult.Content?.Length ?? 0);
+                    LogCrawlResultToWebContent(_logger, crawlResult.Url, crawlResult.Content?.Length ?? 0);
 
                     await writer.WriteAsync(webContent, cancellationToken);
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to crawl URL: {Url}", url);
+                LogFailedToCrawlUrl(_logger, ex, url);
             }
         }).ToList();
 
@@ -202,8 +199,7 @@ public class WebContentProcessor : IWebContentProcessor, IContentExtractService,
         {
             await Task.WhenAll(crawlTasks);
             writer.Complete();
-            _logger.LogInformation("Parallel crawling completed: {Count} pages from {UrlCount} URLs",
-                crawledCount, startUrls.Count);
+            LogParallelCrawlingCompleted(_logger, crawledCount, startUrls.Count);
         }, cancellationToken);
 
         // 채널에서 결과를 스트리밍으로 반환
@@ -256,7 +252,7 @@ public class WebContentProcessor : IWebContentProcessor, IContentExtractService,
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Content extraction failed");
+                LogContentExtractionFailed(_logger, ex);
                 writer.Complete(ex);
             }
         }, cancellationToken);
@@ -271,8 +267,7 @@ public class WebContentProcessor : IWebContentProcessor, IContentExtractService,
         }
 
         await extractionTask;
-        _logger.LogInformation("Extracted {Count} documents, {TotalChars} chars",
-            extractedCount, totalChars);
+        LogExtractedDocuments(_logger, extractedCount, totalChars);
     }
 
     /// <summary>
@@ -294,8 +289,8 @@ public class WebContentProcessor : IWebContentProcessor, IContentExtractService,
 
         try
         {
-            _logger.LogInformation("  Extracting from WebContent: {Url}, Input={InputLength} chars",
-                webContent.Url, webContent.Content?.Length ?? 0);
+            var content = webContent.Content ?? string.Empty;
+            LogExtractingFromWebContent(_logger, webContent.Url, content.Length);
 
             var extractor = _serviceFactory.CreateContentExtractor(webContent.ContentType);
 
@@ -313,7 +308,7 @@ public class WebContentProcessor : IWebContentProcessor, IContentExtractService,
 
                 extracted = await _resilienceService.ExecuteWithRetryAsync(
                     async ct => await extractor.ExtractAutoAsync(
-                        webContent.Content,
+                        content,
                         webContent.Url,
                         webContent.ContentType,
                         ct),
@@ -323,20 +318,19 @@ public class WebContentProcessor : IWebContentProcessor, IContentExtractService,
             else
             {
                 extracted = await extractor.ExtractAutoAsync(
-                    webContent.Content,
+                    content,
                     webContent.Url,
                     webContent.ContentType,
                     cancellationToken);
             }
 
-            _logger.LogInformation("  Extraction complete: {Url}, Output={OutputLength} chars, MainContent={MainLength} chars",
-                webContent.Url, extracted.Text?.Length ?? 0, extracted.MainContent?.Length ?? 0);
+            LogExtractionComplete(_logger, webContent.Url, extracted.Text?.Length ?? 0, extracted.MainContent?.Length ?? 0);
 
             await writer.WriteAsync(extracted, cancellationToken);
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to extract content from {Url}", webContent.Url);
+            LogFailedToExtractContent(_logger, ex, webContent.Url);
             // 에러가 발생해도 파이프라인 계속 진행
         }
         finally
@@ -360,7 +354,7 @@ public class WebContentProcessor : IWebContentProcessor, IContentExtractService,
         var aiService = _serviceFactory.CreateAiEnhancementService();
         if (aiService == null || !await aiService.IsAvailableAsync(cancellationToken))
         {
-            _logger.LogDebug("AI enhancement skipped (service unavailable)");
+            LogAiEnhancementSkipped(_logger);
             await foreach (var content in extractedContents.WithCancellation(cancellationToken))
             {
                 yield return content;
@@ -397,7 +391,7 @@ public class WebContentProcessor : IWebContentProcessor, IContentExtractService,
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "AI enhancement pipeline failed");
+                LogAiEnhancementPipelineFailed(_logger, ex);
                 writer.Complete(ex);
             }
         }, cancellationToken);
@@ -410,8 +404,7 @@ public class WebContentProcessor : IWebContentProcessor, IContentExtractService,
         }
 
         await enhancementTask;
-        _logger.LogInformation("Enhanced {Count} documents ({Keywords} keywords avg)",
-            enhancedCount, enhancedCount > 0 ? 12 : 0);
+        LogEnhancedDocuments(_logger, enhancedCount, enhancedCount > 0 ? 12 : 0);
     }
 
     /// <summary>
@@ -469,7 +462,7 @@ public class WebContentProcessor : IWebContentProcessor, IContentExtractService,
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "AI enhancement failed for {Url}", extracted.Url);
+            LogAiEnhancementFailed(_logger, ex, extracted.Url);
             // 실패해도 원본 콘텐츠는 반환
             await writer.WriteAsync(extracted, cancellationToken);
         }
@@ -523,7 +516,7 @@ public class WebContentProcessor : IWebContentProcessor, IContentExtractService,
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Chunking pipeline failed");
+                LogChunkingPipelineFailed(_logger, ex);
                 writer.Complete(ex);
             }
         }, cancellationToken);
@@ -531,15 +524,14 @@ public class WebContentProcessor : IWebContentProcessor, IContentExtractService,
         // 결과를 스트리밍으로 반환
         await foreach (var chunk in reader.ReadAllAsync(cancellationToken))
         {
-            documentCount = Math.Max(documentCount, chunk.AdditionalMetadata.ContainsKey("DocumentNumber") ?
-                (int)chunk.AdditionalMetadata["DocumentNumber"] : documentCount);
+            documentCount = Math.Max(documentCount, chunk.AdditionalMetadata.TryGetValue("DocumentNumber", out var docNum) ?
+                (int)docNum : documentCount);
             totalChunks++;
             yield return chunk;
         }
 
         await chunkingTask;
-        _logger.LogInformation("Chunked {Count} documents → {TotalChunks} chunks",
-            documentCount, totalChunks);
+        LogChunkedDocuments(_logger, documentCount, totalChunks);
     }
 
     /// <summary>
@@ -557,8 +549,7 @@ public class WebContentProcessor : IWebContentProcessor, IContentExtractService,
 
         try
         {
-            _logger.LogInformation("  📦 Chunking document {DocNum}: Text={TextLength} chars, MainContent={MainLength} chars",
-                documentNumber, extracted.Text?.Length ?? 0, extracted.MainContent?.Length ?? 0);
+            LogChunkingDocument(_logger, documentNumber, extracted.Text?.Length ?? 0, extracted.MainContent?.Length ?? 0);
 
             var chunkingStrategy = _serviceFactory.CreateChunkingStrategy(configuration.Chunking.DefaultStrategy);
 
@@ -575,8 +566,7 @@ public class WebContentProcessor : IWebContentProcessor, IContentExtractService,
                 chunkingOptions,
                 cancellationToken);
 
-            _logger.LogInformation("  ✅ Chunked document {DocNum} → {ChunkCount} chunks",
-                documentNumber, chunks.Count);
+            LogChunkedDocument(_logger, documentNumber, chunks.Count);
 
             // 각 청크에 document number 메타데이터 추가
             foreach (var chunk in chunks)
@@ -587,7 +577,7 @@ public class WebContentProcessor : IWebContentProcessor, IContentExtractService,
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to chunk document {DocNum}", documentNumber);
+            LogFailedToChunkDocument(_logger, ex, documentNumber);
             // 에러가 발생해도 파이프라인 계속 진행
         }
         finally
@@ -602,9 +592,10 @@ public class WebContentProcessor : IWebContentProcessor, IContentExtractService,
     public void Dispose()
     {
         _processingSlot?.Dispose();
+        GC.SuppressFinalize(this);
     }
 
-    private string ExtractTitle(string? content)
+    private static string ExtractTitle(string? content)
     {
         if (string.IsNullOrEmpty(content))
             return "Untitled";
@@ -629,7 +620,7 @@ public class WebContentProcessor : IWebContentProcessor, IContentExtractService,
                 throw new ArgumentException($"Invalid chunking options: {string.Join(", ", validation.Errors)}");
         }
 
-        _logger.LogInformation("Processing single URL: {Url}", url);
+        LogProcessingSingleUrl(_logger, url);
 
         // WebFluxConfiguration 생성하여 단일 URL 처리
         var configuration = new WebFluxConfiguration
@@ -663,8 +654,7 @@ public class WebContentProcessor : IWebContentProcessor, IContentExtractService,
             chunks.Add(chunk);
         }
 
-        _logger.LogInformation("Completed processing URL {Url}: {ChunkCount} chunks generated",
-            url, chunks.Count);
+        LogCompletedProcessingUrl(_logger, url, chunks.Count);
 
         return chunks.AsReadOnly();
     }
@@ -682,7 +672,7 @@ public class WebContentProcessor : IWebContentProcessor, IContentExtractService,
         }
 
         var urlList = urls.ToList();
-        _logger.LogInformation("Processing batch of {UrlCount} URLs", urlList.Count);
+        LogProcessingBatch(_logger, urlList.Count);
 
         var results = new ConcurrentDictionary<string, IReadOnlyList<WebContentChunk>>();
         var semaphore = new SemaphoreSlim(Environment.ProcessorCount);
@@ -697,7 +687,7 @@ public class WebContentProcessor : IWebContentProcessor, IContentExtractService,
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to process URL in batch: {Url}", url);
+                LogFailedToProcessUrlInBatch(_logger, ex, url);
                 results[url] = Array.Empty<WebContentChunk>();
             }
             finally
@@ -708,7 +698,7 @@ public class WebContentProcessor : IWebContentProcessor, IContentExtractService,
 
         await Task.WhenAll(tasks).ConfigureAwait(false);
 
-        _logger.LogInformation("Batch processing completed: {UrlCount} URLs processed", urlList.Count);
+        LogBatchProcessingCompleted(_logger, urlList.Count);
         return results.ToDictionary(kvp => kvp.Key, kvp => kvp.Value).AsReadOnly();
     }
 
@@ -732,8 +722,7 @@ public class WebContentProcessor : IWebContentProcessor, IContentExtractService,
                 throw new ArgumentException($"Invalid chunking options: {string.Join(", ", chunkValidation.Errors)}");
         }
 
-        _logger.LogInformation("Processing website: {Url} (Dynamic: {Dynamic})",
-            startUrl, crawlOptions?.UseDynamicRendering ?? false);
+        LogProcessingWebsite(_logger, startUrl, crawlOptions?.UseDynamicRendering ?? false);
 
         // WebFluxConfiguration 생성
         var configuration = new WebFluxConfiguration
@@ -779,15 +768,14 @@ public class WebContentProcessor : IWebContentProcessor, IContentExtractService,
             TimeoutMs = 15000
         };
 
-        _logger.LogInformation("Using crawler: {Strategy}, UseDynamicRendering: {Dynamic}",
-            crawlStrategy, effectiveCrawlOptions.UseDynamicRendering);
+        LogUsingCrawler(_logger, crawlStrategy, effectiveCrawlOptions.UseDynamicRendering);
 
         // 크롤링 및 처리
         await foreach (var crawlResult in crawler.CrawlWebsiteAsync(startUrl, effectiveCrawlOptions, cancellationToken))
         {
             if (string.IsNullOrEmpty(crawlResult.Content))
             {
-                _logger.LogWarning("Empty content from {Url}", crawlResult.Url);
+                LogEmptyContentFromUrl(_logger, crawlResult.Url);
                 continue;
             }
 
@@ -801,7 +789,7 @@ public class WebContentProcessor : IWebContentProcessor, IContentExtractService,
 
             if (string.IsNullOrEmpty(extracted.MainContent) && string.IsNullOrEmpty(extracted.Text))
             {
-                _logger.LogWarning("No extractable content from {Url}", crawlResult.Url);
+                LogNoExtractableContentFromUrl(_logger, crawlResult.Url);
                 continue;
             }
 
@@ -821,7 +809,7 @@ public class WebContentProcessor : IWebContentProcessor, IContentExtractService,
                 effectiveChunkingOptions,
                 cancellationToken);
 
-            _logger.LogInformation("Generated {ChunkCount} chunks from {Url}", chunks.Count, crawlResult.Url);
+            LogGeneratedChunksFromUrl(_logger, chunks.Count, crawlResult.Url);
 
             foreach (var chunk in chunks)
             {
@@ -846,8 +834,7 @@ public class WebContentProcessor : IWebContentProcessor, IContentExtractService,
                 throw new ArgumentException($"Invalid chunking options: {string.Join(", ", validation.Errors)}");
         }
 
-        _logger.LogInformation("Processing HTML content from {SourceUrl}, Length={Length} chars",
-            sourceUrl, htmlContent.Length);
+        LogProcessingHtmlContent(_logger, sourceUrl, htmlContent.Length);
 
         // 콘텐츠 추출
         var extractor = _serviceFactory.CreateContentExtractor("text/html");
@@ -859,7 +846,7 @@ public class WebContentProcessor : IWebContentProcessor, IContentExtractService,
 
         if (string.IsNullOrEmpty(extracted.MainContent) && string.IsNullOrEmpty(extracted.Text))
         {
-            _logger.LogWarning("No extractable content from HTML for {SourceUrl}", sourceUrl);
+            LogNoExtractableContentFromHtml(_logger, sourceUrl);
             return Array.Empty<WebContentChunk>();
         }
 
@@ -879,31 +866,9 @@ public class WebContentProcessor : IWebContentProcessor, IContentExtractService,
             effectiveOptions,
             cancellationToken).ConfigureAwait(false);
 
-        _logger.LogInformation("Generated {ChunkCount} chunks from HTML for {SourceUrl}",
-            chunks.Count, sourceUrl);
+        LogGeneratedChunksFromHtml(_logger, chunks.Count, sourceUrl);
 
         return chunks;
-    }
-
-    public async IAsyncEnumerable<ProcessingProgress> MonitorProgressAsync(string jobId)
-    {
-        // Stub implementation
-        await Task.CompletedTask;
-        yield break;
-    }
-
-    public async Task<bool> CancelJobAsync(string jobId)
-    {
-        // Stub implementation
-        await Task.CompletedTask;
-        return true;
-    }
-
-    public async Task<ProcessingStatistics> GetStatisticsAsync()
-    {
-        // Stub implementation
-        await Task.CompletedTask;
-        return new ProcessingStatistics();
     }
 
     public IReadOnlyList<string> GetAvailableChunkingStrategies()
@@ -932,12 +897,12 @@ public class WebContentProcessor : IWebContentProcessor, IContentExtractService,
 
         try
         {
-            _logger.LogDebug("Extracting content from {Url}", url);
+            LogExtractingContent(_logger, url);
 
             // URL 유효성 검사
             if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
             {
-                return ProcessingResult<ExtractedContent>.FromError(
+                return ProcessingResult.FromError<ExtractedContent>(
                     "Invalid URL format",
                     ExtractErrorCodes.InvalidUrl,
                     sw.ElapsedMilliseconds);
@@ -952,9 +917,9 @@ public class WebContentProcessor : IWebContentProcessor, IContentExtractService,
 
                 if (cached != null)
                 {
-                    _logger.LogDebug("Cache hit for {Url}", url);
+                    LogCacheHit(_logger, url);
                     cached.FromCache = true;
-                    return ProcessingResult<ExtractedContent>.Success(
+                    return ProcessingResult.Success<ExtractedContent>(
                         cached,
                         processingTimeMs: sw.ElapsedMilliseconds,
                         metadata: new Dictionary<string, object> { ["cacheHit"] = true });
@@ -996,7 +961,7 @@ public class WebContentProcessor : IWebContentProcessor, IContentExtractService,
                 }
                 catch (Exception ex) when (retryCount < options.MaxRetries)
                 {
-                    _logger.LogWarning(ex, "Crawl attempt {Attempt} failed for {Url}", retryCount + 1, url);
+                    LogCrawlAttemptFailed(_logger, ex, retryCount + 1, url);
                 }
 
                 retryCount++;
@@ -1012,7 +977,7 @@ public class WebContentProcessor : IWebContentProcessor, IContentExtractService,
                     ? ExtractErrorCodes.FromHttpStatusCode(crawlResult.StatusCode)
                     : ExtractErrorCodes.NetworkError;
 
-                return ProcessingResult<ExtractedContent>.FromError(
+                return ProcessingResult.FromError<ExtractedContent>(
                     crawlResult?.ErrorMessage ?? "Failed to crawl URL",
                     errorCode,
                     sw.ElapsedMilliseconds);
@@ -1020,7 +985,7 @@ public class WebContentProcessor : IWebContentProcessor, IContentExtractService,
 
             if (string.IsNullOrWhiteSpace(crawlResult.Content))
             {
-                return ProcessingResult<ExtractedContent>.FromError(
+                return ProcessingResult.FromError<ExtractedContent>(
                     "Empty content received",
                     ExtractErrorCodes.EmptyContent,
                     sw.ElapsedMilliseconds);
@@ -1089,25 +1054,23 @@ public class WebContentProcessor : IWebContentProcessor, IContentExtractService,
                     cancellationToken).ConfigureAwait(false);
             }
 
-            _logger.LogInformation(
-                "Extracted content from {Url}: {CharCount} chars in {ElapsedMs}ms",
-                url, extracted.MainContent?.Length ?? 0, sw.ElapsedMilliseconds);
+            LogExtractedContentFromUrl(_logger, url, extracted.MainContent?.Length ?? 0, sw.ElapsedMilliseconds);
 
-            return ProcessingResult<ExtractedContent>.Success(
+            return ProcessingResult.Success<ExtractedContent>(
                 extracted,
                 processingTimeMs: sw.ElapsedMilliseconds);
         }
         catch (OperationCanceledException)
         {
-            return ProcessingResult<ExtractedContent>.FromError(
+            return ProcessingResult.FromError<ExtractedContent>(
                 "Operation cancelled",
                 ExtractErrorCodes.Timeout,
                 sw.ElapsedMilliseconds);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to extract content from {Url}", url);
-            return ProcessingResult<ExtractedContent>.FromException(ex, sw.ElapsedMilliseconds);
+            LogFailedToExtractContentFromUrl(_logger, ex, url);
+            return ProcessingResult.FromException<ExtractedContent>(ex, sw.ElapsedMilliseconds);
         }
     }
 
@@ -1134,7 +1097,7 @@ public class WebContentProcessor : IWebContentProcessor, IContentExtractService,
         var processingTimes = new ConcurrentBag<long>();
         var domainCounts = new ConcurrentDictionary<string, int>();
 
-        _logger.LogInformation("Starting batch extraction for {UrlCount} URLs", urlList.Count);
+        LogStartingBatchExtraction(_logger, urlList.Count);
 
         // Rate Limiter 생성
         var rateLimiter = options.EnableDomainRateLimiting
@@ -1242,9 +1205,7 @@ public class WebContentProcessor : IWebContentProcessor, IContentExtractService,
             EndTime = DateTimeOffset.UtcNow
         };
 
-        _logger.LogInformation(
-            "Batch extraction completed: {Succeeded}/{Total} succeeded ({SuccessRate:P0}) in {Duration}ms",
-            succeededList.Count, urlList.Count, result.SuccessRate, sw.ElapsedMilliseconds);
+        LogBatchExtractionCompleted(_logger, succeededList.Count, urlList.Count, result.SuccessRate, sw.ElapsedMilliseconds);
 
         return result;
     }
@@ -1260,7 +1221,7 @@ public class WebContentProcessor : IWebContentProcessor, IContentExtractService,
         options ??= ExtractOptions.Default;
         var urlList = urls.ToList();
 
-        _logger.LogInformation("Starting streaming batch extraction for {UrlCount} URLs", urlList.Count);
+        LogStartingStreamingBatchExtraction(_logger, urlList.Count);
 
         // Rate Limiter 생성
         var rateLimiter = options.EnableDomainRateLimiting
@@ -1301,7 +1262,7 @@ public class WebContentProcessor : IWebContentProcessor, IContentExtractService,
                 }
                 catch (Exception ex)
                 {
-                    var failedResult = ProcessingResult<ExtractedContent>.FromException(ex);
+                    var failedResult = ProcessingResult.FromException<ExtractedContent>(ex);
                     await writer.WriteAsync(failedResult, cancellationToken).ConfigureAwait(false);
                 }
                 finally
@@ -1326,7 +1287,7 @@ public class WebContentProcessor : IWebContentProcessor, IContentExtractService,
     /// <summary>
     /// 출력 포맷을 적용합니다
     /// </summary>
-    private ExtractedContent ApplyOutputFormat(ExtractedContent content, OutputFormat format, string originalHtml)
+    private static ExtractedContent ApplyOutputFormat(ExtractedContent content, OutputFormat format, string originalHtml)
     {
         switch (format)
         {
@@ -1383,6 +1344,136 @@ public class WebContentProcessor : IWebContentProcessor, IContentExtractService,
     }
 
     #endregion
+
+    // ===================================================================
+    // LoggerMessage Definitions
+    // ===================================================================
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Starting web content processing with {UrlCount} URLs")]
+    private static partial void LogStartingWebContentProcessing(ILogger logger, int UrlCount);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Web content processing completed. Processed {ChunkCount} chunks in {Duration}")]
+    private static partial void LogWebContentProcessingCompleted(ILogger logger, int ChunkCount, TimeSpan Duration);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "No URLs to crawl")]
+    private static partial void LogNoUrlsToCrawl(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Starting parallel crawl: {Url}")]
+    private static partial void LogStartingParallelCrawl(ILogger logger, string Url);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "CrawlResult to WebContent: {Url}, Content={ContentLength} chars")]
+    private static partial void LogCrawlResultToWebContent(ILogger logger, string Url, int ContentLength);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to crawl URL: {Url}")]
+    private static partial void LogFailedToCrawlUrl(ILogger logger, Exception ex, string Url);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Parallel crawling completed: {Count} pages from {UrlCount} URLs")]
+    private static partial void LogParallelCrawlingCompleted(ILogger logger, int Count, int UrlCount);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Content extraction failed")]
+    private static partial void LogContentExtractionFailed(ILogger logger, Exception ex);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Extracted {Count} documents, {TotalChars} chars")]
+    private static partial void LogExtractedDocuments(ILogger logger, int Count, int TotalChars);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Extracting from WebContent: {Url}, Input={InputLength} chars")]
+    private static partial void LogExtractingFromWebContent(ILogger logger, string Url, int InputLength);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Extraction complete: {Url}, Output={OutputLength} chars, MainContent={MainLength} chars")]
+    private static partial void LogExtractionComplete(ILogger logger, string Url, int OutputLength, int MainLength);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to extract content from {Url}")]
+    private static partial void LogFailedToExtractContent(ILogger logger, Exception ex, string Url);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "AI enhancement skipped (service unavailable)")]
+    private static partial void LogAiEnhancementSkipped(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "AI enhancement pipeline failed")]
+    private static partial void LogAiEnhancementPipelineFailed(ILogger logger, Exception ex);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Enhanced {Count} documents ({Keywords} keywords avg)")]
+    private static partial void LogEnhancedDocuments(ILogger logger, int Count, int Keywords);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "AI enhancement failed for {Url}")]
+    private static partial void LogAiEnhancementFailed(ILogger logger, Exception ex, string Url);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Chunking pipeline failed")]
+    private static partial void LogChunkingPipelineFailed(ILogger logger, Exception ex);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Chunked {Count} documents to {TotalChunks} chunks")]
+    private static partial void LogChunkedDocuments(ILogger logger, int Count, int TotalChunks);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Chunking document {DocNum}: Text={TextLength} chars, MainContent={MainLength} chars")]
+    private static partial void LogChunkingDocument(ILogger logger, int DocNum, int TextLength, int MainLength);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Chunked document {DocNum} to {ChunkCount} chunks")]
+    private static partial void LogChunkedDocument(ILogger logger, int DocNum, int ChunkCount);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to chunk document {DocNum}")]
+    private static partial void LogFailedToChunkDocument(ILogger logger, Exception ex, int DocNum);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Processing single URL: {Url}")]
+    private static partial void LogProcessingSingleUrl(ILogger logger, string Url);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Completed processing URL {Url}: {ChunkCount} chunks generated")]
+    private static partial void LogCompletedProcessingUrl(ILogger logger, string Url, int ChunkCount);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Processing batch of {UrlCount} URLs")]
+    private static partial void LogProcessingBatch(ILogger logger, int UrlCount);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to process URL in batch: {Url}")]
+    private static partial void LogFailedToProcessUrlInBatch(ILogger logger, Exception ex, string Url);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Batch processing completed: {UrlCount} URLs processed")]
+    private static partial void LogBatchProcessingCompleted(ILogger logger, int UrlCount);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Processing website: {Url} (Dynamic: {Dynamic})")]
+    private static partial void LogProcessingWebsite(ILogger logger, string Url, bool Dynamic);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Using crawler: {Strategy}, UseDynamicRendering: {Dynamic}")]
+    private static partial void LogUsingCrawler(ILogger logger, WebFlux.Core.Options.CrawlStrategy Strategy, bool Dynamic);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Empty content from {Url}")]
+    private static partial void LogEmptyContentFromUrl(ILogger logger, string Url);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "No extractable content from {Url}")]
+    private static partial void LogNoExtractableContentFromUrl(ILogger logger, string Url);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Generated {ChunkCount} chunks from {Url}")]
+    private static partial void LogGeneratedChunksFromUrl(ILogger logger, int ChunkCount, string Url);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Processing HTML content from {SourceUrl}, Length={Length} chars")]
+    private static partial void LogProcessingHtmlContent(ILogger logger, string SourceUrl, int Length);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "No extractable content from HTML for {SourceUrl}")]
+    private static partial void LogNoExtractableContentFromHtml(ILogger logger, string SourceUrl);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Generated {ChunkCount} chunks from HTML for {SourceUrl}")]
+    private static partial void LogGeneratedChunksFromHtml(ILogger logger, int ChunkCount, string SourceUrl);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Extracting content from {Url}")]
+    private static partial void LogExtractingContent(ILogger logger, string Url);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Cache hit for {Url}")]
+    private static partial void LogCacheHit(ILogger logger, string Url);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Crawl attempt {Attempt} failed for {Url}")]
+    private static partial void LogCrawlAttemptFailed(ILogger logger, Exception ex, int Attempt, string Url);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Extracted content from {Url}: {CharCount} chars in {ElapsedMs}ms")]
+    private static partial void LogExtractedContentFromUrl(ILogger logger, string Url, int CharCount, long ElapsedMs);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to extract content from {Url}")]
+    private static partial void LogFailedToExtractContentFromUrl(ILogger logger, Exception ex, string Url);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Starting batch extraction for {UrlCount} URLs")]
+    private static partial void LogStartingBatchExtraction(ILogger logger, int UrlCount);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Batch extraction completed: {Succeeded}/{Total} succeeded ({SuccessRate}) in {Duration}ms")]
+    private static partial void LogBatchExtractionCompleted(ILogger logger, int Succeeded, int Total, double SuccessRate, long Duration);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Starting streaming batch extraction for {UrlCount} URLs")]
+    private static partial void LogStartingStreamingBatchExtraction(ILogger logger, int UrlCount);
 }
 
 /// <summary>

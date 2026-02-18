@@ -110,7 +110,7 @@ public class CrawlOptions : IValidatable
     /// <summary>
     /// 외부 링크 따라가기 여부 (기본값: false)
     /// </summary>
-    public bool FollowExternalLinks { get; set; } = false;
+    public bool FollowExternalLinks { get; set; }
 
     /// <summary>
     /// 요청 타임아웃 (TimeSpan)
@@ -121,18 +121,6 @@ public class CrawlOptions : IValidatable
     /// 추가 헤더
     /// </summary>
     public Dictionary<string, string> Headers { get; set; } = new();
-
-    /// <summary>
-    /// 제외 패턴 (정규식)
-    /// </summary>
-    [Obsolete("Use ExcludeUrlPatterns instead")]
-    public List<string> ExcludePatterns { get; set; } = new();
-
-    /// <summary>
-    /// 포함 패턴 (정규식)
-    /// </summary>
-    [Obsolete("Use IncludeUrlPatterns instead")]
-    public List<string> IncludePatterns { get; set; } = new();
 
     /// <summary>
     /// 최대 동시 연결 수 (llms.txt 최적화용)
@@ -147,7 +135,7 @@ public class CrawlOptions : IValidatable
     /// <summary>
     /// 이미지 다운로드 여부 (기본값: false)
     /// </summary>
-    public bool DownloadImages { get; set; } = false;
+    public bool DownloadImages { get; set; }
 
     /// <summary>
     /// 최대 이미지 크기 (바이트, 기본값: 5MB)
@@ -178,7 +166,7 @@ public class CrawlOptions : IValidatable
     /// 동적 렌더링 사용 여부 (Playwright 사용, 기본값: false)
     /// JavaScript로 렌더링되는 SPA (React, Vue, Angular) 처리
     /// </summary>
-    public bool UseDynamicRendering { get; set; } = false;
+    public bool UseDynamicRendering { get; set; }
 
     /// <summary>
     /// 동적 렌더링 시 대기할 CSS 셀렉터
@@ -204,7 +192,7 @@ public class CrawlOptions : IValidatable
     /// AI 메타데이터 추출 활성화 (기본값: false)
     /// true일 경우 IWebMetadataExtractor를 사용하여 콘텐츠에서 메타데이터를 추출합니다
     /// </summary>
-    public bool EnableMetadataExtraction { get; set; } = false;
+    public bool EnableMetadataExtraction { get; set; }
 
     /// <summary>
     /// 메타데이터 스키마 (기본값: General)

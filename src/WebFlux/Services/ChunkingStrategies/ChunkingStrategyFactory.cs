@@ -10,7 +10,7 @@ namespace WebFlux.Services.ChunkingStrategies;
 /// 청킹 전략 팩토리 구현
 /// Phase 4D: Auto 전략과 MemoryOptimized 전략을 포함한 7가지 전략 지원
 /// </summary>
-public class ChunkingStrategyFactory : IChunkingStrategyFactory
+public partial class ChunkingStrategyFactory : IChunkingStrategyFactory
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<ChunkingStrategyFactory> _logger;
@@ -40,19 +40,19 @@ public class ChunkingStrategyFactory : IChunkingStrategyFactory
 
         if (!_strategyCreators.TryGetValue(strategyName, out var creator))
         {
-            _logger.LogWarning("알 수 없는 청킹 전략: {StrategyName}, Paragraph 전략으로 대체", strategyName);
+            LogUnknownStrategy(_logger, strategyName);
             creator = _strategyCreators["Paragraph"];
         }
 
         try
         {
             var strategy = creator();
-            _logger.LogDebug("청킹 전략 생성 완료: {StrategyName}", strategy.Name);
+            LogStrategyCreated(_logger, strategy.Name);
             return strategy;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "청킹 전략 생성 실패: {StrategyName}", strategyName);
+            LogStrategyCreationFailed(_logger, ex, strategyName);
             throw new InvalidOperationException($"청킹 전략 '{strategyName}' 생성에 실패했습니다.", ex);
         }
     }
@@ -82,8 +82,8 @@ public class ChunkingStrategyFactory : IChunkingStrategyFactory
         try
         {
             var contentLength = content.MainContent?.Length ?? 0;
-            var hasImages = content.ImageUrls?.Any() ?? false;
-            var hasHeadings = content.Headings?.Any() ?? false;
+            var hasImages = content.ImageUrls?.Count > 0;
+            var hasHeadings = content.Headings?.Count > 0;
             var isTechnical = AnalyzeTechnicalContent(content);
 
             // 메모리 제약이 있는 경우
@@ -121,7 +121,7 @@ public class ChunkingStrategyFactory : IChunkingStrategyFactory
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "전략 추천 중 오류 발생, 기본 전략 반환");
+            LogStrategyRecommendationFailed(_logger, ex);
             return "Paragraph";
         }
     }
@@ -245,13 +245,13 @@ public class ChunkingStrategyFactory : IChunkingStrategyFactory
             SuitableContentTypes = new List<string> { "대용량 텍스트", "로그 파일", "데이터 덤프" }
         };
 
-        _logger.LogInformation("청킹 전략 팩토리 초기화 완료: {StrategyCount}개 전략", _strategyCreators.Count);
+        LogFactoryInitialized(_logger, _strategyCreators.Count);
     }
 
     /// <summary>
     /// 기술적 콘텐츠 분석
     /// </summary>
-    private bool AnalyzeTechnicalContent(ExtractedContent content)
+    private static bool AnalyzeTechnicalContent(ExtractedContent content)
     {
         var text = content.MainContent?.ToLowerInvariant() ?? "";
         var technicalKeywords = new[]
@@ -267,7 +267,7 @@ public class ChunkingStrategyFactory : IChunkingStrategyFactory
     /// <summary>
     /// 메타데이터 컨텍스트 존재 여부 확인
     /// </summary>
-    private bool HasMetadataContext(ExtractedContent content)
+    private static bool HasMetadataContext(ExtractedContent content)
     {
         // URL에서 메타데이터 가능성 추정
         var url = content.Url?.ToLowerInvariant() ?? "";
@@ -281,6 +281,25 @@ public class ChunkingStrategyFactory : IChunkingStrategyFactory
 
         return metadataRichSites.Any(site => url.Contains(site)) ||
                !string.IsNullOrEmpty(content.Title) ||
-               content.Headings?.Any() == true;
+               content.Headings?.Count > 0;
     }
+
+    // ===================================================================
+    // LoggerMessage Definitions
+    // ===================================================================
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "알 수 없는 청킹 전략: {StrategyName}, Paragraph 전략으로 대체")]
+    private static partial void LogUnknownStrategy(ILogger logger, string StrategyName);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "청킹 전략 생성 완료: {StrategyName}")]
+    private static partial void LogStrategyCreated(ILogger logger, string StrategyName);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "청킹 전략 생성 실패: {StrategyName}")]
+    private static partial void LogStrategyCreationFailed(ILogger logger, Exception ex, string StrategyName);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "전략 추천 중 오류 발생, 기본 전략 반환")]
+    private static partial void LogStrategyRecommendationFailed(ILogger logger, Exception ex);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "청킹 전략 팩토리 초기화 완료: {StrategyCount}개 전략")]
+    private static partial void LogFactoryInitialized(ILogger logger, int StrategyCount);
 }

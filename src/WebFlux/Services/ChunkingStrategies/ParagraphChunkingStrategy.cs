@@ -10,6 +10,8 @@ namespace WebFlux.Services.ChunkingStrategies;
 /// </summary>
 public class ParagraphChunkingStrategy : BaseChunkingStrategy
 {
+    private static readonly string[] ParagraphSplitSeparators = ["\n\n", "\r\n\r\n"];
+
     public override string Name => "Paragraph";
     public override string Description => "문단 기반 청킹 - 자연스러운 텍스트 경계 보존";
 
@@ -40,10 +42,10 @@ public class ParagraphChunkingStrategy : BaseChunkingStrategy
     /// <summary>
     /// 문단 단위로 텍스트를 분할
     /// </summary>
-    private IReadOnlyList<WebContentChunk> SplitByParagraphs(string text, int maxChunkSize, string sourceUrl)
+    private List<WebContentChunk> SplitByParagraphs(string text, int maxChunkSize, string sourceUrl)
     {
         var chunks = new List<WebContentChunk>();
-        var paragraphs = text.Split(new[] { "\n\n", "\r\n\r\n" }, StringSplitOptions.RemoveEmptyEntries);
+        var paragraphs = text.Split(ParagraphSplitSeparators, StringSplitOptions.RemoveEmptyEntries);
         var currentChunk = new List<string>();
         var currentLength = 0;
         var sequenceNumber = 0;
@@ -70,6 +72,6 @@ public class ParagraphChunkingStrategy : BaseChunkingStrategy
             chunks.Add(CreateChunk(string.Join("\n\n", currentChunk), sequenceNumber, sourceUrl));
         }
 
-        return chunks.AsReadOnly();
+        return chunks;
     }
 }

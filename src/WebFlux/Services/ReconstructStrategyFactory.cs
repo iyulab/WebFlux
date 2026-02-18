@@ -11,7 +11,7 @@ namespace WebFlux.Services;
 /// 재구성 전략 팩토리 구현
 /// 전략 선택, 생성 및 최적화 자동 선택 기능 제공
 /// </summary>
-public class ReconstructStrategyFactory : IReconstructStrategyFactory
+public partial class ReconstructStrategyFactory : IReconstructStrategyFactory
 {
     private readonly ITextCompletionService? _llmService;
     private readonly ILogger<ReconstructStrategyFactory> _logger;
@@ -37,13 +37,11 @@ public class ReconstructStrategyFactory : IReconstructStrategyFactory
         // LLM 서비스 가용성 로깅
         if (_llmService == null)
         {
-            _logger.LogInformation(
-                "ITextCompletionService not registered. LLM-based reconstruction strategies (Summarize, Expand, Rewrite, Enrich) will not be available. " +
-                "Only 'None' strategy will work without quality degradation.");
+            LogLlmServiceNotRegistered(_logger);
         }
         else
         {
-            _logger.LogDebug("ITextCompletionService registered. All reconstruction strategies are available.");
+            LogLlmServiceRegistered(_logger);
         }
     }
 
@@ -56,16 +54,13 @@ public class ReconstructStrategyFactory : IReconstructStrategyFactory
     {
         if (string.IsNullOrWhiteSpace(strategyName))
         {
-            _logger.LogWarning("Strategy name is null or empty, defaulting to 'None' strategy");
+            LogEmptyStrategyName(_logger);
             return new NoneReconstructStrategy();
         }
 
         if (!_strategyCreators.TryGetValue(strategyName, out var creator))
         {
-            _logger.LogWarning(
-                "Unknown strategy '{StrategyName}' requested. Available strategies: {AvailableStrategies}. Defaulting to 'None'",
-                strategyName,
-                string.Join(", ", GetAvailableStrategies()));
+            LogUnknownStrategy(_logger, strategyName, string.Join(", ", GetAvailableStrategies()));
             return new NoneReconstructStrategy();
         }
 
@@ -74,13 +69,10 @@ public class ReconstructStrategyFactory : IReconstructStrategyFactory
         // LLM 전략인데 서비스가 없으면 경고
         if (strategyName != "None" && _llmService == null)
         {
-            _logger.LogWarning(
-                "Strategy '{StrategyName}' requires ITextCompletionService, but it is not registered. " +
-                "This strategy will fail if used. Consider registering ITextCompletionService or using 'None' strategy.",
-                strategyName);
+            LogLlmRequiredButMissing(_logger, strategyName);
         }
 
-        _logger.LogDebug("Created reconstruction strategy: {StrategyName}", strategyName);
+        LogStrategyCreated(_logger, strategyName);
         return strategy;
     }
 
@@ -89,27 +81,23 @@ public class ReconstructStrategyFactory : IReconstructStrategyFactory
         // 사용자가 명시적으로 전략을 지정했으면 그것을 사용
         if (!string.IsNullOrEmpty(options.Strategy) && options.Strategy != "Auto")
         {
-            _logger.LogInformation("Using explicitly specified strategy: {Strategy}", options.Strategy);
+            LogUsingExplicitStrategy(_logger, options.Strategy);
             return CreateStrategy(options.Strategy);
         }
 
         // Auto 전략 선택 로직
-        _logger.LogDebug("Auto-selecting optimal reconstruction strategy based on content analysis");
+        LogAutoSelectingStrategy(_logger);
 
         // LLM 서비스가 없거나 UseLLM이 false면 무조건 None
         if (_llmService == null || !options.UseLLM)
         {
             if (_llmService == null)
             {
-                _logger.LogInformation(
-                    "ITextCompletionService not available. Using 'None' strategy. " +
-                    "Output quality: Original content preserved without enhancement.");
+                LogLlmNotAvailableUsingNone(_logger);
             }
             else
             {
-                _logger.LogInformation(
-                    "UseLLM is false. Using 'None' strategy. " +
-                    "Set ReconstructOptions.UseLLM = true to enable LLM-based strategies.");
+                LogUseLlmFalseUsingNone(_logger);
             }
             return new NoneReconstructStrategy();
         }
@@ -117,11 +105,7 @@ public class ReconstructStrategyFactory : IReconstructStrategyFactory
         // 콘텐츠 분석 기반 전략 선택
         var selectedStrategy = AnalyzeAndSelectStrategy(content, options);
 
-        _logger.LogInformation(
-            "Auto-selected strategy: {Strategy} (Content length: {Length}, Quality: {Quality:F2})",
-            selectedStrategy,
-            content.CleanedContent.Length,
-            content.Metrics?.ContentQuality ?? 0);
+        LogAutoSelectedStrategy(_logger, selectedStrategy, content.CleanedContent.Length, content.Metrics?.ContentQuality ?? 0);
 
         return CreateStrategy(selectedStrategy);
     }
@@ -208,31 +192,31 @@ public class ReconstructStrategyFactory : IReconstructStrategyFactory
         };
     }
 
-    private string AnalyzeAndSelectStrategy(AnalyzedContent content, ReconstructOptions options)
+    private static string AnalyzeAndSelectStrategy(AnalyzedContent content, ReconstructOptions options)
     {
         var contentLength = content.CleanedContent.Length;
         var quality = content.Metrics?.ContentQuality ?? 0;
-        var hasImages = content.Images?.Any() ?? false;
+        var hasImages = content.Images?.Count > 0;
 
-        // 매우 긴 콘텐츠 → 요약
+        // 매우 긴 콘텐츠 -> 요약
         if (contentLength > 10000)
         {
             return "Summarize";
         }
 
-        // 품질이 낮은 콘텐츠 → 재작성
+        // 품질이 낮은 콘텐츠 -> 재작성
         if (quality < 0.6)
         {
             return "Rewrite";
         }
 
-        // 짧은 콘텐츠 → 확장
+        // 짧은 콘텐츠 -> 확장
         if (contentLength < 500)
         {
             return "Expand";
         }
 
-        // 이미지가 많거나 기술 문서 → 보강
+        // 이미지가 많거나 기술 문서 -> 보강
         if (hasImages || content.Sections?.Count > 5)
         {
             return "Enrich";
@@ -241,4 +225,41 @@ public class ReconstructStrategyFactory : IReconstructStrategyFactory
         // 기본값: 재작성 (가장 범용적)
         return "Rewrite";
     }
+
+    // ===================================================================
+    // LoggerMessage Definitions
+    // ===================================================================
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "ITextCompletionService not registered. LLM-based reconstruction strategies (Summarize, Expand, Rewrite, Enrich) will not be available. Only 'None' strategy will work without quality degradation.")]
+    private static partial void LogLlmServiceNotRegistered(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "ITextCompletionService registered. All reconstruction strategies are available.")]
+    private static partial void LogLlmServiceRegistered(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Strategy name is null or empty, defaulting to 'None' strategy")]
+    private static partial void LogEmptyStrategyName(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Unknown strategy '{StrategyName}' requested. Available strategies: {AvailableStrategies}. Defaulting to 'None'")]
+    private static partial void LogUnknownStrategy(ILogger logger, string StrategyName, string AvailableStrategies);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Strategy '{StrategyName}' requires ITextCompletionService, but it is not registered. This strategy will fail if used. Consider registering ITextCompletionService or using 'None' strategy.")]
+    private static partial void LogLlmRequiredButMissing(ILogger logger, string StrategyName);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Created reconstruction strategy: {StrategyName}")]
+    private static partial void LogStrategyCreated(ILogger logger, string StrategyName);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Using explicitly specified strategy: {Strategy}")]
+    private static partial void LogUsingExplicitStrategy(ILogger logger, string Strategy);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Auto-selecting optimal reconstruction strategy based on content analysis")]
+    private static partial void LogAutoSelectingStrategy(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "ITextCompletionService not available. Using 'None' strategy. Output quality: Original content preserved without enhancement.")]
+    private static partial void LogLlmNotAvailableUsingNone(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "UseLLM is false. Using 'None' strategy. Set ReconstructOptions.UseLLM = true to enable LLM-based strategies.")]
+    private static partial void LogUseLlmFalseUsingNone(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Auto-selected strategy: {Strategy} (Content length: {Length}, Quality: {Quality})")]
+    private static partial void LogAutoSelectedStrategy(ILogger logger, string Strategy, int Length, double Quality);
 }

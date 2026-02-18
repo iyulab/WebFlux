@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Globalization;
 using System.Text;
 using WebFlux.Core.Interfaces;
 using WebFlux.Core.Models;
@@ -32,7 +33,7 @@ public class EnrichReconstructStrategy : IReconstructStrategy
 
     public bool IsApplicable(AnalyzedContent content, ReconstructOptions options)
     {
-        return _llmService != null && options.UseLLM && options.EnrichmentTypes.Any();
+        return _llmService != null && options.UseLLM && options.EnrichmentTypes.Count != 0;
     }
 
     public async Task<ReconstructedContent> ApplyAsync(
@@ -111,9 +112,9 @@ public class EnrichReconstructStrategy : IReconstructStrategy
         return TimeSpan.FromMilliseconds(estimatedTokensPerCall * totalCalls * 10);
     }
 
-    private string BuildEnrichmentPrompt(AnalyzedContent content, string enrichmentType, string? additionalContext)
+    private static string BuildEnrichmentPrompt(AnalyzedContent content, string enrichmentType, string? additionalContext)
     {
-        var instructions = enrichmentType.ToLower() switch
+        var instructions = enrichmentType.ToLowerInvariant() switch
         {
             "context" => "Provide relevant background context and historical information that would help understand this content better.",
             "definitions" => "Identify and define key technical terms, concepts, and acronyms mentioned in the content.",
@@ -137,9 +138,9 @@ Content:
 Enrichment:";
     }
 
-    private string CombineEnhancements(string originalContent, List<ContentEnhancement> enhancements)
+    private static string CombineEnhancements(string originalContent, List<ContentEnhancement> enhancements)
     {
-        if (!enhancements.Any())
+        if (enhancements.Count == 0)
             return originalContent;
 
         var sb = new StringBuilder();
@@ -150,14 +151,14 @@ Enrichment:";
         foreach (var enhancement in enhancements)
         {
             sb.AppendLine();
-            sb.AppendLine($"### {enhancement.Type}");
+            sb.AppendLine(CultureInfo.InvariantCulture, $"### {enhancement.Type}");
             sb.AppendLine(enhancement.Content);
         }
 
         return sb.ToString();
     }
 
-    private int EstimateTotalTokens(List<ContentEnhancement> enhancements)
+    private static int EstimateTotalTokens(List<ContentEnhancement> enhancements)
     {
         return enhancements.Sum(e => e.Content.Length / 4);
     }

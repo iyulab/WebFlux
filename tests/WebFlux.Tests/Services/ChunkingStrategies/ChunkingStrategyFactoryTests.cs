@@ -1,6 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Moq;
+using NSubstitute;
 using WebFlux.Core.Models;
 using WebFlux.Core.Options;
 using WebFlux.Services.ChunkingStrategies;
@@ -16,7 +16,7 @@ namespace WebFlux.Tests.Services.ChunkingStrategies;
 public class ChunkingStrategyFactoryTests
 {
     private readonly IServiceProvider _serviceProvider;
-    private readonly Mock<ILogger<ChunkingStrategyFactory>> _mockLogger;
+    private readonly ILogger<ChunkingStrategyFactory> _mockLogger;
     private readonly ChunkingStrategyFactory _factory;
 
     public ChunkingStrategyFactoryTests()
@@ -32,8 +32,8 @@ public class ChunkingStrategyFactoryTests
         services.AddTransient<MemoryOptimizedChunkingStrategy>();
 
         _serviceProvider = services.BuildServiceProvider();
-        _mockLogger = new Mock<ILogger<ChunkingStrategyFactory>>();
-        _factory = new ChunkingStrategyFactory(_serviceProvider, _mockLogger.Object);
+        _mockLogger = Substitute.For<ILogger<ChunkingStrategyFactory>>();
+        _factory = new ChunkingStrategyFactory(_serviceProvider, _mockLogger);
     }
 
     #region Constructor Tests
@@ -43,7 +43,7 @@ public class ChunkingStrategyFactoryTests
     {
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() =>
-            new ChunkingStrategyFactory(null!, _mockLogger.Object));
+            new ChunkingStrategyFactory(null!, _mockLogger));
     }
 
     [Fact]
@@ -58,7 +58,7 @@ public class ChunkingStrategyFactoryTests
     public void Constructor_WithValidArguments_ShouldNotThrow()
     {
         // Act & Assert
-        var factory = new ChunkingStrategyFactory(_serviceProvider, _mockLogger.Object);
+        var factory = new ChunkingStrategyFactory(_serviceProvider, _mockLogger);
         factory.Should().NotBeNull();
     }
 
@@ -341,7 +341,7 @@ public class ChunkingStrategyFactoryTests
         // Arrange
         var content = new ExtractedContent
         {
-            MainContent = null,
+            MainContent = null!,
             Url = "https://example.com"
         };
 

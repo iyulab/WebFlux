@@ -10,11 +10,11 @@ namespace WebFlux.Services.ChunkingStrategies;
 /// </summary>
 public abstract class BaseChunkingStrategy : IChunkingStrategy
 {
-    protected readonly IEventPublisher? _eventPublisher;
+    protected IEventPublisher? EventPublisher { get; }
 
     protected BaseChunkingStrategy(IEventPublisher? eventPublisher = null)
     {
-        _eventPublisher = eventPublisher;
+        EventPublisher = eventPublisher;
     }
 
     /// <summary>

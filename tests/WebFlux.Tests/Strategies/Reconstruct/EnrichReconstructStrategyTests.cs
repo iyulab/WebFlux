@@ -3,7 +3,7 @@ using WebFlux.Core.Models;
 using WebFlux.Core.Options;
 using WebFlux.Strategies.Reconstruct;
 using Xunit;
-using Moq;
+using NSubstitute;
 
 namespace WebFlux.Tests.Strategies.Reconstruct;
 
@@ -13,13 +13,13 @@ namespace WebFlux.Tests.Strategies.Reconstruct;
 /// </summary>
 public class EnrichReconstructStrategyTests
 {
-    private readonly Mock<ITextCompletionService> _mockLlmService;
+    private readonly ITextCompletionService _mockLlmService;
     private readonly EnrichReconstructStrategy _strategy;
 
     public EnrichReconstructStrategyTests()
     {
-        _mockLlmService = new Mock<ITextCompletionService>();
-        _strategy = new EnrichReconstructStrategy(_mockLlmService.Object);
+        _mockLlmService = Substitute.For<ITextCompletionService>();
+        _strategy = new EnrichReconstructStrategy(_mockLlmService);
     }
 
     [Fact]
@@ -125,11 +125,11 @@ public class EnrichReconstructStrategyTests
         };
 
         _mockLlmService
-            .Setup(x => x.CompleteAsync(
-                It.IsAny<string>(),
-                It.IsAny<TextCompletionOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync("Enrichment content");
+            .CompleteAsync(
+                Arg.Any<string>(),
+                Arg.Any<TextCompletionOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns("Enrichment content");
 
         // Act
         var result = await _strategy.ApplyAsync(content, options);
@@ -137,12 +137,11 @@ public class EnrichReconstructStrategyTests
         // Assert
         // Should call LLM 3 times (once for each enrichment type)
         // Note: Strategy uses hardcoded MaxTokens=1000, not from options
-        _mockLlmService.Verify(
-            x => x.CompleteAsync(
-                It.IsAny<string>(),
-                It.Is<TextCompletionOptions>(o => o.MaxTokens == 1000 && Math.Abs(o.Temperature - 0.5f) < 0.001f),
-                It.IsAny<CancellationToken>()),
-            Times.Exactly(3));
+        await _mockLlmService.Received(3)
+            .CompleteAsync(
+                Arg.Any<string>(),
+                Arg.Is<TextCompletionOptions>(o => o.MaxTokens == 1000 && Math.Abs(o.Temperature - 0.5f) < 0.001f),
+                Arg.Any<CancellationToken>());
 
         Assert.True(result.UsedLLM);
         Assert.Equal("Enrich", result.StrategyUsed);
@@ -160,23 +159,22 @@ public class EnrichReconstructStrategyTests
         };
 
         _mockLlmService
-            .Setup(x => x.CompleteAsync(
-                It.IsAny<string>(),
-                It.IsAny<TextCompletionOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync("Definition enrichment");
+            .CompleteAsync(
+                Arg.Any<string>(),
+                Arg.Any<TextCompletionOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns("Definition enrichment");
 
         // Act
         await _strategy.ApplyAsync(content, options);
 
         // Assert
-        _mockLlmService.Verify(
-            x => x.CompleteAsync(
-                It.Is<string>(p => p.Contains("define", StringComparison.OrdinalIgnoreCase) ||
+        await _mockLlmService.Received(1)
+            .CompleteAsync(
+                Arg.Is<string>(p => p.Contains("define", StringComparison.OrdinalIgnoreCase) ||
                                    p.Contains("definitions", StringComparison.OrdinalIgnoreCase)),
-                It.IsAny<TextCompletionOptions>(),
-                It.IsAny<CancellationToken>()),
-            Times.Once);
+                Arg.Any<TextCompletionOptions>(),
+                Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -193,22 +191,21 @@ public class EnrichReconstructStrategyTests
         };
 
         _mockLlmService
-            .Setup(x => x.CompleteAsync(
-                It.IsAny<string>(),
-                It.IsAny<TextCompletionOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync("Enriched");
+            .CompleteAsync(
+                Arg.Any<string>(),
+                Arg.Any<TextCompletionOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns("Enriched");
 
         // Act
         await _strategy.ApplyAsync(content, options);
 
         // Assert
-        _mockLlmService.Verify(
-            x => x.CompleteAsync(
-                It.Is<string>(p => p.Contains(contextPrompt)),
-                It.IsAny<TextCompletionOptions>(),
-                It.IsAny<CancellationToken>()),
-            Times.Once);
+        await _mockLlmService.Received(1)
+            .CompleteAsync(
+                Arg.Is<string>(p => p.Contains(contextPrompt)),
+                Arg.Any<TextCompletionOptions>(),
+                Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -223,11 +220,11 @@ public class EnrichReconstructStrategyTests
         };
 
         _mockLlmService
-            .Setup(x => x.CompleteAsync(
-                It.IsAny<string>(),
-                It.IsAny<TextCompletionOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync("Enrichment");
+            .CompleteAsync(
+                Arg.Any<string>(),
+                Arg.Any<TextCompletionOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns("Enrichment");
 
         // Act
         var result = await _strategy.ApplyAsync(content, options);
@@ -251,11 +248,11 @@ public class EnrichReconstructStrategyTests
         };
 
         _mockLlmService
-            .Setup(x => x.CompleteAsync(
-                It.IsAny<string>(),
-                It.IsAny<TextCompletionOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync("Enrichment content");
+            .CompleteAsync(
+                Arg.Any<string>(),
+                Arg.Any<TextCompletionOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns("Enrichment content");
 
         // Act
         var result = await _strategy.ApplyAsync(content, options);
@@ -279,11 +276,11 @@ public class EnrichReconstructStrategyTests
 
         var enrichment = "Additional context.";
         _mockLlmService
-            .Setup(x => x.CompleteAsync(
-                It.IsAny<string>(),
-                It.IsAny<TextCompletionOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(enrichment);
+            .CompleteAsync(
+                Arg.Any<string>(),
+                Arg.Any<TextCompletionOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns(enrichment);
 
         // Act
         var result = await _strategy.ApplyAsync(content, options);
@@ -306,22 +303,21 @@ public class EnrichReconstructStrategyTests
         var cts = new CancellationTokenSource();
 
         _mockLlmService
-            .Setup(x => x.CompleteAsync(
-                It.IsAny<string>(),
-                It.IsAny<TextCompletionOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync("Enriched");
+            .CompleteAsync(
+                Arg.Any<string>(),
+                Arg.Any<TextCompletionOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns("Enriched");
 
         // Act
         await _strategy.ApplyAsync(content, options, cts.Token);
 
         // Assert
-        _mockLlmService.Verify(
-            x => x.CompleteAsync(
-                It.IsAny<string>(),
-                It.IsAny<TextCompletionOptions>(),
-                cts.Token),
-            Times.Once);
+        await _mockLlmService.Received(1)
+            .CompleteAsync(
+                Arg.Any<string>(),
+                Arg.Any<TextCompletionOptions>(),
+                cts.Token);
     }
 
     [Fact]
@@ -377,25 +373,24 @@ public class EnrichReconstructStrategyTests
         };
 
         _mockLlmService
-            .Setup(x => x.CompleteAsync(
-                It.IsAny<string>(),
-                It.IsAny<TextCompletionOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync("Enrichment");
+            .CompleteAsync(
+                Arg.Any<string>(),
+                Arg.Any<TextCompletionOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns("Enrichment");
 
         // Act
         await _strategy.ApplyAsync(content, options);
 
         // Assert
-        _mockLlmService.Verify(
-            x => x.CompleteAsync(
-                It.Is<string>(p => p.Contains(expectedKeyword, StringComparison.OrdinalIgnoreCase)),
-                It.IsAny<TextCompletionOptions>(),
-                It.IsAny<CancellationToken>()),
-            Times.Once);
+        await _mockLlmService.Received(1)
+            .CompleteAsync(
+                Arg.Is<string>(p => p.Contains(expectedKeyword, StringComparison.OrdinalIgnoreCase)),
+                Arg.Any<TextCompletionOptions>(),
+                Arg.Any<CancellationToken>());
     }
 
-    private AnalyzedContent CreateSampleAnalyzedContent(string? customContent = null)
+    private static AnalyzedContent CreateSampleAnalyzedContent(string? customContent = null)
     {
         return new AnalyzedContent
         {

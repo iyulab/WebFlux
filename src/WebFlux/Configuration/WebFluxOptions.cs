@@ -23,12 +23,12 @@ public class WebFluxOptions : IValidatable
     /// <summary>
     /// 개발 모드 여부
     /// </summary>
-    public bool DevelopmentMode { get; set; } = false;
+    public bool DevelopmentMode { get; set; }
 
     /// <summary>
     /// 상세 로깅 활성화 여부
     /// </summary>
-    public bool EnableVerboseLogging { get; set; } = false;
+    public bool EnableVerboseLogging { get; set; }
 
     /// <summary>
     /// 메트릭 수집 활성화 여부
@@ -38,7 +38,7 @@ public class WebFluxOptions : IValidatable
     /// <summary>
     /// 성능 프로파일링 활성화 여부
     /// </summary>
-    public bool EnableProfiling { get; set; } = false;
+    public bool EnableProfiling { get; set; }
 
     /// <summary>
     /// 기본 사용자 에이전트

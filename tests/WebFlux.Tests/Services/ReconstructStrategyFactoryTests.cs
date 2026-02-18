@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Logging;
-using Moq;
+using NSubstitute;
 using WebFlux.Core.Interfaces;
 using WebFlux.Core.Models;
 using WebFlux.Core.Options;
@@ -16,13 +16,15 @@ namespace WebFlux.Tests.Services;
 /// </summary>
 public class ReconstructStrategyFactoryTests
 {
-    private readonly Mock<ITextCompletionService> _mockLlmService;
-    private readonly Mock<ILogger<ReconstructStrategyFactory>> _mockLogger;
+    private static readonly string[] ExpectedStrategies = ["None", "Summarize", "Expand", "Rewrite", "Enrich"];
+
+    private readonly ITextCompletionService _mockLlmService;
+    private readonly ILogger<ReconstructStrategyFactory> _mockLogger;
 
     public ReconstructStrategyFactoryTests()
     {
-        _mockLlmService = new Mock<ITextCompletionService>();
-        _mockLogger = new Mock<ILogger<ReconstructStrategyFactory>>();
+        _mockLlmService = Substitute.For<ITextCompletionService>();
+        _mockLogger = Substitute.For<ILogger<ReconstructStrategyFactory>>();
     }
 
     #region Constructor Tests
@@ -31,7 +33,7 @@ public class ReconstructStrategyFactoryTests
     public void Constructor_WithLlmService_ShouldNotThrow()
     {
         // Act & Assert
-        var factory = new ReconstructStrategyFactory(_mockLlmService.Object, _mockLogger.Object);
+        var factory = new ReconstructStrategyFactory(_mockLlmService, _mockLogger);
         factory.Should().NotBeNull();
     }
 
@@ -39,7 +41,7 @@ public class ReconstructStrategyFactoryTests
     public void Constructor_WithoutLlmService_ShouldNotThrow()
     {
         // Act & Assert
-        var factory = new ReconstructStrategyFactory(null, _mockLogger.Object);
+        var factory = new ReconstructStrategyFactory(null, _mockLogger);
         factory.Should().NotBeNull();
     }
 
@@ -47,7 +49,7 @@ public class ReconstructStrategyFactoryTests
     public void Constructor_WithNullLogger_ShouldUseNullLogger()
     {
         // Act & Assert
-        var factory = new ReconstructStrategyFactory(_mockLlmService.Object, null);
+        var factory = new ReconstructStrategyFactory(_mockLlmService, null);
         factory.Should().NotBeNull();
     }
 
@@ -67,21 +69,21 @@ public class ReconstructStrategyFactoryTests
     public void GetAvailableStrategies_ShouldReturnAllFiveStrategies()
     {
         // Arrange
-        var factory = new ReconstructStrategyFactory(_mockLlmService.Object, _mockLogger.Object);
+        var factory = new ReconstructStrategyFactory(_mockLlmService, _mockLogger);
 
         // Act
         var strategies = factory.GetAvailableStrategies().ToList();
 
         // Assert
         strategies.Should().HaveCount(5);
-        strategies.Should().Contain(new[] { "None", "Summarize", "Expand", "Rewrite", "Enrich" });
+        strategies.Should().Contain(ExpectedStrategies);
     }
 
     [Fact]
     public void GetAvailableStrategies_WithoutLlmService_ShouldStillReturnAllStrategies()
     {
         // Arrange
-        var factory = new ReconstructStrategyFactory(null, _mockLogger.Object);
+        var factory = new ReconstructStrategyFactory(null, _mockLogger);
 
         // Act
         var strategies = factory.GetAvailableStrategies().ToList();
@@ -98,7 +100,7 @@ public class ReconstructStrategyFactoryTests
     public void CreateStrategy_WithNone_ShouldReturnNoneStrategy()
     {
         // Arrange
-        var factory = new ReconstructStrategyFactory(_mockLlmService.Object, _mockLogger.Object);
+        var factory = new ReconstructStrategyFactory(_mockLlmService, _mockLogger);
 
         // Act
         var strategy = factory.CreateStrategy("None");
@@ -112,7 +114,7 @@ public class ReconstructStrategyFactoryTests
     public void CreateStrategy_WithSummarize_ShouldReturnSummarizeStrategy()
     {
         // Arrange
-        var factory = new ReconstructStrategyFactory(_mockLlmService.Object, _mockLogger.Object);
+        var factory = new ReconstructStrategyFactory(_mockLlmService, _mockLogger);
 
         // Act
         var strategy = factory.CreateStrategy("Summarize");
@@ -126,7 +128,7 @@ public class ReconstructStrategyFactoryTests
     public void CreateStrategy_WithExpand_ShouldReturnExpandStrategy()
     {
         // Arrange
-        var factory = new ReconstructStrategyFactory(_mockLlmService.Object, _mockLogger.Object);
+        var factory = new ReconstructStrategyFactory(_mockLlmService, _mockLogger);
 
         // Act
         var strategy = factory.CreateStrategy("Expand");
@@ -140,7 +142,7 @@ public class ReconstructStrategyFactoryTests
     public void CreateStrategy_WithRewrite_ShouldReturnRewriteStrategy()
     {
         // Arrange
-        var factory = new ReconstructStrategyFactory(_mockLlmService.Object, _mockLogger.Object);
+        var factory = new ReconstructStrategyFactory(_mockLlmService, _mockLogger);
 
         // Act
         var strategy = factory.CreateStrategy("Rewrite");
@@ -154,7 +156,7 @@ public class ReconstructStrategyFactoryTests
     public void CreateStrategy_WithEnrich_ShouldReturnEnrichStrategy()
     {
         // Arrange
-        var factory = new ReconstructStrategyFactory(_mockLlmService.Object, _mockLogger.Object);
+        var factory = new ReconstructStrategyFactory(_mockLlmService, _mockLogger);
 
         // Act
         var strategy = factory.CreateStrategy("Enrich");
@@ -171,7 +173,7 @@ public class ReconstructStrategyFactoryTests
     public void CreateStrategy_ShouldBeCaseInsensitive(string strategyName)
     {
         // Arrange
-        var factory = new ReconstructStrategyFactory(_mockLlmService.Object, _mockLogger.Object);
+        var factory = new ReconstructStrategyFactory(_mockLlmService, _mockLogger);
 
         // Act
         var strategy = factory.CreateStrategy(strategyName);
@@ -187,7 +189,7 @@ public class ReconstructStrategyFactoryTests
     public void CreateStrategy_WithNullOrEmptyName_ShouldDefaultToNone(string? strategyName)
     {
         // Arrange
-        var factory = new ReconstructStrategyFactory(_mockLlmService.Object, _mockLogger.Object);
+        var factory = new ReconstructStrategyFactory(_mockLlmService, _mockLogger);
 
         // Act
         var strategy = factory.CreateStrategy(strategyName!);
@@ -201,7 +203,7 @@ public class ReconstructStrategyFactoryTests
     public void CreateStrategy_WithUnknownName_ShouldDefaultToNone()
     {
         // Arrange
-        var factory = new ReconstructStrategyFactory(_mockLlmService.Object, _mockLogger.Object);
+        var factory = new ReconstructStrategyFactory(_mockLlmService, _mockLogger);
 
         // Act
         var strategy = factory.CreateStrategy("UnknownStrategy");
@@ -215,7 +217,7 @@ public class ReconstructStrategyFactoryTests
     public void CreateStrategy_LlmStrategyWithoutService_ShouldStillCreate()
     {
         // Arrange - LLM 서비스 없이 LLM 전략 생성
-        var factory = new ReconstructStrategyFactory(null, _mockLogger.Object);
+        var factory = new ReconstructStrategyFactory(null, _mockLogger);
 
         // Act
         var strategy = factory.CreateStrategy("Summarize");
@@ -233,7 +235,7 @@ public class ReconstructStrategyFactoryTests
     public void GetStrategyCharacteristics_ShouldReturnAllFiveStrategies()
     {
         // Arrange
-        var factory = new ReconstructStrategyFactory(_mockLlmService.Object, _mockLogger.Object);
+        var factory = new ReconstructStrategyFactory(_mockLlmService, _mockLogger);
 
         // Act
         var characteristics = factory.GetStrategyCharacteristics();
@@ -247,7 +249,7 @@ public class ReconstructStrategyFactoryTests
     public void GetStrategyCharacteristics_NoneStrategy_ShouldNotRequireLLM()
     {
         // Arrange
-        var factory = new ReconstructStrategyFactory(_mockLlmService.Object, _mockLogger.Object);
+        var factory = new ReconstructStrategyFactory(_mockLlmService, _mockLogger);
 
         // Act
         var characteristics = factory.GetStrategyCharacteristics();
@@ -264,7 +266,7 @@ public class ReconstructStrategyFactoryTests
     public void GetStrategyCharacteristics_LlmStrategies_ShouldRequireLLM(string strategyName)
     {
         // Arrange
-        var factory = new ReconstructStrategyFactory(_mockLlmService.Object, _mockLogger.Object);
+        var factory = new ReconstructStrategyFactory(_mockLlmService, _mockLogger);
 
         // Act
         var characteristics = factory.GetStrategyCharacteristics();
@@ -277,7 +279,7 @@ public class ReconstructStrategyFactoryTests
     public void GetStrategyCharacteristics_AllStrategies_ShouldHaveCompleteMetadata()
     {
         // Arrange
-        var factory = new ReconstructStrategyFactory(_mockLlmService.Object, _mockLogger.Object);
+        var factory = new ReconstructStrategyFactory(_mockLlmService, _mockLogger);
 
         // Act
         var characteristics = factory.GetStrategyCharacteristics();
@@ -300,7 +302,7 @@ public class ReconstructStrategyFactoryTests
     public void CreateOptimalStrategy_WithExplicitStrategy_ShouldUseSpecifiedStrategy()
     {
         // Arrange
-        var factory = new ReconstructStrategyFactory(_mockLlmService.Object, _mockLogger.Object);
+        var factory = new ReconstructStrategyFactory(_mockLlmService, _mockLogger);
         var content = new AnalyzedContent { CleanedContent = "Test content" };
         var options = new ReconstructOptions { Strategy = "Summarize" };
 
@@ -316,7 +318,7 @@ public class ReconstructStrategyFactoryTests
     public void CreateOptimalStrategy_WithExplicitNoneStrategy_ShouldUseNone()
     {
         // Arrange
-        var factory = new ReconstructStrategyFactory(_mockLlmService.Object, _mockLogger.Object);
+        var factory = new ReconstructStrategyFactory(_mockLlmService, _mockLogger);
         var content = new AnalyzedContent { CleanedContent = "Test content" };
         var options = new ReconstructOptions { Strategy = "None" };
 
@@ -336,7 +338,7 @@ public class ReconstructStrategyFactoryTests
     public void CreateOptimalStrategy_WithoutLlmService_ShouldReturnNone()
     {
         // Arrange
-        var factory = new ReconstructStrategyFactory(null, _mockLogger.Object);
+        var factory = new ReconstructStrategyFactory(null, _mockLogger);
         var content = new AnalyzedContent { CleanedContent = "Test content" };
         var options = new ReconstructOptions { Strategy = "Auto" };
 
@@ -352,7 +354,7 @@ public class ReconstructStrategyFactoryTests
     public void CreateOptimalStrategy_WithUseLLMFalse_ShouldReturnNone()
     {
         // Arrange
-        var factory = new ReconstructStrategyFactory(_mockLlmService.Object, _mockLogger.Object);
+        var factory = new ReconstructStrategyFactory(_mockLlmService, _mockLogger);
         var content = new AnalyzedContent { CleanedContent = "Test content" };
         var options = new ReconstructOptions { Strategy = "Auto", UseLLM = false };
 
@@ -368,7 +370,7 @@ public class ReconstructStrategyFactoryTests
     public void CreateOptimalStrategy_WithVeryLongContent_ShouldSelectSummarize()
     {
         // Arrange
-        var factory = new ReconstructStrategyFactory(_mockLlmService.Object, _mockLogger.Object);
+        var factory = new ReconstructStrategyFactory(_mockLlmService, _mockLogger);
         var content = new AnalyzedContent
         {
             CleanedContent = new string('a', 15000) // >10000 chars
@@ -387,7 +389,7 @@ public class ReconstructStrategyFactoryTests
     public void CreateOptimalStrategy_WithLowQualityContent_ShouldSelectRewrite()
     {
         // Arrange
-        var factory = new ReconstructStrategyFactory(_mockLlmService.Object, _mockLogger.Object);
+        var factory = new ReconstructStrategyFactory(_mockLlmService, _mockLogger);
         var content = new AnalyzedContent
         {
             CleanedContent = "Medium length content",
@@ -407,7 +409,7 @@ public class ReconstructStrategyFactoryTests
     public void CreateOptimalStrategy_WithShortContent_ShouldSelectExpand()
     {
         // Arrange
-        var factory = new ReconstructStrategyFactory(_mockLlmService.Object, _mockLogger.Object);
+        var factory = new ReconstructStrategyFactory(_mockLlmService, _mockLogger);
         var content = new AnalyzedContent
         {
             CleanedContent = "Short", // <500 chars
@@ -427,7 +429,7 @@ public class ReconstructStrategyFactoryTests
     public void CreateOptimalStrategy_WithImages_ShouldSelectEnrich()
     {
         // Arrange
-        var factory = new ReconstructStrategyFactory(_mockLlmService.Object, _mockLogger.Object);
+        var factory = new ReconstructStrategyFactory(_mockLlmService, _mockLogger);
         var content = new AnalyzedContent
         {
             CleanedContent = new string('a', 2000), // medium length
@@ -448,7 +450,7 @@ public class ReconstructStrategyFactoryTests
     public void CreateOptimalStrategy_WithManySections_ShouldSelectEnrich()
     {
         // Arrange
-        var factory = new ReconstructStrategyFactory(_mockLlmService.Object, _mockLogger.Object);
+        var factory = new ReconstructStrategyFactory(_mockLlmService, _mockLogger);
         var content = new AnalyzedContent
         {
             CleanedContent = new string('a', 2000),
@@ -473,7 +475,7 @@ public class ReconstructStrategyFactoryTests
     public void CreateOptimalStrategy_WithMediumContent_ShouldSelectRewrite()
     {
         // Arrange - 기본값 테스트
-        var factory = new ReconstructStrategyFactory(_mockLlmService.Object, _mockLogger.Object);
+        var factory = new ReconstructStrategyFactory(_mockLlmService, _mockLogger);
         var content = new AnalyzedContent
         {
             CleanedContent = new string('a', 2000), // medium length
@@ -493,7 +495,7 @@ public class ReconstructStrategyFactoryTests
     public void CreateOptimalStrategy_WithEmptyStrategyOption_ShouldAutoSelect()
     {
         // Arrange
-        var factory = new ReconstructStrategyFactory(_mockLlmService.Object, _mockLogger.Object);
+        var factory = new ReconstructStrategyFactory(_mockLlmService, _mockLogger);
         var content = new AnalyzedContent
         {
             CleanedContent = new string('a', 15000)
@@ -516,7 +518,7 @@ public class ReconstructStrategyFactoryTests
     public void CreateStrategy_CalledMultipleTimes_ShouldReturnNewInstances()
     {
         // Arrange
-        var factory = new ReconstructStrategyFactory(_mockLlmService.Object, _mockLogger.Object);
+        var factory = new ReconstructStrategyFactory(_mockLlmService, _mockLogger);
 
         // Act
         var strategy1 = factory.CreateStrategy("Summarize");

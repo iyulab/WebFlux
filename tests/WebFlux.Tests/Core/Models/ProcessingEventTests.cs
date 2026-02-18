@@ -631,7 +631,7 @@ public class ProcessingEventTests
     /// <summary>
     /// ProcessingEvent를 테스트하기 위한 구체 클래스
     /// </summary>
-    private class TestProcessingEvent : ProcessingEvent
+    private sealed class TestProcessingEvent : ProcessingEvent
     {
         public override string EventType => "Test";
     }

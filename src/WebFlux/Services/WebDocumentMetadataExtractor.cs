@@ -139,7 +139,7 @@ public partial class WebDocumentMetadataExtractor : IWebDocumentMetadataExtracto
     // 언어 감지 (Issue #4)
     // ===================================================================
 
-    private (string language, LanguageDetectionMethod method) DetectLanguage(
+    private static (string language, LanguageDetectionMethod method) DetectLanguage(
         IDocument document,
         IReadOnlyDictionary<string, string>? httpHeaders,
         string html)
@@ -180,13 +180,13 @@ public partial class WebDocumentMetadataExtractor : IWebDocumentMetadataExtracto
         return normalized.Length == 2 ? normalized : langCode.ToLowerInvariant();
     }
 
-    private string DetectLanguageFromContent(string html)
+    private static string DetectLanguageFromContent(string html)
     {
         // 간단한 문자 기반 휴리스틱
         // 한글 문자 비율 체크
-        var koreanCount = KoreanCharRegex().Matches(html).Count;
-        var japaneseCount = JapaneseCharRegex().Matches(html).Count;
-        var chineseCount = ChineseCharRegex().Matches(html).Count;
+        var koreanCount = KoreanCharRegex().Count(html);
+        var japaneseCount = JapaneseCharRegex().Count(html);
+        var chineseCount = ChineseCharRegex().Count(html);
 
         var total = html.Length;
         if (total == 0) return string.Empty;
@@ -275,7 +275,7 @@ public partial class WebDocumentMetadataExtractor : IWebDocumentMetadataExtracto
         return null;
     }
 
-    private static IReadOnlyDictionary<string, string> ExtractStructuredData(IDocument document)
+    private static Dictionary<string, string> ExtractStructuredData(IDocument document)
     {
         var data = new Dictionary<string, string>();
 
@@ -340,7 +340,7 @@ public partial class WebDocumentMetadataExtractor : IWebDocumentMetadataExtracto
         }
     }
 
-    private static IReadOnlyList<object> ExtractJsonLdData(IDocument document)
+    private static List<object> ExtractJsonLdData(IDocument document)
     {
         var result = new List<object>();
 
@@ -366,7 +366,7 @@ public partial class WebDocumentMetadataExtractor : IWebDocumentMetadataExtracto
     // 사이트 컨텍스트 추출 (Issue #3)
     // ===================================================================
 
-    private SiteContext ExtractSiteContext(IDocument document, string currentUrl)
+    private static SiteContext ExtractSiteContext(IDocument document, string currentUrl)
     {
         return new SiteContext
         {
@@ -449,7 +449,7 @@ public partial class WebDocumentMetadataExtractor : IWebDocumentMetadataExtracto
         return Array.Empty<string>();
     }
 
-    private static IReadOnlyList<BreadcrumbItem> ExtractBreadcrumbItems(IDocument document)
+    private static List<BreadcrumbItem> ExtractBreadcrumbItems(IDocument document)
     {
         var items = new List<BreadcrumbItem>();
 
@@ -523,7 +523,7 @@ public partial class WebDocumentMetadataExtractor : IWebDocumentMetadataExtracto
         return items;
     }
 
-    private static IReadOnlyList<string> ExtractRelatedPages(IDocument document, string currentUrl)
+    private static List<string> ExtractRelatedPages(IDocument document, string currentUrl)
     {
         var currentUri = new Uri(currentUrl);
         var relatedPages = new HashSet<string>();

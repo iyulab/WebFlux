@@ -10,12 +10,15 @@ namespace WebFlux.Services.ContentExtractors;
 /// </summary>
 public abstract class BaseContentExtractor : IContentExtractor
 {
-    protected readonly IEventPublisher _eventPublisher;
-    protected ExtractionConfiguration _configuration = new();
+    private static readonly char[] SentenceSplitChars = ['.', '!', '?'];
+    private static readonly char[] WordSplitChars = [' ', '\t', '\n', '\r'];
+
+    protected IEventPublisher EventPublisher { get; }
+    protected ExtractionConfiguration Configuration { get; set; } = new();
 
     protected BaseContentExtractor(IEventPublisher eventPublisher)
     {
-        _eventPublisher = eventPublisher ?? throw new ArgumentNullException(nameof(eventPublisher));
+        EventPublisher = eventPublisher ?? throw new ArgumentNullException(nameof(eventPublisher));
     }
 
     /// <summary>
@@ -30,16 +33,15 @@ public abstract class BaseContentExtractor : IContentExtractor
         ExtractionConfiguration configuration,
         CancellationToken cancellationToken = default)
     {
-        if (webContent == null)
-            throw new ArgumentNullException(nameof(webContent));
+        ArgumentNullException.ThrowIfNull(webContent);
 
-        _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
+        Configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
 
         var startTime = DateTimeOffset.UtcNow;
 
         try
         {
-            await _eventPublisher.PublishAsync(new ContentExtractionStartedEvent
+            await EventPublisher.PublishAsync(new ContentExtractionStartedEvent
             {
                 Url = webContent.Url,
                 ContentType = webContent.ContentType,
@@ -78,7 +80,7 @@ public abstract class BaseContentExtractor : IContentExtractor
                 ReadingTimeMinutes = readingTime
             };
 
-            await _eventPublisher.PublishAsync(new ContentExtractionCompletedEvent
+            await EventPublisher.PublishAsync(new ContentExtractionCompletedEvent
             {
                 Url = webContent.Url,
                 ExtractedTextLength = processedText.Length,
@@ -91,7 +93,7 @@ public abstract class BaseContentExtractor : IContentExtractor
         }
         catch (Exception ex)
         {
-            await _eventPublisher.PublishAsync(new ContentExtractionFailedEvent
+            await EventPublisher.PublishAsync(new ContentExtractionFailedEvent
             {
                 Url = webContent.Url,
                 Error = ex.Message,
@@ -150,13 +152,13 @@ public abstract class BaseContentExtractor : IContentExtractor
         var processed = extractedText;
 
         // 중복 공백 정리
-        if (_configuration.NormalizeWhitespace)
+        if (Configuration.NormalizeWhitespace)
         {
             processed = Regex.Replace(processed, @"\s+", " ");
         }
 
         // 중복 개행 정리
-        if (_configuration.NormalizeLineBreaks)
+        if (Configuration.NormalizeLineBreaks)
         {
             processed = Regex.Replace(processed, @"\n\s*\n", "\n\n");
         }
@@ -165,15 +167,15 @@ public abstract class BaseContentExtractor : IContentExtractor
         processed = processed.Trim();
 
         // 최소 텍스트 길이 확인
-        if (processed.Length < _configuration.MinTextLength)
+        if (processed.Length < Configuration.MinTextLength)
         {
             return Task.FromResult(string.Empty);
         }
 
         // 최대 텍스트 길이 제한
-        if (_configuration.MaxTextLength > 0 && processed.Length > _configuration.MaxTextLength)
+        if (Configuration.MaxTextLength > 0 && processed.Length > Configuration.MaxTextLength)
         {
-            processed = processed.Substring(0, _configuration.MaxTextLength);
+            processed = processed.Substring(0, Configuration.MaxTextLength);
         }
 
         return Task.FromResult(processed);
@@ -234,7 +236,7 @@ public abstract class BaseContentExtractor : IContentExtractor
         if (string.IsNullOrWhiteSpace(firstLine))
             return "Untitled";
 
-        return firstLine.Length > 100 ? firstLine.Substring(0, 100) + "..." : firstLine;
+        return firstLine.Length > 100 ? string.Concat(firstLine.AsSpan(0, 100), "...") : firstLine;
     }
 
     /// <summary>
@@ -248,10 +250,10 @@ public abstract class BaseContentExtractor : IContentExtractor
             return string.Empty;
 
         // 첫 번째 문단을 설명으로 사용 (최대 300자)
-        var sentences = content.Split(new[] { '.', '!', '?' }, StringSplitOptions.RemoveEmptyEntries);
+        var sentences = content.Split(SentenceSplitChars, StringSplitOptions.RemoveEmptyEntries);
         var description = string.Join(". ", sentences.Take(2)).Trim();
 
-        return description.Length > 300 ? description.Substring(0, 300) + "..." : description;
+        return description.Length > 300 ? string.Concat(description.AsSpan(0, 300), "...") : description;
     }
 
     /// <summary>
@@ -290,7 +292,7 @@ public abstract class BaseContentExtractor : IContentExtractor
             return 0;
 
         // 공백 기준으로 단어 분리
-        return text.Split(new[] { ' ', '\t', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries).Length;
+        return text.Split(WordSplitChars, StringSplitOptions.RemoveEmptyEntries).Length;
     }
 
     /// <summary>
@@ -323,7 +325,7 @@ public abstract class BaseContentExtractor : IContentExtractor
         };
 
         // 단어 추출 및 빈도 계산
-        var words = Regex.Matches(text.ToLower(), @"\b\w+\b")
+        var words = Regex.Matches(text.ToLowerInvariant(), @"\b\w+\b")
             .Cast<Match>()
             .Select(m => m.Value)
             .Where(word => word.Length > 2 && !stopWords.Contains(word))

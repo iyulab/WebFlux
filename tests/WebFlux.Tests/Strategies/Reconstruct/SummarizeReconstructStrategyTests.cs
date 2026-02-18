@@ -3,7 +3,7 @@ using WebFlux.Core.Models;
 using WebFlux.Core.Options;
 using WebFlux.Strategies.Reconstruct;
 using Xunit;
-using Moq;
+using NSubstitute;
 
 namespace WebFlux.Tests.Strategies.Reconstruct;
 
@@ -13,13 +13,13 @@ namespace WebFlux.Tests.Strategies.Reconstruct;
 /// </summary>
 public class SummarizeReconstructStrategyTests
 {
-    private readonly Mock<ITextCompletionService> _mockLlmService;
+    private readonly ITextCompletionService _mockLlmService;
     private readonly SummarizeReconstructStrategy _strategy;
 
     public SummarizeReconstructStrategyTests()
     {
-        _mockLlmService = new Mock<ITextCompletionService>();
-        _strategy = new SummarizeReconstructStrategy(_mockLlmService.Object);
+        _mockLlmService = Substitute.For<ITextCompletionService>();
+        _strategy = new SummarizeReconstructStrategy(_mockLlmService);
     }
 
     [Fact]
@@ -126,22 +126,21 @@ public class SummarizeReconstructStrategyTests
 
         var expectedSummary = "This is a concise summary of the content.";
         _mockLlmService
-            .Setup(x => x.CompleteAsync(
-                It.IsAny<string>(),
-                It.IsAny<TextCompletionOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(expectedSummary);
+            .CompleteAsync(
+                Arg.Any<string>(),
+                Arg.Any<TextCompletionOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns(expectedSummary);
 
         // Act
         var result = await _strategy.ApplyAsync(content, options);
 
         // Assert
-        _mockLlmService.Verify(
-            x => x.CompleteAsync(
-                It.Is<string>(p => p.Contains("summarize") || p.Contains("Summary")),
-                It.Is<TextCompletionOptions>(o => o.MaxTokens == 2000),
-                It.IsAny<CancellationToken>()),
-            Times.Once);
+        await _mockLlmService.Received(1)
+            .CompleteAsync(
+                Arg.Is<string>(p => p.Contains("summarize") || p.Contains("Summary")),
+                Arg.Is<TextCompletionOptions>(o => o.MaxTokens == 2000),
+                Arg.Any<CancellationToken>());
 
         Assert.Equal(expectedSummary, result.ReconstructedText);
         Assert.True(result.UsedLLM);
@@ -161,22 +160,21 @@ public class SummarizeReconstructStrategyTests
         };
 
         _mockLlmService
-            .Setup(x => x.CompleteAsync(
-                It.IsAny<string>(),
-                It.IsAny<TextCompletionOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync("Summary");
+            .CompleteAsync(
+                Arg.Any<string>(),
+                Arg.Any<TextCompletionOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns("Summary");
 
         // Act
         await _strategy.ApplyAsync(content, options);
 
         // Assert
-        _mockLlmService.Verify(
-            x => x.CompleteAsync(
-                It.Is<string>(p => p.Contains(contextPrompt)),
-                It.IsAny<TextCompletionOptions>(),
-                It.IsAny<CancellationToken>()),
-            Times.Once);
+        await _mockLlmService.Received(1)
+            .CompleteAsync(
+                Arg.Is<string>(p => p.Contains(contextPrompt)),
+                Arg.Any<TextCompletionOptions>(),
+                Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -188,11 +186,11 @@ public class SummarizeReconstructStrategyTests
         var options = new ReconstructOptions { UseLLM = true };
 
         _mockLlmService
-            .Setup(x => x.CompleteAsync(
-                It.IsAny<string>(),
-                It.IsAny<TextCompletionOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(summary);
+            .CompleteAsync(
+                Arg.Any<string>(),
+                Arg.Any<TextCompletionOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns(summary);
 
         // Act
         var result = await _strategy.ApplyAsync(content, options);
@@ -214,11 +212,11 @@ public class SummarizeReconstructStrategyTests
         var options = new ReconstructOptions { UseLLM = true };
 
         _mockLlmService
-            .Setup(x => x.CompleteAsync(
-                It.IsAny<string>(),
-                It.IsAny<TextCompletionOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(summary);
+            .CompleteAsync(
+                Arg.Any<string>(),
+                Arg.Any<TextCompletionOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns(summary);
 
         // Act
         var result = await _strategy.ApplyAsync(content, options);
@@ -238,22 +236,21 @@ public class SummarizeReconstructStrategyTests
         var cts = new CancellationTokenSource();
 
         _mockLlmService
-            .Setup(x => x.CompleteAsync(
-                It.IsAny<string>(),
-                It.IsAny<TextCompletionOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync("Summary");
+            .CompleteAsync(
+                Arg.Any<string>(),
+                Arg.Any<TextCompletionOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns("Summary");
 
         // Act
         await _strategy.ApplyAsync(content, options, cts.Token);
 
         // Assert
-        _mockLlmService.Verify(
-            x => x.CompleteAsync(
-                It.IsAny<string>(),
-                It.IsAny<TextCompletionOptions>(),
-                cts.Token),
-            Times.Once);
+        await _mockLlmService.Received(1)
+            .CompleteAsync(
+                Arg.Any<string>(),
+                Arg.Any<TextCompletionOptions>(),
+                cts.Token);
     }
 
     [Fact]
@@ -281,33 +278,31 @@ public class SummarizeReconstructStrategyTests
         var options2 = new ReconstructOptions { UseLLM = true, SummaryRatio = 0.5 };
 
         _mockLlmService
-            .Setup(x => x.CompleteAsync(
-                It.IsAny<string>(),
-                It.IsAny<TextCompletionOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync("Summary");
+            .CompleteAsync(
+                Arg.Any<string>(),
+                Arg.Any<TextCompletionOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns("Summary");
 
         // Act
         await _strategy.ApplyAsync(content, options1);
         await _strategy.ApplyAsync(content, options2);
 
         // Assert
-        _mockLlmService.Verify(
-            x => x.CompleteAsync(
-                It.Is<string>(p => p.Contains("100")), // 1000 * 0.1
-                It.IsAny<TextCompletionOptions>(),
-                It.IsAny<CancellationToken>()),
-            Times.Once);
+        await _mockLlmService.Received(1)
+            .CompleteAsync(
+                Arg.Is<string>(p => p.Contains("100")), // 1000 * 0.1
+                Arg.Any<TextCompletionOptions>(),
+                Arg.Any<CancellationToken>());
 
-        _mockLlmService.Verify(
-            x => x.CompleteAsync(
-                It.Is<string>(p => p.Contains("500")), // 1000 * 0.5
-                It.IsAny<TextCompletionOptions>(),
-                It.IsAny<CancellationToken>()),
-            Times.Once);
+        await _mockLlmService.Received(1)
+            .CompleteAsync(
+                Arg.Is<string>(p => p.Contains("500")), // 1000 * 0.5
+                Arg.Any<TextCompletionOptions>(),
+                Arg.Any<CancellationToken>());
     }
 
-    private AnalyzedContent CreateSampleAnalyzedContent(string? customContent = null)
+    private static AnalyzedContent CreateSampleAnalyzedContent(string? customContent = null)
     {
         return new AnalyzedContent
         {

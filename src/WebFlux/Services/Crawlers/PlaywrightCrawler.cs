@@ -11,8 +11,14 @@ namespace WebFlux.Services.Crawlers;
 /// Playwright 기반 동적 렌더링 크롤러
 /// JavaScript로 렌더링되는 SPA (React, Vue, Angular) 지원
 /// </summary>
-public class PlaywrightCrawler : BaseCrawler
+public partial class PlaywrightCrawler : BaseCrawler, IAsyncDisposable
 {
+    private static readonly string[] ChromiumArgs =
+    [
+        "--disable-blink-features=AutomationControlled", // 자동화 감지 우회
+        "--disable-dev-shm-usage",
+        "--no-sandbox"
+    ];
     private readonly ILogger<PlaywrightCrawler> _logger;
     private IPlaywright? _playwright;
     private IBrowser? _browser;
@@ -42,9 +48,9 @@ public class PlaywrightCrawler : BaseCrawler
 
         try
         {
-            _logger.LogInformation("🌐 Crawling URL with Playwright: {Url}", url);
+            LogCrawlingWithPlaywright(_logger, url);
 
-            _logger.LogInformation("  ⏳ Getting page from pool...");
+            LogGettingPageFromPool(_logger);
             var page = await GetPageFromPoolAsync(cancellationToken);
 
             try
@@ -59,15 +65,15 @@ public class PlaywrightCrawler : BaseCrawler
                 }
 
                 // 네비게이션 옵션 - 성능 최적화: DOMContentLoaded 사용
-                var timeout = options?.TimeoutMs ?? 15000; // 30초 → 15초로 단축
+                var timeout = options?.TimeoutMs ?? 15000; // 30초 -> 15초로 단축
                 var gotoOptions = new PageGotoOptions
                 {
-                    WaitUntil = WaitUntilState.DOMContentLoaded, // NetworkIdle → DOMContentLoaded (2-4초 절감)
+                    WaitUntil = WaitUntilState.DOMContentLoaded, // NetworkIdle -> DOMContentLoaded (2-4초 절감)
                     Timeout = (float)timeout
                 };
 
                 // 페이지 로드
-                _logger.LogInformation("  ⏳ Loading page (DOM ready)...");
+                LogLoadingPage(_logger);
                 var response = await page.GotoAsync(url, gotoOptions);
 
                 if (response == null)
@@ -75,12 +81,12 @@ public class PlaywrightCrawler : BaseCrawler
                     throw new InvalidOperationException($"Failed to load page: {url}");
                 }
 
-                _logger.LogInformation("  ✅ Page loaded (Status: {StatusCode})", response.Status);
+                LogPageLoaded(_logger, response.Status);
 
                 // 특정 셀렉터 대기 (설정된 경우)
                 if (!string.IsNullOrEmpty(options?.WaitForSelector))
                 {
-                    _logger.LogInformation("  ⏳ Waiting for selector: {Selector}", options.WaitForSelector);
+                    LogWaitingForSelector(_logger, options.WaitForSelector);
                     await page.WaitForSelectorAsync(options.WaitForSelector, new()
                     {
                         Timeout = (float)timeout
@@ -91,7 +97,7 @@ public class PlaywrightCrawler : BaseCrawler
                 // 기본 대기 시간 제거로 500ms 절감
                 if (options?.DelayMs > 0)
                 {
-                    _logger.LogInformation("  ⏳ Waiting {DelayMs}ms for JavaScript execution...", options.DelayMs);
+                    LogWaitingForJavaScript(_logger, options.DelayMs);
                     await Task.Delay(options.DelayMs, cancellationToken);
                 }
                 // 기본 대기 (300ms) - DOM 안정화 및 네비게이션 완료 대기
@@ -104,12 +110,12 @@ public class PlaywrightCrawler : BaseCrawler
                 // 기본값을 false로 변경하여 불필요한 스크롤 제거 (최대 5초 절감)
                 if (options?.EnableScrolling == true)
                 {
-                    _logger.LogInformation("  ⏳ Auto-scrolling page to load lazy content...");
+                    LogAutoScrolling(_logger);
                     await AutoScrollAsync(page, cancellationToken);
                 }
 
                 // 콘텐츠 추출 (재시도 로직 포함)
-                _logger.LogInformation("  ⏳ Extracting page content...");
+                LogExtractingContent(_logger);
                 string content = string.Empty;
                 string title = string.Empty;
 
@@ -126,7 +132,7 @@ public class PlaywrightCrawler : BaseCrawler
                     {
                         if (retryCount >= 2) throw;
 
-                        _logger.LogDebug("  ⏳ Page still navigating, waiting... (retry {RetryCount}/3)", retryCount + 1);
+                        LogPageStillNavigating(_logger, retryCount + 1);
                         await Task.Delay(500, cancellationToken);
                     }
                 }
@@ -167,9 +173,7 @@ public class PlaywrightCrawler : BaseCrawler
 
                 UpdateStatistics(result);
 
-                _logger.LogInformation(
-                    "Successfully crawled {Url} with Playwright in {ResponseTime}ms",
-                    url, responseTimeMs);
+                LogCrawlSuccess(_logger, url, responseTimeMs);
 
                 return result;
             }
@@ -180,7 +184,7 @@ public class PlaywrightCrawler : BaseCrawler
         }
         catch (PlaywrightException ex)
         {
-            _logger.LogError(ex, "Playwright error while crawling {Url}", url);
+            LogPlaywrightError(_logger, ex, url);
 
             var errorResult = new CrawlResult
             {
@@ -197,7 +201,7 @@ public class PlaywrightCrawler : BaseCrawler
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error crawling {Url} with Playwright", url);
+            LogCrawlError(_logger, ex, url);
 
             var errorResult = new CrawlResult
             {
@@ -225,8 +229,8 @@ public class PlaywrightCrawler : BaseCrawler
                 async () => {
                     await new Promise((resolve) => {
                         let totalHeight = 0;
-                        const distance = 200; // 100 → 200 (스크롤 속도 2배)
-                        const maxScrolls = 20; // 50 → 20 (최대 스크롤 횟수 60% 감소)
+                        const distance = 200; // 100 -> 200 (스크롤 속도 2배)
+                        const maxScrolls = 20; // 50 -> 20 (최대 스크롤 횟수 60% 감소)
                         let scrolls = 0;
 
                         const timer = setInterval(() => {
@@ -239,19 +243,19 @@ public class PlaywrightCrawler : BaseCrawler
                                 clearInterval(timer);
                                 resolve();
                             }
-                        }, 50); // 100ms → 50ms (스크롤 간격 50% 감소)
+                        }, 50); // 100ms -> 50ms (스크롤 간격 50% 감소)
                     });
                 }
             ");
 
-            // 스크롤 후 추가 대기 (500ms → 200ms)
+            // 스크롤 후 추가 대기 (500ms -> 200ms)
             await Task.Delay(200, cancellationToken);
 
-            _logger.LogDebug("Auto-scroll completed");
+            LogAutoScrollCompleted(_logger);
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Auto-scroll failed, continuing anyway");
+            LogAutoScrollFailed(_logger, ex);
         }
     }
 
@@ -274,7 +278,7 @@ public class PlaywrightCrawler : BaseCrawler
                 return _browser;
             }
 
-            _logger.LogInformation("Initializing Playwright browser");
+            LogInitializingBrowser(_logger);
 
             // Playwright 초기화
             _playwright ??= await Playwright.CreateAsync();
@@ -283,15 +287,10 @@ public class PlaywrightCrawler : BaseCrawler
             _browser = await _playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
             {
                 Headless = true,
-                Args = new[]
-                {
-                    "--disable-blink-features=AutomationControlled", // 자동화 감지 우회
-                    "--disable-dev-shm-usage",
-                    "--no-sandbox"
-                }
+                Args = ChromiumArgs
             });
 
-            _logger.LogInformation("Playwright browser initialized successfully");
+            LogBrowserInitialized(_logger);
 
             return _browser;
         }
@@ -315,7 +314,7 @@ public class PlaywrightCrawler : BaseCrawler
             {
                 if (!page.IsClosed)
                 {
-                    _logger.LogDebug("Reusing page from pool");
+                    LogReusingPage(_logger);
                     return page;
                 }
             }
@@ -323,7 +322,7 @@ public class PlaywrightCrawler : BaseCrawler
             // 풀에 없으면 새로 생성
             var browser = await GetBrowserAsync(cancellationToken);
             var newPage = await browser.NewPageAsync();
-            _logger.LogDebug("Created new page for pool");
+            LogCreatedNewPage(_logger);
             return newPage;
         }
         catch
@@ -353,12 +352,12 @@ public class PlaywrightCrawler : BaseCrawler
                 });
 
                 _pagePool.Add(page);
-                _logger.LogDebug("Returned page to pool");
+                LogReturnedPage(_logger);
             }
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to return page to pool, will be discarded");
+            LogReturnPageFailed(_logger, ex);
             try
             {
                 await page.CloseAsync();
@@ -387,7 +386,48 @@ public class PlaywrightCrawler : BaseCrawler
     }
 
     /// <summary>
-    /// 리소스 정리
+    /// 비동기 리소스 정리 (권장)
+    /// </summary>
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed)
+            return;
+
+        _disposed = true;
+
+        try
+        {
+            while (_pagePool.TryTake(out var page))
+            {
+                try
+                {
+                    await page.CloseAsync().ConfigureAwait(false);
+                }
+                catch
+                {
+                    // Ignore close errors during disposal
+                }
+            }
+
+            if (_browser is not null)
+            {
+                await _browser.DisposeAsync().ConfigureAwait(false);
+            }
+
+            _playwright?.Dispose();
+            _browserLock?.Dispose();
+            _pageSemaphore?.Dispose();
+        }
+        finally
+        {
+            base.Dispose();
+        }
+
+        GC.SuppressFinalize(this);
+    }
+
+    /// <summary>
+    /// 동기 리소스 정리 (레거시 호환)
     /// </summary>
     public override void Dispose()
     {
@@ -398,7 +438,6 @@ public class PlaywrightCrawler : BaseCrawler
 
         try
         {
-            // 페이지 풀의 모든 페이지 닫기
             while (_pagePool.TryTake(out var page))
             {
                 try
@@ -411,7 +450,7 @@ public class PlaywrightCrawler : BaseCrawler
                 }
             }
 
-            _browser?.DisposeAsync().GetAwaiter().GetResult();
+            _browser?.DisposeAsync().AsTask().GetAwaiter().GetResult();
             _playwright?.Dispose();
             _browserLock?.Dispose();
             _pageSemaphore?.Dispose();
@@ -421,4 +460,68 @@ public class PlaywrightCrawler : BaseCrawler
             base.Dispose();
         }
     }
+
+    // ===================================================================
+    // LoggerMessage Definitions
+    // ===================================================================
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Crawling URL with Playwright: {Url}")]
+    private static partial void LogCrawlingWithPlaywright(ILogger logger, string Url);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "  Getting page from pool...")]
+    private static partial void LogGettingPageFromPool(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "  Loading page (DOM ready)...")]
+    private static partial void LogLoadingPage(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "  Page loaded (Status: {StatusCode})")]
+    private static partial void LogPageLoaded(ILogger logger, int StatusCode);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "  Waiting for selector: {Selector}")]
+    private static partial void LogWaitingForSelector(ILogger logger, string Selector);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "  Waiting {DelayMs}ms for JavaScript execution...")]
+    private static partial void LogWaitingForJavaScript(ILogger logger, int DelayMs);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "  Auto-scrolling page to load lazy content...")]
+    private static partial void LogAutoScrolling(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "  Extracting page content...")]
+    private static partial void LogExtractingContent(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "  Page still navigating, waiting... (retry {RetryCount}/3)")]
+    private static partial void LogPageStillNavigating(ILogger logger, int RetryCount);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Successfully crawled {Url} with Playwright in {ResponseTime}ms")]
+    private static partial void LogCrawlSuccess(ILogger logger, string Url, long ResponseTime);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Playwright error while crawling {Url}")]
+    private static partial void LogPlaywrightError(ILogger logger, Exception ex, string Url);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Error crawling {Url} with Playwright")]
+    private static partial void LogCrawlError(ILogger logger, Exception ex, string Url);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Auto-scroll completed")]
+    private static partial void LogAutoScrollCompleted(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Auto-scroll failed, continuing anyway")]
+    private static partial void LogAutoScrollFailed(ILogger logger, Exception ex);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Initializing Playwright browser")]
+    private static partial void LogInitializingBrowser(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Playwright browser initialized successfully")]
+    private static partial void LogBrowserInitialized(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Reusing page from pool")]
+    private static partial void LogReusingPage(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Created new page for pool")]
+    private static partial void LogCreatedNewPage(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Returned page to pool")]
+    private static partial void LogReturnedPage(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to return page to pool, will be discarded")]
+    private static partial void LogReturnPageFailed(ILogger logger, Exception ex);
 }

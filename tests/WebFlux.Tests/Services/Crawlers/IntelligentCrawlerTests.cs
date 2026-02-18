@@ -385,11 +385,11 @@ public class IntelligentCrawlerTests
     }
 
     [Fact]
-    public void GetStatistics_AfterMultipleCrawls_ShouldStillReturnZero()
+    public async Task GetStatistics_AfterMultipleCrawls_ShouldStillReturnZero()
     {
         // Arrange - crawl multiple times
-        _ = _crawler.CrawlAsync("https://example.com").Result;
-        _ = _crawler.CrawlAsync("https://test.com").Result;
+        _ = await _crawler.CrawlAsync("https://example.com");
+        _ = await _crawler.CrawlAsync("https://test.com");
 
         // Act
         var stats = _crawler.GetStatistics();

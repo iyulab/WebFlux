@@ -23,7 +23,7 @@ dotnet run
 ## 빌드
 
 ```bash
-dotnet build WebFluxSamples.sln
+dotnet build WebFluxSamples.slnx
 ```
 
 ## 주의사항

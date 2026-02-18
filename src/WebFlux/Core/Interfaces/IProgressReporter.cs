@@ -37,9 +37,9 @@ public interface IProgressReporter
     /// 작업을 실패로 표시합니다.
     /// </summary>
     /// <param name="jobId">작업 ID</param>
-    /// <param name="error">오류 정보</param>
+    /// <param name="exception">오류 정보</param>
     /// <returns>실패 작업</returns>
-    Task FailJobAsync(string jobId, Exception error);
+    Task FailJobAsync(string jobId, Exception exception);
 
     /// <summary>
     /// 작업 진행률을 실시간으로 모니터링합니다.
@@ -117,7 +117,7 @@ public interface IProgressTracker : IDisposable
     /// <summary>
     /// 작업을 실패로 표시합니다.
     /// </summary>
-    /// <param name="error">오류 정보</param>
+    /// <param name="exception">오류 정보</param>
     /// <returns>실패 작업</returns>
-    Task FailAsync(Exception error);
+    Task FailAsync(Exception exception);
 }

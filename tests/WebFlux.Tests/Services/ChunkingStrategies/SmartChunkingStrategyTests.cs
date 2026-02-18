@@ -69,8 +69,8 @@ public class SmartChunkingStrategyTests
         // Arrange
         var content = new ExtractedContent
         {
-            Text = null,
-            MainContent = null,
+            Text = null!,
+            MainContent = null!,
             Url = "https://example.com"
         };
 
@@ -181,7 +181,7 @@ Content for section two";
         {
             MainContent = text,
             Url = "https://example.com",
-            Headings = null
+            Headings = null!
         };
 
         // Act
@@ -223,7 +223,7 @@ Content for section two";
         {
             MainContent = text,
             Url = "https://example.com",
-            Headings = null
+            Headings = null!
         };
 
         // Act

@@ -103,7 +103,7 @@ public class CrawlProgressReporter : ICrawlProgressReporter
 /// <summary>
 /// 크롤링 진행률 추적기 구현
 /// </summary>
-internal class CrawlProgressTracker : ICrawlProgressTracker
+internal sealed class CrawlProgressTracker : ICrawlProgressTracker
 {
     private readonly CrawlProgress _progress;
     private readonly Stopwatch _stopwatch;

@@ -541,10 +541,10 @@ public class MarkdownConversionOptions
     public bool EnableAutoLinks { get; init; } = true;
 
     /// <summary>이모지 변환</summary>
-    public bool EnableEmojis { get; init; } = false;
+    public bool EnableEmojis { get; init; }
 
     /// <summary>링크 검증</summary>
-    public bool ValidateLinks { get; init; } = false;
+    public bool ValidateLinks { get; init; }
 
     /// <summary>이미지 정보 추출</summary>
     public bool ExtractImageInfo { get; init; } = true;

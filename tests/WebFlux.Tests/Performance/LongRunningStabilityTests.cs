@@ -40,7 +40,7 @@ public class LongRunningStabilityTests
         // Act: 24시간 동안 계속 처리
         while (DateTime.UtcNow < endTime)
         {
-            metrics.StartIteration();
+            LongRunningMetrics.StartIteration();
 
             try
             {
@@ -110,7 +110,7 @@ public class LongRunningStabilityTests
         // Act: 10분 동안 고속 처리
         while (DateTime.UtcNow < endTime)
         {
-            metrics.StartIteration();
+            LongRunningMetrics.StartIteration();
 
             var content = GenerateRandomWebContent();
             var chunks = await strategy.ChunkAsync(content, options);
@@ -204,7 +204,7 @@ public class LongRunningStabilityTests
 
         for (int i = 0; i < size / 100; i++)
         {
-            text.AppendLine($"<p>Random paragraph {i}. Lorem ipsum dolor sit amet.</p>");
+            text.AppendLine(System.Globalization.CultureInfo.InvariantCulture, $"<p>Random paragraph {i}. Lorem ipsum dolor sit amet.</p>");
         }
 
         text.AppendLine("</body></html>");
@@ -227,14 +227,14 @@ public class LongRunningMetrics
 {
     private readonly List<double> _memorySamplesMB = new();
     private readonly List<int> _gcGen2Samples = new();
-    private int _successCount = 0;
-    private int _failureCount = 0;
-    private int _totalChunks = 0;
+    private int _successCount;
+    private int _failureCount;
+    private int _totalChunks;
     private readonly Stopwatch _stopwatch = Stopwatch.StartNew();
 
     public int IterationCount => _successCount + _failureCount;
 
-    public void StartIteration()
+    public static void StartIteration()
     {
         // 반복 시작 (필요시 추가 로직)
     }
@@ -267,7 +267,7 @@ public class LongRunningMetrics
         }
     }
 
-    public double GetCurrentMemoryMB()
+    public static double GetCurrentMemoryMB()
     {
         return GC.GetTotalMemory(false) / (1024.0 * 1024.0);
     }
@@ -305,7 +305,7 @@ public class LongRunningMetrics
     {
         lock (_memorySamplesMB)
         {
-            var avgMemory = _memorySamplesMB.Any() ? _memorySamplesMB.Average() : 0;
+            var avgMemory = _memorySamplesMB.Count > 0 ? _memorySamplesMB.Average() : 0;
             var successRate = IterationCount > 0 ? (double)_successCount / IterationCount : 0;
 
             // 메모리 증가 추세 계산 (선형 회귀)

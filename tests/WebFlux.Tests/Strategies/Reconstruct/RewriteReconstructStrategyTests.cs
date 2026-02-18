@@ -3,7 +3,7 @@ using WebFlux.Core.Models;
 using WebFlux.Core.Options;
 using WebFlux.Strategies.Reconstruct;
 using Xunit;
-using Moq;
+using NSubstitute;
 
 namespace WebFlux.Tests.Strategies.Reconstruct;
 
@@ -13,13 +13,13 @@ namespace WebFlux.Tests.Strategies.Reconstruct;
 /// </summary>
 public class RewriteReconstructStrategyTests
 {
-    private readonly Mock<ITextCompletionService> _mockLlmService;
+    private readonly ITextCompletionService _mockLlmService;
     private readonly RewriteReconstructStrategy _strategy;
 
     public RewriteReconstructStrategyTests()
     {
-        _mockLlmService = new Mock<ITextCompletionService>();
-        _strategy = new RewriteReconstructStrategy(_mockLlmService.Object);
+        _mockLlmService = Substitute.For<ITextCompletionService>();
+        _strategy = new RewriteReconstructStrategy(_mockLlmService);
     }
 
     [Fact]
@@ -126,22 +126,21 @@ public class RewriteReconstructStrategyTests
 
         var expectedRewrite = "This is a clear, well-structured rewrite of the original content.";
         _mockLlmService
-            .Setup(x => x.CompleteAsync(
-                It.IsAny<string>(),
-                It.IsAny<TextCompletionOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(expectedRewrite);
+            .CompleteAsync(
+                Arg.Any<string>(),
+                Arg.Any<TextCompletionOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns(expectedRewrite);
 
         // Act
         var result = await _strategy.ApplyAsync(content, options);
 
         // Assert
-        _mockLlmService.Verify(
-            x => x.CompleteAsync(
-                It.Is<string>(p => p.Contains("rewrite", StringComparison.OrdinalIgnoreCase)),
-                It.Is<TextCompletionOptions>(o => o.MaxTokens == 2500 && Math.Abs(o.Temperature - 0.4f) < 0.001f),
-                It.IsAny<CancellationToken>()),
-            Times.Once);
+        await _mockLlmService.Received(1)
+            .CompleteAsync(
+                Arg.Is<string>(p => p.Contains("rewrite", StringComparison.OrdinalIgnoreCase)),
+                Arg.Is<TextCompletionOptions>(o => o.MaxTokens == 2500 && Math.Abs(o.Temperature - 0.4f) < 0.001f),
+                Arg.Any<CancellationToken>());
 
         Assert.Equal(expectedRewrite, result.ReconstructedText);
         Assert.True(result.UsedLLM);
@@ -160,22 +159,21 @@ public class RewriteReconstructStrategyTests
         };
 
         _mockLlmService
-            .Setup(x => x.CompleteAsync(
-                It.IsAny<string>(),
-                It.IsAny<TextCompletionOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync("Rewritten content");
+            .CompleteAsync(
+                Arg.Any<string>(),
+                Arg.Any<TextCompletionOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns("Rewritten content");
 
         // Act
         await _strategy.ApplyAsync(content, options);
 
         // Assert
-        _mockLlmService.Verify(
-            x => x.CompleteAsync(
-                It.Is<string>(p => p.Contains("casual") || p.Contains("conversational")),
-                It.IsAny<TextCompletionOptions>(),
-                It.IsAny<CancellationToken>()),
-            Times.Once);
+        await _mockLlmService.Received(1)
+            .CompleteAsync(
+                Arg.Is<string>(p => p.Contains("casual") || p.Contains("conversational")),
+                Arg.Any<TextCompletionOptions>(),
+                Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -191,22 +189,21 @@ public class RewriteReconstructStrategyTests
         };
 
         _mockLlmService
-            .Setup(x => x.CompleteAsync(
-                It.IsAny<string>(),
-                It.IsAny<TextCompletionOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync("Rewritten");
+            .CompleteAsync(
+                Arg.Any<string>(),
+                Arg.Any<TextCompletionOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns("Rewritten");
 
         // Act
         await _strategy.ApplyAsync(content, options);
 
         // Assert
-        _mockLlmService.Verify(
-            x => x.CompleteAsync(
-                It.Is<string>(p => p.Contains(contextPrompt)),
-                It.IsAny<TextCompletionOptions>(),
-                It.IsAny<CancellationToken>()),
-            Times.Once);
+        await _mockLlmService.Received(1)
+            .CompleteAsync(
+                Arg.Is<string>(p => p.Contains(contextPrompt)),
+                Arg.Any<TextCompletionOptions>(),
+                Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -218,11 +215,11 @@ public class RewriteReconstructStrategyTests
         var options = new ReconstructOptions { UseLLM = true };
 
         _mockLlmService
-            .Setup(x => x.CompleteAsync(
-                It.IsAny<string>(),
-                It.IsAny<TextCompletionOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(rewrite);
+            .CompleteAsync(
+                Arg.Any<string>(),
+                Arg.Any<TextCompletionOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns(rewrite);
 
         // Act
         var result = await _strategy.ApplyAsync(content, options);
@@ -243,11 +240,11 @@ public class RewriteReconstructStrategyTests
         var options = new ReconstructOptions { UseLLM = true };
 
         _mockLlmService
-            .Setup(x => x.CompleteAsync(
-                It.IsAny<string>(),
-                It.IsAny<TextCompletionOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(rewrite);
+            .CompleteAsync(
+                Arg.Any<string>(),
+                Arg.Any<TextCompletionOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns(rewrite);
 
         // Act
         var result = await _strategy.ApplyAsync(content, options);
@@ -267,22 +264,21 @@ public class RewriteReconstructStrategyTests
         var cts = new CancellationTokenSource();
 
         _mockLlmService
-            .Setup(x => x.CompleteAsync(
-                It.IsAny<string>(),
-                It.IsAny<TextCompletionOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync("Rewritten");
+            .CompleteAsync(
+                Arg.Any<string>(),
+                Arg.Any<TextCompletionOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns("Rewritten");
 
         // Act
         await _strategy.ApplyAsync(content, options, cts.Token);
 
         // Assert
-        _mockLlmService.Verify(
-            x => x.CompleteAsync(
-                It.IsAny<string>(),
-                It.IsAny<TextCompletionOptions>(),
-                cts.Token),
-            Times.Once);
+        await _mockLlmService.Received(1)
+            .CompleteAsync(
+                Arg.Any<string>(),
+                Arg.Any<TextCompletionOptions>(),
+                cts.Token);
     }
 
     [Fact]
@@ -316,25 +312,24 @@ public class RewriteReconstructStrategyTests
         };
 
         _mockLlmService
-            .Setup(x => x.CompleteAsync(
-                It.IsAny<string>(),
-                It.IsAny<TextCompletionOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync("Rewritten");
+            .CompleteAsync(
+                Arg.Any<string>(),
+                Arg.Any<TextCompletionOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns("Rewritten");
 
         // Act
         await _strategy.ApplyAsync(content, options);
 
         // Assert
-        _mockLlmService.Verify(
-            x => x.CompleteAsync(
-                It.Is<string>(p => p.Contains(expectedInPrompt, StringComparison.OrdinalIgnoreCase)),
-                It.IsAny<TextCompletionOptions>(),
-                It.IsAny<CancellationToken>()),
-            Times.Once);
+        await _mockLlmService.Received(1)
+            .CompleteAsync(
+                Arg.Is<string>(p => p.Contains(expectedInPrompt, StringComparison.OrdinalIgnoreCase)),
+                Arg.Any<TextCompletionOptions>(),
+                Arg.Any<CancellationToken>());
     }
 
-    private AnalyzedContent CreateSampleAnalyzedContent(string? customContent = null)
+    private static AnalyzedContent CreateSampleAnalyzedContent(string? customContent = null)
     {
         return new AnalyzedContent
         {

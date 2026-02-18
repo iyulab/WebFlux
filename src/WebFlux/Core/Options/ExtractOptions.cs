@@ -15,7 +15,7 @@ public class ExtractOptions : IValidatable
     /// JavaScript 렌더링 사용 여부 (Playwright 기반)
     /// SPA, 동적 콘텐츠 페이지에 사용
     /// </summary>
-    public bool UseDynamicRendering { get; set; } = false;
+    public bool UseDynamicRendering { get; set; }
 
     /// <summary>
     /// 동적 렌더링 시 대기할 CSS 선택자
@@ -55,7 +55,7 @@ public class ExtractOptions : IValidatable
     /// <summary>
     /// 캐시 무시하고 강제 새로고침
     /// </summary>
-    public bool ForceRefresh { get; set; } = false;
+    public bool ForceRefresh { get; set; }
 
     #endregion
 
@@ -79,12 +79,12 @@ public class ExtractOptions : IValidatable
     /// <summary>
     /// 이미지 URL 포함 여부
     /// </summary>
-    public bool IncludeImages { get; set; } = false;
+    public bool IncludeImages { get; set; }
 
     /// <summary>
     /// 링크 URL 포함 여부
     /// </summary>
-    public bool IncludeLinks { get; set; } = false;
+    public bool IncludeLinks { get; set; }
 
     /// <summary>
     /// 최대 텍스트 길이 (null이면 제한 없음)

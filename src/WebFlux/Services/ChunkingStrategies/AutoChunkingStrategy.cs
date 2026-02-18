@@ -10,7 +10,7 @@ namespace WebFlux.Services.ChunkingStrategies;
 /// 자동 청킹 전략 - Phase 5B 고도화
 /// 품질 평가 시스템과 실시간 최적화를 통한 지능형 전략 선택
 /// </summary>
-public class AutoChunkingStrategy : BaseChunkingStrategy
+public partial class AutoChunkingStrategy : BaseChunkingStrategy
 {
     private readonly IServiceProvider? _serviceProvider;
     private readonly IPerformanceMonitor? _performanceMonitor;
@@ -62,7 +62,7 @@ public class AutoChunkingStrategy : BaseChunkingStrategy
             var cachedResult = await GetCachedResultAsync(cacheKey, cancellationToken);
             if (cachedResult != null)
             {
-                _logger?.LogDebug("Using cached chunking result for {Url}", sourceUrl);
+                if (_logger != null) LogUsingCachedResult(_logger, sourceUrl);
                 return cachedResult;
             }
 
@@ -73,8 +73,7 @@ public class AutoChunkingStrategy : BaseChunkingStrategy
             // Phase 5B.3: 최적 전략 선택 (성능 히스토리 고려)
             var selectedStrategy = SelectOptimalStrategy(strategyScores, analysisMetadata);
 
-            _logger?.LogInformation("Selected strategy: {Strategy} with score: {Score:F3} for content: {Url}",
-                selectedStrategy.Name, strategyScores[selectedStrategy.Name].TotalScore, sourceUrl);
+            if (_logger != null) LogSelectedStrategy(_logger, selectedStrategy.Name, strategyScores[selectedStrategy.Name].TotalScore, sourceUrl);
 
             // Phase 5B.4: 실시간 성능 모니터링과 함께 청킹 수행
             var chunks = await ExecuteChunkingWithMonitoring(selectedStrategy, content, options, cancellationToken);
@@ -93,11 +92,11 @@ public class AutoChunkingStrategy : BaseChunkingStrategy
         }
         catch (Exception ex)
         {
-            _logger?.LogError(ex, "Error in auto chunking strategy for {Url}", sourceUrl);
+            if (_logger != null) LogAutoChunkingError(_logger, ex, sourceUrl);
             operationScope?.RecordError(ex);
 
             // Fallback to simple strategy
-            var fallbackStrategy = new ParagraphChunkingStrategy(_eventPublisher);
+            var fallbackStrategy = new ParagraphChunkingStrategy(EventPublisher);
             return await fallbackStrategy.ChunkAsync(content, options, cancellationToken);
         }
     }
@@ -105,7 +104,7 @@ public class AutoChunkingStrategy : BaseChunkingStrategy
     /// <summary>
     /// Phase 5B.1: 캐시 키 생성
     /// </summary>
-    private string GenerateCacheKey(ExtractedContent content, ChunkingOptions? options)
+    private static string GenerateCacheKey(ExtractedContent content, ChunkingOptions? options)
     {
         var contentHash = content.Url?.GetHashCode() ?? content.Text?.GetHashCode() ?? 0;
         var optionsHash = options?.GetHashCode() ?? 0;
@@ -125,7 +124,7 @@ public class AutoChunkingStrategy : BaseChunkingStrategy
         }
         catch (Exception ex)
         {
-            _logger?.LogWarning(ex, "Failed to get cached result for key: {CacheKey}", cacheKey);
+            if (_logger != null) LogCacheGetFailed(_logger, ex, cacheKey);
             return null;
         }
     }
@@ -141,7 +140,7 @@ public class AutoChunkingStrategy : BaseChunkingStrategy
         var analysis = new ContentAnalysisMetadata
         {
             DocumentLength = textLength,
-            HasImages = content.ImageUrls?.Any() == true,
+            HasImages = content.ImageUrls?.Count > 0,
             ImageDensity = CalculateImageDensity(content),
             HasTechnicalContent = await DetectTechnicalContentAsync(text, cancellationToken),
             ContentType = ClassifyContentType(content),
@@ -196,16 +195,19 @@ public class AutoChunkingStrategy : BaseChunkingStrategy
     {
         var bestStrategy = scores.OrderByDescending(kvp => kvp.Value.TotalScore).First();
 
-        _logger?.LogDebug("Strategy scores: {Scores}",
-            string.Join(", ", scores.Select(kvp => $"{kvp.Key}:{kvp.Value.TotalScore:F2}")));
+        if (_logger != null)
+        {
+            var scoresText = string.Join(", ", scores.Select(kvp => $"{kvp.Key}:{kvp.Value.TotalScore:F2}"));
+            LogStrategyScores(_logger, scoresText);
+        }
 
         return bestStrategy.Key switch
         {
-            "Smart" => new SmartChunkingStrategy(_eventPublisher),
-            "Semantic" => new SemanticChunkingStrategy(_eventPublisher),
-            "MemoryOptimized" => new MemoryOptimizedChunkingStrategy(_eventPublisher),
-            "Paragraph" => new ParagraphChunkingStrategy(_eventPublisher),
-            _ => new FixedSizeChunkingStrategy(_eventPublisher)
+            "Smart" => new SmartChunkingStrategy(EventPublisher),
+            "Semantic" => new SemanticChunkingStrategy(EventPublisher),
+            "MemoryOptimized" => new MemoryOptimizedChunkingStrategy(EventPublisher),
+            "Paragraph" => new ParagraphChunkingStrategy(EventPublisher),
+            _ => new FixedSizeChunkingStrategy(EventPublisher)
         };
     }
 
@@ -215,7 +217,7 @@ public class AutoChunkingStrategy : BaseChunkingStrategy
     private async Task<IReadOnlyList<WebContentChunk>> ExecuteChunkingWithMonitoring(
         IChunkingStrategy strategy, ExtractedContent content, ChunkingOptions? options, CancellationToken cancellationToken)
     {
-        using var scope = _performanceMonitor?.MeasureOperation($"chunking_{strategy.Name.ToLower()}") as IOperationScope;
+        using var scope = _performanceMonitor?.MeasureOperation($"chunking_{strategy.Name.ToLowerInvariant()}") as IOperationScope;
 
         try
         {
@@ -277,17 +279,17 @@ public class AutoChunkingStrategy : BaseChunkingStrategy
             var expiration = qualityScore > 0.8 ? TimeSpan.FromHours(4) : TimeSpan.FromHours(1);
             await _cacheService.SetAsync(cacheKey, chunks.ToList(), expiration, cancellationToken);
 
-            _logger?.LogDebug("Cached chunking result with quality score: {QualityScore:F3}", qualityScore);
+            if (_logger != null) LogCachedChunkingResult(_logger, qualityScore);
         }
         catch (Exception ex)
         {
-            _logger?.LogWarning(ex, "Failed to cache chunking result");
+            if (_logger != null) LogCacheSetFailed(_logger, ex);
         }
     }
 
     #region Helper Methods
 
-    private double CalculateImageDensity(ExtractedContent content)
+    private static double CalculateImageDensity(ExtractedContent content)
     {
         var imageCount = content.ImageUrls?.Count ?? 0;
         var textLength = content.MainContent?.Length ?? content.Text?.Length ?? 1;
@@ -315,7 +317,7 @@ public class AutoChunkingStrategy : BaseChunkingStrategy
         return ContentType.Article;
     }
 
-    private StructuralComplexity AnalyzeStructuralComplexity(ExtractedContent content)
+    private static StructuralComplexity AnalyzeStructuralComplexity(ExtractedContent content)
     {
         var headingCount = content.Headings?.Count ?? 0;
         var imageCount = content.ImageUrls?.Count ?? 0;
@@ -331,7 +333,7 @@ public class AutoChunkingStrategy : BaseChunkingStrategy
         };
     }
 
-    private async Task<ContentQualityMetrics> CalculateQualityMetricsAsync(ExtractedContent content, CancellationToken cancellationToken)
+    private static async Task<ContentQualityMetrics> CalculateQualityMetricsAsync(ExtractedContent content, CancellationToken cancellationToken)
     {
         var text = content.MainContent ?? content.Text ?? "";
 
@@ -446,12 +448,12 @@ public class AutoChunkingStrategy : BaseChunkingStrategy
         }
         catch (Exception ex)
         {
-            _logger?.LogWarning(ex, "Failed to get performance history for strategy: {Strategy}", strategy);
+            if (_logger != null) LogPerformanceHistoryFailed(_logger, ex, strategy);
             score.AddScore("performance_history", 0.5, "Performance history unavailable");
         }
     }
 
-    private double CalculateSizeConsistency(IReadOnlyList<WebContentChunk> chunks)
+    private static double CalculateSizeConsistency(IReadOnlyList<WebContentChunk> chunks)
     {
         if (chunks.Count < 2) return 1.0;
 
@@ -464,7 +466,7 @@ public class AutoChunkingStrategy : BaseChunkingStrategy
         return Math.Max(0.0, 1.0 - coefficientOfVariation);
     }
 
-    private Task<double> CalculateSemanticCohesion(IReadOnlyList<WebContentChunk> chunks, CancellationToken cancellationToken)
+    private static Task<double> CalculateSemanticCohesion(IReadOnlyList<WebContentChunk> chunks, CancellationToken cancellationToken)
     {
         // 의미적 응집성 평가 (간단한 구현)
         // 실제로는 임베딩 서비스를 사용해야 하지만 여기서는 키워드 기반 평가
@@ -480,7 +482,7 @@ public class AutoChunkingStrategy : BaseChunkingStrategy
         return Task.FromResult(cohesionScores.Average());
     }
 
-    private double CalculateStructuralConsistency(IReadOnlyList<WebContentChunk> chunks, ContentAnalysisMetadata analysis)
+    private static double CalculateStructuralConsistency(IReadOnlyList<WebContentChunk> chunks, ContentAnalysisMetadata analysis)
     {
         // 구조적 일관성: 청크들이 논리적 구조를 유지하는지 평가
         var consistencyScore = 1.0;
@@ -516,12 +518,12 @@ public class AutoChunkingStrategy : BaseChunkingStrategy
         }
         catch (Exception ex)
         {
-            _logger?.LogWarning(ex, "Failed to calculate token efficiency");
+            if (_logger != null) LogTokenEfficiencyFailed(_logger, ex);
             return 0.8;
         }
     }
 
-    private double CalculateTextDensity(string text)
+    private static double CalculateTextDensity(string text)
     {
         if (string.IsNullOrWhiteSpace(text)) return 0.0;
 
@@ -530,7 +532,7 @@ public class AutoChunkingStrategy : BaseChunkingStrategy
         return (double)meaningfulChars / totalChars;
     }
 
-    private double CalculateBaseStructuralConsistency(ExtractedContent content)
+    private static double CalculateBaseStructuralConsistency(ExtractedContent content)
     {
         var headingCount = content.Headings?.Count ?? 0;
         var textLength = content.MainContent?.Length ?? content.Text?.Length ?? 0;
@@ -542,7 +544,7 @@ public class AutoChunkingStrategy : BaseChunkingStrategy
         return Math.Min(1.0, headingDensity * 0.1); // 적절한 헤딩 밀도 점수
     }
 
-    private Task<double> EstimateSemanticCohesion(string text, CancellationToken cancellationToken)
+    private static Task<double> EstimateSemanticCohesion(string text, CancellationToken cancellationToken)
     {
         // 간단한 의미적 응집성 추정 (실제로는 NLP 모델 사용)
         var sentences = text.Split(['.', '!', '?'], StringSplitOptions.RemoveEmptyEntries);
@@ -557,7 +559,7 @@ public class AutoChunkingStrategy : BaseChunkingStrategy
         return Task.FromResult(cohesionSum / (sentences.Length - 1));
     }
 
-    private double CalculateReadabilityScore(string text)
+    private static double CalculateReadabilityScore(string text)
     {
         if (string.IsNullOrWhiteSpace(text)) return 0.0;
 
@@ -574,14 +576,14 @@ public class AutoChunkingStrategy : BaseChunkingStrategy
         return Math.Max(0.0, 1.0 - complexityScore / 20.0);
     }
 
-    private double CalculateTextSimilarity(string text1, string text2)
+    private static double CalculateTextSimilarity(string text1, string text2)
     {
         // 간단한 텍스트 유사성 계산 (Jaccard 유사성)
         var words1 = text1.ToLowerInvariant().Split([' ', '\t', '\n'], StringSplitOptions.RemoveEmptyEntries).ToHashSet();
         var words2 = text2.ToLowerInvariant().Split([' ', '\t', '\n'], StringSplitOptions.RemoveEmptyEntries).ToHashSet();
 
-        if (!words1.Any() && !words2.Any()) return 1.0;
-        if (!words1.Any() || !words2.Any()) return 0.0;
+        if (words1.Count == 0 && words2.Count == 0) return 1.0;
+        if (words1.Count == 0 || words2.Count == 0) return 0.0;
 
         var intersection = words1.Intersect(words2).Count();
         var union = words1.Union(words2).Count();
@@ -590,4 +592,35 @@ public class AutoChunkingStrategy : BaseChunkingStrategy
     }
 
     #endregion
+
+    // ===================================================================
+    // LoggerMessage Definitions
+    // ===================================================================
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Using cached chunking result for {Url}")]
+    private static partial void LogUsingCachedResult(ILogger logger, string Url);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Selected strategy: {Strategy} with score: {Score} for content: {Url}")]
+    private static partial void LogSelectedStrategy(ILogger logger, string Strategy, double Score, string Url);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Error in auto chunking strategy for {Url}")]
+    private static partial void LogAutoChunkingError(ILogger logger, Exception ex, string Url);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to get cached result for key: {CacheKey}")]
+    private static partial void LogCacheGetFailed(ILogger logger, Exception ex, string CacheKey);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Strategy scores: {Scores}")]
+    private static partial void LogStrategyScores(ILogger logger, string Scores);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Cached chunking result with quality score: {QualityScore}")]
+    private static partial void LogCachedChunkingResult(ILogger logger, double QualityScore);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to cache chunking result")]
+    private static partial void LogCacheSetFailed(ILogger logger, Exception ex);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to get performance history for strategy: {Strategy}")]
+    private static partial void LogPerformanceHistoryFailed(ILogger logger, Exception ex, string Strategy);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to calculate token efficiency")]
+    private static partial void LogTokenEfficiencyFailed(ILogger logger, Exception ex);
 }

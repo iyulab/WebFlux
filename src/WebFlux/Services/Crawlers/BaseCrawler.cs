@@ -17,25 +17,25 @@ namespace WebFlux.Services.Crawlers;
 /// </summary>
 public abstract class BaseCrawler : ICrawler
 {
-    protected readonly IHttpClientService _httpClient;
-    protected readonly IEventPublisher _eventPublisher;
-    protected readonly ConcurrentQueue<string> _urlQueue = new();
-    protected readonly HashSet<string> _visitedUrls = new();
-    protected readonly HashSet<string> _failedUrls = new();
-    protected readonly object _lockObject = new();
+    protected IHttpClientService HttpClient { get; }
+    protected IEventPublisher EventPublisher { get; }
+    protected ConcurrentQueue<string> UrlQueue { get; } = new();
+    protected HashSet<string> VisitedUrls { get; } = new();
+    protected HashSet<string> FailedUrls { get; } = new();
+    protected object LockObject { get; } = new();
 
-    protected CrawlStatistics _statistics = new();
-    protected CancellationTokenSource? _cancellationTokenSource;
-    protected bool _isRunning;
-    protected int _processedCount;
-    protected int _successCount;
-    protected int _errorCount;
-    protected DateTimeOffset _startTime;
+    protected CrawlStatistics Statistics { get; set; } = new();
+    protected CancellationTokenSource? CancellationTokenSourceInstance { get; set; }
+    protected bool IsRunning { get; set; }
+    protected int ProcessedCount { get; set; }
+    protected int SuccessCount { get; set; }
+    protected int ErrorCount { get; set; }
+    protected DateTimeOffset StartTime { get; set; }
 
     protected BaseCrawler(IHttpClientService httpClient, IEventPublisher eventPublisher)
     {
-        _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
-        _eventPublisher = eventPublisher ?? throw new ArgumentNullException(nameof(eventPublisher));
+        HttpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
+        EventPublisher = eventPublisher ?? throw new ArgumentNullException(nameof(eventPublisher));
     }
 
     /// <summary>
@@ -66,14 +66,14 @@ public abstract class BaseCrawler : ICrawler
             {
                 if (attempt == 0)
                 {
-                    await _eventPublisher.PublishAsync(new UrlProcessingStartedEvent
+                    await EventPublisher.PublishAsync(new UrlProcessingStartedEvent
                     {
                         Url = url,
                         Timestamp = startTime
                     }, cancellationToken);
                 }
 
-                using var response = await _httpClient.GetAsync(url, cancellationToken: cancellationToken);
+                using var response = await HttpClient.GetAsync(url, cancellationToken: cancellationToken);
 
                 // HTTP 429 Too Many Requests 처리
                 if (response.StatusCode == HttpStatusCode.TooManyRequests && attempt < maxRetries)
@@ -195,7 +195,7 @@ public abstract class BaseCrawler : ICrawler
         if (string.IsNullOrWhiteSpace(startUrl))
             throw new ArgumentException("Start URL cannot be null or empty", nameof(startUrl));
 
-        _startTime = DateTimeOffset.UtcNow;
+        StartTime = DateTimeOffset.UtcNow;
         var queue = new Queue<(string url, int depth)>();
         var visited = new HashSet<string>();
         var maxDepth = options?.MaxDepth ?? 3;
@@ -273,7 +273,7 @@ public abstract class BaseCrawler : ICrawler
         if (string.IsNullOrWhiteSpace(startUrl))
             throw new ArgumentException("Start URL cannot be null or empty", nameof(startUrl));
 
-        _startTime = DateTimeOffset.UtcNow;
+        StartTime = DateTimeOffset.UtcNow;
 
         var maxDepth = options?.MaxDepth ?? 3;
         var maxPages = options?.MaxPages ?? 100;
@@ -477,7 +477,7 @@ public abstract class BaseCrawler : ICrawler
 
         try
         {
-            using var response = await _httpClient.GetAsync(robotsUrl, cancellationToken: cancellationToken);
+            using var response = await HttpClient.GetAsync(robotsUrl, cancellationToken: cancellationToken);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -512,11 +512,11 @@ public abstract class BaseCrawler : ICrawler
                 var path = new Uri(url).PathAndQuery;
 
                 // 허용된 경로 확인
-                if (rules.AllowedPaths.Any(pattern => path.StartsWith(pattern)))
+                if (rules.AllowedPaths.Any(pattern => path.StartsWith(pattern, StringComparison.Ordinal)))
                     return true;
 
                 // 금지된 경로 확인
-                if (rules.DisallowedPaths.Any(pattern => path.StartsWith(pattern)))
+                if (rules.DisallowedPaths.Any(pattern => path.StartsWith(pattern, StringComparison.Ordinal)))
                     return false;
             }
 
@@ -557,7 +557,7 @@ public abstract class BaseCrawler : ICrawler
                 href.StartsWith("javascript:", StringComparison.OrdinalIgnoreCase) ||
                 href.StartsWith("mailto:", StringComparison.OrdinalIgnoreCase) ||
                 href.StartsWith("tel:", StringComparison.OrdinalIgnoreCase) ||
-                href.StartsWith("#"))
+                href.StartsWith('#'))
             {
                 continue;
             }
@@ -581,7 +581,7 @@ public abstract class BaseCrawler : ICrawler
     /// <returns>크롤링 통계 정보</returns>
     public virtual CrawlStatistics GetStatistics()
     {
-        return _statistics;
+        return Statistics;
     }
 
     /// <summary>
@@ -597,7 +597,7 @@ public abstract class BaseCrawler : ICrawler
     {
         try
         {
-            using var response = await _httpClient.GetAsync(sitemapUrl, cancellationToken: cancellationToken);
+            using var response = await HttpClient.GetAsync(sitemapUrl, cancellationToken: cancellationToken);
 
             if (!response.IsSuccessStatusCode)
                 return Array.Empty<string>();
@@ -688,7 +688,7 @@ public abstract class BaseCrawler : ICrawler
     /// </summary>
     /// <param name="content">Sitemap 콘텐츠</param>
     /// <returns>추출된 URL 목록</returns>
-    private static IEnumerable<string> ParseSitemapWithRegex(string content)
+    private static List<string> ParseSitemapWithRegex(string content)
     {
         var urlMatches = System.Text.RegularExpressions.Regex.Matches(
             content,
@@ -795,31 +795,31 @@ public abstract class BaseCrawler : ICrawler
     protected virtual void UpdateStatistics(CrawlResult result)
     {
         var domain = new Uri(result.Url).Host;
-        var domainCounts = _statistics.RequestsByDomain.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+        var domainCounts = Statistics.RequestsByDomain.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
         domainCounts[domain] = domainCounts.GetValueOrDefault(domain, 0) + 1;
 
-        var statusCounts = _statistics.StatusCodeDistribution.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+        var statusCounts = Statistics.StatusCodeDistribution.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
         statusCounts[result.StatusCode] = statusCounts.GetValueOrDefault(result.StatusCode, 0) + 1;
 
-        var totalRequests = _statistics.TotalRequests + 1;
-        var successfulRequests = _statistics.SuccessfulRequests + (result.IsSuccess ? 1 : 0);
-        var failedRequests = _statistics.FailedRequests + (result.IsSuccess ? 0 : 1);
-        var totalBytes = _statistics.TotalBytesProcessed + (result.ContentLength ?? 0);
+        var totalRequests = Statistics.TotalRequests + 1;
+        var successfulRequests = Statistics.SuccessfulRequests + (result.IsSuccess ? 1 : 0);
+        var failedRequests = Statistics.FailedRequests + (result.IsSuccess ? 0 : 1);
+        var totalBytes = Statistics.TotalBytesProcessed + (result.ContentLength ?? 0);
 
-        var elapsedTime = DateTimeOffset.UtcNow - _startTime;
+        var elapsedTime = DateTimeOffset.UtcNow - StartTime;
         var requestsPerSecond = elapsedTime.TotalSeconds > 0 ? totalRequests / elapsedTime.TotalSeconds : 0;
 
-        _statistics = new CrawlStatistics
+        Statistics = new CrawlStatistics
         {
             TotalRequests = totalRequests,
             SuccessfulRequests = successfulRequests,
             FailedRequests = failedRequests,
-            AverageResponseTimeMs = (_statistics.AverageResponseTimeMs * (_statistics.TotalRequests) + result.ResponseTimeMs) / totalRequests,
+            AverageResponseTimeMs = (Statistics.AverageResponseTimeMs * (Statistics.TotalRequests) + result.ResponseTimeMs) / totalRequests,
             TotalBytesProcessed = totalBytes,
             RequestsPerSecond = requestsPerSecond,
             RequestsByDomain = domainCounts.AsReadOnly(),
             StatusCodeDistribution = statusCounts.AsReadOnly(),
-            StartTime = _startTime,
+            StartTime = StartTime,
             LastUpdated = DateTimeOffset.UtcNow
         };
     }
@@ -871,22 +871,16 @@ public abstract class BaseCrawler : ICrawler
                 return false;
 
             // 포함 URL 패턴 확인 (설정된 경우, 하나 이상 매치 필요)
-#pragma warning disable CS0618 // Obsolete 경고 억제 - 하위 호환성 유지
-            var includePatterns = options.IncludeUrlPatterns?.Count > 0 ? options.IncludeUrlPatterns : options.IncludePatterns;
-#pragma warning restore CS0618
-            if (includePatterns != null && includePatterns.Count > 0)
+            if (options.IncludeUrlPatterns?.Count > 0)
             {
-                if (!includePatterns.Any(pattern => Regex.IsMatch(url, pattern, RegexOptions.IgnoreCase)))
+                if (!options.IncludeUrlPatterns.Any(pattern => Regex.IsMatch(url, pattern, RegexOptions.IgnoreCase)))
                     return false;
             }
 
             // 제외 URL 패턴 확인 (매치되면 제외)
-#pragma warning disable CS0618 // Obsolete 경고 억제 - 하위 호환성 유지
-            var excludePatterns = options.ExcludeUrlPatterns?.Count > 0 ? options.ExcludeUrlPatterns : options.ExcludePatterns;
-#pragma warning restore CS0618
-            if (excludePatterns != null && excludePatterns.Count > 0)
+            if (options.ExcludeUrlPatterns?.Count > 0)
             {
-                if (excludePatterns.Any(pattern => Regex.IsMatch(url, pattern, RegexOptions.IgnoreCase)))
+                if (options.ExcludeUrlPatterns.Any(pattern => Regex.IsMatch(url, pattern, RegexOptions.IgnoreCase)))
                     return false;
             }
         }
@@ -916,8 +910,8 @@ public abstract class BaseCrawler : ICrawler
     /// </summary>
     public virtual void Dispose()
     {
-        _cancellationTokenSource?.Cancel();
-        _cancellationTokenSource?.Dispose();
-        _isRunning = false;
+        CancellationTokenSourceInstance?.Cancel();
+        CancellationTokenSourceInstance?.Dispose();
+        IsRunning = false;
     }
 }

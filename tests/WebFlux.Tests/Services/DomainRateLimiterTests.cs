@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Logging;
-using Moq;
+using NSubstitute;
 using WebFlux.Core.Interfaces;
 using WebFlux.Services;
 using Xunit;
@@ -13,18 +13,19 @@ namespace WebFlux.Tests.Services;
 /// </summary>
 public class DomainRateLimiterTests : IDisposable
 {
-    private readonly Mock<ILogger<DomainRateLimiter>> _mockLogger;
+    private readonly ILogger<DomainRateLimiter> _mockLogger;
     private readonly DomainRateLimiter _rateLimiter;
 
     public DomainRateLimiterTests()
     {
-        _mockLogger = new Mock<ILogger<DomainRateLimiter>>();
-        _rateLimiter = new DomainRateLimiter(_mockLogger.Object);
+        _mockLogger = Substitute.For<ILogger<DomainRateLimiter>>();
+        _rateLimiter = new DomainRateLimiter(_mockLogger);
     }
 
     public void Dispose()
     {
         _rateLimiter.Dispose();
+        GC.SuppressFinalize(this);
     }
 
     #region Constructor Tests
@@ -40,7 +41,7 @@ public class DomainRateLimiterTests : IDisposable
     public void Constructor_WithLogger_ShouldNotThrow()
     {
         // Act & Assert
-        using var limiter = new DomainRateLimiter(_mockLogger.Object);
+        using var limiter = new DomainRateLimiter(_mockLogger);
         limiter.Should().NotBeNull();
     }
 
@@ -51,7 +52,7 @@ public class DomainRateLimiterTests : IDisposable
         var interval = TimeSpan.FromSeconds(2);
 
         // Act
-        using var limiter = new DomainRateLimiter(_mockLogger.Object, interval);
+        using var limiter = new DomainRateLimiter(_mockLogger, interval);
 
         // Assert
         limiter.GetDomainLimit("example.com").Should().Be(interval);
@@ -367,7 +368,7 @@ public class DomainRateLimiterTests : IDisposable
     public void Dispose_ShouldNotThrow()
     {
         // Arrange
-        var limiter = new DomainRateLimiter(_mockLogger.Object);
+        var limiter = new DomainRateLimiter(_mockLogger);
 
         // Act & Assert
         limiter.Invoking(l => l.Dispose()).Should().NotThrow();
@@ -377,7 +378,7 @@ public class DomainRateLimiterTests : IDisposable
     public void Dispose_MultipleTimes_ShouldNotThrow()
     {
         // Arrange
-        var limiter = new DomainRateLimiter(_mockLogger.Object);
+        var limiter = new DomainRateLimiter(_mockLogger);
 
         // Act & Assert
         limiter.Invoking(l =>

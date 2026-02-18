@@ -209,7 +209,7 @@ public class ChunkingConfiguration
     /// <summary>
     /// 멀티모달 처리 활성화 여부 (Phase 5A.3)
     /// </summary>
-    public bool EnableMultimodalProcessing { get; set; } = false;
+    public bool EnableMultimodalProcessing { get; set; }
 
     /// <summary>
     /// 멀티모달 처리 옵션
@@ -422,12 +422,12 @@ public class SecurityConfiguration
     /// <summary>
     /// 사용자 에이전트 검증
     /// </summary>
-    public bool ValidateUserAgent { get; set; } = false;
+    public bool ValidateUserAgent { get; set; }
 
     /// <summary>
     /// 콘텐츠 스캔 활성화
     /// </summary>
-    public bool EnableContentScanning { get; set; } = false;
+    public bool EnableContentScanning { get; set; }
 }
 
 /// <summary>
@@ -612,7 +612,7 @@ public class CacheOptimizationSettings
     /// <summary>
     /// 캐시 예열 활성화
     /// </summary>
-    public bool EnableWarmup { get; set; } = false;
+    public bool EnableWarmup { get; set; }
 
     /// <summary>
     /// 최대 캐시 엔트리 수
@@ -705,7 +705,7 @@ public class AiEnhancementConfiguration
     /// <summary>
     /// AI 증강 활성화 여부
     /// </summary>
-    public bool Enabled { get; set; } = false;
+    public bool Enabled { get; set; }
 
     /// <summary>
     /// 요약 생성 활성화
@@ -720,7 +720,7 @@ public class AiEnhancementConfiguration
     /// <summary>
     /// 재작성 활성화 (기본값: false)
     /// </summary>
-    public bool EnableRewrite { get; set; } = false;
+    public bool EnableRewrite { get; set; }
 
     /// <summary>
     /// 병렬 처리 활성화

@@ -18,7 +18,7 @@ public class ReconstructOptions : IValidatable
     /// <summary>
     /// LLM 사용 여부
     /// </summary>
-    public bool UseLLM { get; set; } = false;
+    public bool UseLLM { get; set; }
 
     /// <summary>
     /// 최대 재구성 길이 (문자 수)

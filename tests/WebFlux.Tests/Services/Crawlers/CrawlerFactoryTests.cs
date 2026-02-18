@@ -1,4 +1,4 @@
-using Moq;
+using NSubstitute;
 using WebFlux.Core.Interfaces;
 using WebFlux.Core.Options;
 using WebFlux.Services.Crawlers;
@@ -13,13 +13,13 @@ namespace WebFlux.Tests.Services.Crawlers;
 /// </summary>
 public class CrawlerFactoryTests
 {
-    private readonly Mock<IServiceProvider> _mockServiceProvider;
+    private readonly IServiceProvider _mockServiceProvider;
     private readonly CrawlerFactory _factory;
 
     public CrawlerFactoryTests()
     {
-        _mockServiceProvider = new Mock<IServiceProvider>();
-        _factory = new CrawlerFactory(_mockServiceProvider.Object);
+        _mockServiceProvider = Substitute.For<IServiceProvider>();
+        _factory = new CrawlerFactory(_mockServiceProvider);
     }
 
     #region Constructor Tests
@@ -28,7 +28,7 @@ public class CrawlerFactoryTests
     public void Constructor_WithValidServiceProvider_ShouldNotThrow()
     {
         // Act & Assert
-        var factory = new CrawlerFactory(_mockServiceProvider.Object);
+        var factory = new CrawlerFactory(_mockServiceProvider);
         factory.Should().NotBeNull();
     }
 
@@ -40,83 +40,80 @@ public class CrawlerFactoryTests
     public void CreateCrawler_WithBreadthFirstStrategy_ShouldReturnBreadthFirstCrawler()
     {
         // Arrange
-        var mockCrawler = new Mock<ICrawler>();
-        mockCrawler.Setup(c => c.CrawlAsync(It.IsAny<string>(), It.IsAny<CrawlOptions?>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new CrawlResult { Url = "https://example.com" });
-
-        _mockServiceProvider.Setup(sp => sp.GetService(typeof(BreadthFirstCrawler)))
-            .Returns(mockCrawler.Object);
+        var mockCrawler = Substitute.For<ICrawler>();
+        _mockServiceProvider.GetService(typeof(BreadthFirstCrawler))
+            .Returns(mockCrawler);
 
         // Act
         var crawler = _factory.CreateCrawler(CrawlStrategy.BreadthFirst);
 
         // Assert
         crawler.Should().NotBeNull();
-        _mockServiceProvider.Verify(sp => sp.GetService(typeof(BreadthFirstCrawler)), Times.Once);
+        _mockServiceProvider.Received(1).GetService(typeof(BreadthFirstCrawler));
     }
 
     [Fact]
     public void CreateCrawler_WithDepthFirstStrategy_ShouldReturnDepthFirstCrawler()
     {
         // Arrange
-        var mockCrawler = new Mock<ICrawler>();
-        _mockServiceProvider.Setup(sp => sp.GetService(typeof(DepthFirstCrawler)))
-            .Returns(mockCrawler.Object);
+        var mockCrawler = Substitute.For<ICrawler>();
+        _mockServiceProvider.GetService(typeof(DepthFirstCrawler))
+            .Returns(mockCrawler);
 
         // Act
         var crawler = _factory.CreateCrawler(CrawlStrategy.DepthFirst);
 
         // Assert
         crawler.Should().NotBeNull();
-        _mockServiceProvider.Verify(sp => sp.GetService(typeof(DepthFirstCrawler)), Times.Once);
+        _mockServiceProvider.Received(1).GetService(typeof(DepthFirstCrawler));
     }
 
     [Fact]
     public void CreateCrawler_WithSitemapStrategy_ShouldReturnSitemapCrawler()
     {
         // Arrange
-        var mockCrawler = new Mock<ICrawler>();
-        _mockServiceProvider.Setup(sp => sp.GetService(typeof(SitemapCrawler)))
-            .Returns(mockCrawler.Object);
+        var mockCrawler = Substitute.For<ICrawler>();
+        _mockServiceProvider.GetService(typeof(SitemapCrawler))
+            .Returns(mockCrawler);
 
         // Act
         var crawler = _factory.CreateCrawler(CrawlStrategy.Sitemap);
 
         // Assert
         crawler.Should().NotBeNull();
-        _mockServiceProvider.Verify(sp => sp.GetService(typeof(SitemapCrawler)), Times.Once);
+        _mockServiceProvider.Received(1).GetService(typeof(SitemapCrawler));
     }
 
     [Fact]
     public void CreateCrawler_WithIntelligentStrategy_ShouldReturnIntelligentCrawler()
     {
         // Arrange
-        var mockCrawler = new Mock<ICrawler>();
-        _mockServiceProvider.Setup(sp => sp.GetService(typeof(IntelligentCrawler)))
-            .Returns(mockCrawler.Object);
+        var mockCrawler = Substitute.For<ICrawler>();
+        _mockServiceProvider.GetService(typeof(IntelligentCrawler))
+            .Returns(mockCrawler);
 
         // Act
         var crawler = _factory.CreateCrawler(CrawlStrategy.Intelligent);
 
         // Assert
         crawler.Should().NotBeNull();
-        _mockServiceProvider.Verify(sp => sp.GetService(typeof(IntelligentCrawler)), Times.Once);
+        _mockServiceProvider.Received(1).GetService(typeof(IntelligentCrawler));
     }
 
     [Fact]
     public void CreateCrawler_WithDynamicStrategy_ShouldReturnPlaywrightCrawler()
     {
         // Arrange
-        var mockCrawler = new Mock<ICrawler>();
-        _mockServiceProvider.Setup(sp => sp.GetService(typeof(PlaywrightCrawler)))
-            .Returns(mockCrawler.Object);
+        var mockCrawler = Substitute.For<ICrawler>();
+        _mockServiceProvider.GetService(typeof(PlaywrightCrawler))
+            .Returns(mockCrawler);
 
         // Act
         var crawler = _factory.CreateCrawler(CrawlStrategy.Dynamic);
 
         // Assert
         crawler.Should().NotBeNull();
-        _mockServiceProvider.Verify(sp => sp.GetService(typeof(PlaywrightCrawler)), Times.Once);
+        _mockServiceProvider.Received(1).GetService(typeof(PlaywrightCrawler));
     }
 
     [Fact]
@@ -149,9 +146,9 @@ public class CrawlerFactoryTests
     public void CreateCrawler_CalledMultipleTimes_ShouldCallServiceProvider()
     {
         // Arrange
-        var mockCrawler = new Mock<ICrawler>();
-        _mockServiceProvider.Setup(sp => sp.GetService(typeof(BreadthFirstCrawler)))
-            .Returns(mockCrawler.Object);
+        var mockCrawler = Substitute.For<ICrawler>();
+        _mockServiceProvider.GetService(typeof(BreadthFirstCrawler))
+            .Returns(mockCrawler);
 
         // Act
         _factory.CreateCrawler(CrawlStrategy.BreadthFirst);
@@ -159,19 +156,19 @@ public class CrawlerFactoryTests
         _factory.CreateCrawler(CrawlStrategy.BreadthFirst);
 
         // Assert
-        _mockServiceProvider.Verify(sp => sp.GetService(typeof(BreadthFirstCrawler)), Times.Exactly(3));
+        _mockServiceProvider.Received(3).GetService(typeof(BreadthFirstCrawler));
     }
 
     [Fact]
     public void CreateCrawler_WithDifferentStrategies_ShouldReturnDifferentCrawlers()
     {
         // Arrange
-        var breadthFirstCrawler = new Mock<ICrawler>().Object;
-        var depthFirstCrawler = new Mock<ICrawler>().Object;
+        var breadthFirstCrawler = Substitute.For<ICrawler>();
+        var depthFirstCrawler = Substitute.For<ICrawler>();
 
-        _mockServiceProvider.Setup(sp => sp.GetService(typeof(BreadthFirstCrawler)))
+        _mockServiceProvider.GetService(typeof(BreadthFirstCrawler))
             .Returns(breadthFirstCrawler);
-        _mockServiceProvider.Setup(sp => sp.GetService(typeof(DepthFirstCrawler)))
+        _mockServiceProvider.GetService(typeof(DepthFirstCrawler))
             .Returns(depthFirstCrawler);
 
         // Act

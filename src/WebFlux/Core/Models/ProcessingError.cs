@@ -268,7 +268,7 @@ public class ProcessingError
         };
     }
 
-    private static IReadOnlyList<string> GetSuggestedActions(Exception exception)
+    private static string[] GetSuggestedActions(Exception exception)
     {
         return exception switch
         {

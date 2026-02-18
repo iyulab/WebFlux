@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
-using Moq;
+using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using WebFlux.Core.Interfaces;
 using WebFlux.Core.Models;
 using WebFlux.Core.Options;
@@ -17,15 +18,15 @@ namespace WebFlux.Tests.Services.Crawlers;
 /// </summary>
 public class BaseCrawlerTests : IDisposable
 {
-    private readonly Mock<IHttpClientService> _mockHttpClient;
-    private readonly Mock<IEventPublisher> _mockEventPublisher;
+    private readonly IHttpClientService _mockHttpClient;
+    private readonly IEventPublisher _mockEventPublisher;
     private readonly TestCrawler _crawler;
 
     public BaseCrawlerTests()
     {
-        _mockHttpClient = new Mock<IHttpClientService>();
-        _mockEventPublisher = new Mock<IEventPublisher>();
-        _crawler = new TestCrawler(_mockHttpClient.Object, _mockEventPublisher.Object);
+        _mockHttpClient = Substitute.For<IHttpClientService>();
+        _mockEventPublisher = Substitute.For<IEventPublisher>();
+        _crawler = new TestCrawler(_mockHttpClient, _mockEventPublisher);
     }
 
     #region Constructor Tests
@@ -35,7 +36,7 @@ public class BaseCrawlerTests : IDisposable
     {
         // Act & Assert
         var ex = Assert.Throws<ArgumentNullException>(() =>
-            new TestCrawler(null!, _mockEventPublisher.Object));
+            new TestCrawler(null!, _mockEventPublisher));
 
         ex.ParamName.Should().Be("httpClient");
     }
@@ -45,7 +46,7 @@ public class BaseCrawlerTests : IDisposable
     {
         // Act & Assert
         var ex = Assert.Throws<ArgumentNullException>(() =>
-            new TestCrawler(_mockHttpClient.Object, null!));
+            new TestCrawler(_mockHttpClient, null!));
 
         ex.ParamName.Should().Be("eventPublisher");
     }
@@ -67,8 +68,8 @@ public class BaseCrawlerTests : IDisposable
             RequestMessage = new HttpRequestMessage { RequestUri = new Uri(url) }
         };
 
-        _mockHttpClient.Setup(c => c.GetAsync(url, null, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(response);
+        _mockHttpClient.GetAsync(url, null, Arg.Any<CancellationToken>())
+            .Returns(response);
 
         // Act
         var result = await _crawler.CrawlAsync(url);
@@ -104,8 +105,8 @@ public class BaseCrawlerTests : IDisposable
             ReasonPhrase = "Not Found"
         };
 
-        _mockHttpClient.Setup(c => c.GetAsync(url, null, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(response);
+        _mockHttpClient.GetAsync(url, null, Arg.Any<CancellationToken>())
+            .Returns(response);
 
         // Act
         var result = await _crawler.CrawlAsync(url);
@@ -124,8 +125,8 @@ public class BaseCrawlerTests : IDisposable
         var url = "https://example.com";
         var exceptionMessage = "Network error";
 
-        _mockHttpClient.Setup(c => c.GetAsync(url, null, It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new HttpRequestException(exceptionMessage));
+        _mockHttpClient.GetAsync(url, null, Arg.Any<CancellationToken>())
+            .Throws(new HttpRequestException(exceptionMessage));
 
         // Act
         var result = await _crawler.CrawlAsync(url);
@@ -149,11 +150,9 @@ public class BaseCrawlerTests : IDisposable
         await _crawler.CrawlAsync(url);
 
         // Assert
-        _mockEventPublisher.Verify(
-            e => e.PublishAsync(
-                It.Is<UrlProcessingStartedEvent>(evt => evt.Url == url),
-                It.IsAny<CancellationToken>()),
-            Times.Once);
+        await _mockEventPublisher.Received(1).PublishAsync(
+            Arg.Is<UrlProcessingStartedEvent>(evt => evt.Url == url),
+            Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -463,11 +462,11 @@ Sitemap: https://example.com/sitemap.xml
 
         var response = new HttpResponseMessage(HttpStatusCode.NotFound);
 
-        _mockHttpClient.Setup(c => c.GetAsync(
-            It.Is<string>(url => url.Contains("robots.txt")),
+        _mockHttpClient.GetAsync(
+            Arg.Is<string>(url => url.Contains("robots.txt")),
             null,
-            It.IsAny<CancellationToken>()))
-            .ReturnsAsync(response);
+            Arg.Any<CancellationToken>())
+            .Returns(response);
 
         // Act
         var result = await _crawler.GetRobotsTxtAsync(baseUrl, "*");
@@ -514,7 +513,6 @@ Crawl-delay: 10
     public async Task IsUrlAllowedAsync_WithAllowedPath_ShouldReturnTrue()
     {
         // Arrange
-        var baseUrl = "https://example.com";
         var url = "https://example.com/public/page";
         var robotsTxtContent = @"
 User-agent: *
@@ -558,11 +556,11 @@ Disallow: /admin/
 
         var response = new HttpResponseMessage(HttpStatusCode.NotFound);
 
-        _mockHttpClient.Setup(c => c.GetAsync(
-            It.Is<string>(u => u.Contains("robots.txt")),
+        _mockHttpClient.GetAsync(
+            Arg.Is<string>(u => u.Contains("robots.txt")),
             null,
-            It.IsAny<CancellationToken>()))
-            .ReturnsAsync(response);
+            Arg.Any<CancellationToken>())
+            .Returns(response);
 
         // Act
         var result = await _crawler.IsUrlAllowedAsync(url, "*");
@@ -702,8 +700,8 @@ Disallow: /admin/
     {
         // Arrange
         var url = "https://example.com";
-        _mockHttpClient.Setup(c => c.GetAsync(url, null, It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new HttpRequestException("Network error"));
+        _mockHttpClient.GetAsync(url, null, Arg.Any<CancellationToken>())
+            .Throws(new HttpRequestException("Network error"));
 
         // Act
         await _crawler.CrawlAsync(url);
@@ -747,16 +745,17 @@ Disallow: /admin/
             RequestMessage = new HttpRequestMessage { RequestUri = new Uri(url) }
         };
 
-        _mockHttpClient.Setup(c => c.GetAsync(
-            It.Is<string>(u => u == url),
+        _mockHttpClient.GetAsync(
+            Arg.Is<string>(u => u == url),
             null,
-            It.IsAny<CancellationToken>()))
-            .ReturnsAsync(response);
+            Arg.Any<CancellationToken>())
+            .Returns(response);
     }
 
     public void Dispose()
     {
         _crawler?.Dispose();
+        GC.SuppressFinalize(this);
     }
 
     #endregion
@@ -766,7 +765,7 @@ Disallow: /admin/
     /// <summary>
     /// BaseCrawler를 테스트하기 위한 구체 클래스
     /// </summary>
-    private class TestCrawler : BaseCrawler
+    private sealed class TestCrawler : BaseCrawler
     {
         public TestCrawler(IHttpClientService httpClient, IEventPublisher eventPublisher)
             : base(httpClient, eventPublisher)

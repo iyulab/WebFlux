@@ -10,7 +10,7 @@ namespace WebFlux.Services.Crawlers;
 /// 지능형 크롤러 - 정적/동적 콘텐츠 자동 감지
 /// 정적 페이지는 HttpClient (빠름), 동적 페이지는 Playwright (완전한 렌더링)
 /// </summary>
-public class SmartCrawler : BaseCrawler
+public partial class SmartCrawler : BaseCrawler
 {
     private readonly ILogger<SmartCrawler> _logger;
     private readonly PlaywrightCrawler _playwrightCrawler;
@@ -36,15 +36,15 @@ public class SmartCrawler : BaseCrawler
     {
         try
         {
-            _logger.LogInformation("🔍 Smart crawling: {Url}", url);
+            LogSmartCrawling(_logger, url);
 
             // 1단계: HttpClient로 먼저 시도 (빠른 정적 콘텐츠 확인)
-            _logger.LogDebug("  → Trying HttpClient (fast path)...");
+            LogTryingHttpClient(_logger);
             var httpResult = await base.CrawlAsync(url, options, cancellationToken);
 
             if (!httpResult.IsSuccess)
             {
-                _logger.LogWarning("  ❌ HttpClient failed, trying Playwright...");
+                LogHttpClientFailed(_logger);
                 return await _playwrightCrawler.CrawlAsync(url, options, cancellationToken);
             }
 
@@ -53,12 +53,12 @@ public class SmartCrawler : BaseCrawler
 
             if (requiresJavaScript)
             {
-                _logger.LogInformation("  🌐 Dynamic content detected → using Playwright");
+                LogDynamicContentDetected(_logger);
                 return await _playwrightCrawler.CrawlAsync(url, options, cancellationToken);
             }
 
             // 3단계: 정적 콘텐츠 - HttpClient 결과 사용
-            _logger.LogInformation("  ✅ Static content → using HttpClient result");
+            LogStaticContentDetected(_logger);
 
             // HtmlContent를 Content로 복사 (PlaywrightCrawler와 호환성)
             return new CrawlResult
@@ -85,10 +85,10 @@ public class SmartCrawler : BaseCrawler
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error in smart crawling {Url}", url);
+            LogSmartCrawlError(_logger, ex, url);
 
             // 실패 시 Playwright로 대체 시도
-            _logger.LogWarning("  → Fallback to Playwright");
+            LogFallbackToPlaywright(_logger);
             return await _playwrightCrawler.CrawlAsync(url, options, cancellationToken);
         }
     }
@@ -112,7 +112,7 @@ public class SmartCrawler : BaseCrawler
         var lowerContent = htmlContent.ToLowerInvariant();
         if (spaIndicators.Any(indicator => lowerContent.Contains(indicator)))
         {
-            _logger.LogDebug("  🎯 SPA framework detected");
+            LogSpaFrameworkDetected(_logger);
             return true;
         }
 
@@ -128,7 +128,7 @@ public class SmartCrawler : BaseCrawler
             // Body에 실제 텍스트가 100자 미만이면 동적 렌더링 가능성
             if (textContent.Length < 100)
             {
-                _logger.LogDebug("  🎯 Empty or minimal body content");
+                LogEmptyBody(_logger);
                 return true;
             }
         }
@@ -143,7 +143,7 @@ public class SmartCrawler : BaseCrawler
 
         if (scriptCount > 10 && scriptRatio > 5)
         {
-            _logger.LogDebug("  🎯 Heavy JavaScript usage ({Count} scripts)", scriptCount);
+            LogHeavyJavaScript(_logger, scriptCount);
             return true;
         }
 
@@ -156,11 +156,11 @@ public class SmartCrawler : BaseCrawler
 
         if (csrIndicators.Any(indicator => lowerContent.Contains(indicator)))
         {
-            _logger.LogDebug("  🎯 Client-side rendering hints found");
+            LogCsrHintsFound(_logger);
             return true;
         }
 
-        _logger.LogDebug("  ✅ Static content (no JavaScript required)");
+        LogStaticContent(_logger);
         return false;
     }
 
@@ -172,4 +172,44 @@ public class SmartCrawler : BaseCrawler
         _playwrightCrawler?.Dispose();
         base.Dispose();
     }
+
+    // ===================================================================
+    // LoggerMessage Definitions
+    // ===================================================================
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Smart crawling: {Url}")]
+    private static partial void LogSmartCrawling(ILogger logger, string Url);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "  Trying HttpClient (fast path)...")]
+    private static partial void LogTryingHttpClient(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "  HttpClient failed, trying Playwright...")]
+    private static partial void LogHttpClientFailed(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "  Dynamic content detected, using Playwright")]
+    private static partial void LogDynamicContentDetected(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "  Static content, using HttpClient result")]
+    private static partial void LogStaticContentDetected(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Error in smart crawling {Url}")]
+    private static partial void LogSmartCrawlError(ILogger logger, Exception ex, string Url);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "  Fallback to Playwright")]
+    private static partial void LogFallbackToPlaywright(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "  SPA framework detected")]
+    private static partial void LogSpaFrameworkDetected(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "  Empty or minimal body content")]
+    private static partial void LogEmptyBody(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "  Heavy JavaScript usage ({Count} scripts)")]
+    private static partial void LogHeavyJavaScript(ILogger logger, int Count);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "  Client-side rendering hints found")]
+    private static partial void LogCsrHintsFound(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "  Static content (no JavaScript required)")]
+    private static partial void LogStaticContent(ILogger logger);
 }

@@ -14,6 +14,8 @@ namespace WebFlux.Services.ChunkingStrategies;
 /// </summary>
 public class DomStructureChunkingStrategy : BaseChunkingStrategy
 {
+    private static readonly string[] SentenceSplitSeparators = [". ", ".\n", ".\r\n"];
+
     public DomStructureChunkingStrategy(IEventPublisher? eventPublisher = null)
         : base(eventPublisher)
     {
@@ -115,7 +117,7 @@ public class DomStructureChunkingStrategy : BaseChunkingStrategy
     /// <summary>
     /// 시퀀스 번호 카운터 (ref 대신 사용)
     /// </summary>
-    private class SequenceCounter
+    private sealed class SequenceCounter
     {
         public int Value { get; set; }
         public int GetNext() => Value++;
@@ -147,7 +149,7 @@ public class DomStructureChunkingStrategy : BaseChunkingStrategy
                 var headingText = element.TextContent.Trim();
                 if (!string.IsNullOrEmpty(headingText))
                 {
-                    var level = int.Parse(tagName[1].ToString());
+                    var level = int.Parse(tagName[1].ToString(), System.Globalization.CultureInfo.InvariantCulture);
                     UpdateHeadingPath(headingPath, headingText, level);
                 }
             }
@@ -270,7 +272,7 @@ public class DomStructureChunkingStrategy : BaseChunkingStrategy
         if (!string.IsNullOrEmpty(element.Id))
             return $"{tag}#{element.Id}";
 
-        var classes = element.ClassList.FirstOrDefault();
+        var classes = element.ClassList.Length > 0 ? element.ClassList[0] : null;
         if (!string.IsNullOrEmpty(classes))
             return $"{tag}.{classes}";
 
@@ -372,7 +374,7 @@ public class DomStructureChunkingStrategy : BaseChunkingStrategy
         SequenceCounter sequenceCounter)
     {
         var chunks = new List<WebContentChunk>();
-        var sentences = text.Split(new[] { ". ", ".\n", ".\r\n" }, StringSplitOptions.RemoveEmptyEntries);
+        var sentences = text.Split(SentenceSplitSeparators, StringSplitOptions.RemoveEmptyEntries);
         var currentChunk = new StringBuilder();
 
         foreach (var sentence in sentences)
@@ -406,7 +408,7 @@ public class DomStructureChunkingStrategy : BaseChunkingStrategy
         return chunks;
     }
 
-    private static IReadOnlyList<WebContentChunk> MergeSmallChunks(
+    private static List<WebContentChunk> MergeSmallChunks(
         List<WebContentChunk> chunks,
         HtmlChunkingOptions options)
     {

@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Logging;
-using Moq;
+using NSubstitute;
 using WebFlux.Core.Models;
 using WebFlux.Services;
 using Xunit;
@@ -13,13 +13,13 @@ namespace WebFlux.Tests.Services;
 /// </summary>
 public class ContentQualityEvaluatorTests
 {
-    private readonly Mock<ILogger<ContentQualityEvaluator>> _mockLogger;
+    private readonly ILogger<ContentQualityEvaluator> _mockLogger;
     private readonly ContentQualityEvaluator _evaluator;
 
     public ContentQualityEvaluatorTests()
     {
-        _mockLogger = new Mock<ILogger<ContentQualityEvaluator>>();
-        _evaluator = new ContentQualityEvaluator(_mockLogger.Object);
+        _mockLogger = Substitute.For<ILogger<ContentQualityEvaluator>>();
+        _evaluator = new ContentQualityEvaluator(_mockLogger);
     }
 
     #region Constructor Tests
@@ -35,7 +35,7 @@ public class ContentQualityEvaluatorTests
     public void Constructor_WithLogger_ShouldNotThrow()
     {
         // Act & Assert
-        var evaluator = new ContentQualityEvaluator(_mockLogger.Object);
+        var evaluator = new ContentQualityEvaluator(_mockLogger);
         evaluator.Should().NotBeNull();
     }
 

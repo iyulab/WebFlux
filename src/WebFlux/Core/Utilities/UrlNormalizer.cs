@@ -26,7 +26,7 @@ public static class UrlNormalizer
         var host = uri.Host.ToLowerInvariant();
 
         // 3. Remove www prefix
-        if (host.StartsWith("www."))
+        if (host.StartsWith("www.", StringComparison.Ordinal))
             host = host.Substring(4);
 
         // 4. Remove default ports (80 for http, 443 for https)
@@ -35,7 +35,8 @@ public static class UrlNormalizer
 
         // 5. Path - remove trailing slash (except for root "/")
         var path = uri.AbsolutePath;
-        if (path.Length > 1 && path.EndsWith("/"))
+        if (path.Length > 1 && path.EndsWith('/'))
+
             path = path.TrimEnd('/');
 
         // 6. Remove fragment (#)

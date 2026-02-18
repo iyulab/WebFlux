@@ -1,5 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
-using Moq;
+using NSubstitute;
 using WebFlux.Core.Interfaces;
 using WebFlux.Core.Options;
 using WebFlux.Services;
@@ -35,9 +35,9 @@ public class ServiceFactoryTests
     public void CreateService_Generic_WithRegisteredService_ShouldReturnService()
     {
         // Arrange
-        var mockService = new Mock<IAiEnhancementService>();
+        var mockService = Substitute.For<IAiEnhancementService>();
         var services = new ServiceCollection();
-        services.AddSingleton(mockService.Object);
+        services.AddSingleton(mockService);
         var serviceProvider = services.BuildServiceProvider();
         var factory = new ServiceFactory(serviceProvider);
 
@@ -46,7 +46,7 @@ public class ServiceFactoryTests
 
         // Assert
         service.Should().NotBeNull();
-        service.Should().BeSameAs(mockService.Object);
+        service.Should().BeSameAs(mockService);
     }
 
     [Fact]
@@ -69,18 +69,18 @@ public class ServiceFactoryTests
     public void CreateService_Type_WithRegisteredService_ShouldReturnService()
     {
         // Arrange
-        var mockService = new Mock<IAiEnhancementService>();
+        var mockService = Substitute.For<IAiEnhancementService>();
         var services = new ServiceCollection();
-        services.AddSingleton(typeof(IAiEnhancementService), mockService.Object);
+        services.AddSingleton<IAiEnhancementService>(mockService);
         var serviceProvider = services.BuildServiceProvider();
         var factory = new ServiceFactory(serviceProvider);
 
         // Act
-        var service = factory.CreateService(typeof(IAiEnhancementService));
+        var service = factory.CreateService<IAiEnhancementService>();
 
         // Assert
         service.Should().NotBeNull();
-        service.Should().BeSameAs(mockService.Object);
+        service.Should().BeSameAs(mockService);
     }
 
     [Fact]
@@ -92,7 +92,7 @@ public class ServiceFactoryTests
         var factory = new ServiceFactory(serviceProvider);
 
         // Act & Assert
-        Assert.Throws<InvalidOperationException>(() => factory.CreateService(typeof(IAiEnhancementService)));
+        Assert.Throws<InvalidOperationException>(() => factory.CreateService<IAiEnhancementService>());
     }
 
     #endregion
@@ -103,9 +103,9 @@ public class ServiceFactoryTests
     public void CreateNamedService_WithRegisteredKeyedService_ShouldReturnService()
     {
         // Arrange
-        var mockService = new Mock<IContentExtractor>();
+        var mockService = Substitute.For<IContentExtractor>();
         var services = new ServiceCollection();
-        services.AddKeyedSingleton<IContentExtractor>("Html", mockService.Object);
+        services.AddKeyedSingleton<IContentExtractor>("Html", mockService);
         var serviceProvider = services.BuildServiceProvider();
         var factory = new ServiceFactory(serviceProvider);
 
@@ -114,7 +114,7 @@ public class ServiceFactoryTests
 
         // Assert
         service.Should().NotBeNull();
-        service.Should().BeSameAs(mockService.Object);
+        service.Should().BeSameAs(mockService);
     }
 
     [Fact]
@@ -138,9 +138,9 @@ public class ServiceFactoryTests
     public void CreateCrawler_WithBreadthFirst_ShouldReturnKeyedCrawler()
     {
         // Arrange
-        var mockCrawler = new Mock<ICrawler>();
+        var mockCrawler = Substitute.For<ICrawler>();
         var services = new ServiceCollection();
-        services.AddKeyedSingleton<ICrawler>("BreadthFirst", mockCrawler.Object);
+        services.AddKeyedSingleton<ICrawler>("BreadthFirst", mockCrawler);
         var serviceProvider = services.BuildServiceProvider();
         var factory = new ServiceFactory(serviceProvider);
 
@@ -149,16 +149,16 @@ public class ServiceFactoryTests
 
         // Assert
         crawler.Should().NotBeNull();
-        crawler.Should().BeSameAs(mockCrawler.Object);
+        crawler.Should().BeSameAs(mockCrawler);
     }
 
     [Fact]
     public void CreateCrawler_WithDepthFirst_ShouldReturnKeyedCrawler()
     {
         // Arrange
-        var mockCrawler = new Mock<ICrawler>();
+        var mockCrawler = Substitute.For<ICrawler>();
         var services = new ServiceCollection();
-        services.AddKeyedSingleton<ICrawler>("DepthFirst", mockCrawler.Object);
+        services.AddKeyedSingleton<ICrawler>("DepthFirst", mockCrawler);
         var serviceProvider = services.BuildServiceProvider();
         var factory = new ServiceFactory(serviceProvider);
 
@@ -167,16 +167,16 @@ public class ServiceFactoryTests
 
         // Assert
         crawler.Should().NotBeNull();
-        crawler.Should().BeSameAs(mockCrawler.Object);
+        crawler.Should().BeSameAs(mockCrawler);
     }
 
     [Fact]
     public void CreateCrawler_WithIntelligent_ShouldReturnKeyedCrawler()
     {
         // Arrange
-        var mockCrawler = new Mock<ICrawler>();
+        var mockCrawler = Substitute.For<ICrawler>();
         var services = new ServiceCollection();
-        services.AddKeyedSingleton<ICrawler>("Intelligent", mockCrawler.Object);
+        services.AddKeyedSingleton<ICrawler>("Intelligent", mockCrawler);
         var serviceProvider = services.BuildServiceProvider();
         var factory = new ServiceFactory(serviceProvider);
 
@@ -185,16 +185,16 @@ public class ServiceFactoryTests
 
         // Assert
         crawler.Should().NotBeNull();
-        crawler.Should().BeSameAs(mockCrawler.Object);
+        crawler.Should().BeSameAs(mockCrawler);
     }
 
     [Fact]
     public void CreateCrawler_WithSitemap_ShouldReturnKeyedCrawler()
     {
         // Arrange
-        var mockCrawler = new Mock<ICrawler>();
+        var mockCrawler = Substitute.For<ICrawler>();
         var services = new ServiceCollection();
-        services.AddKeyedSingleton<ICrawler>("Sitemap", mockCrawler.Object);
+        services.AddKeyedSingleton<ICrawler>("Sitemap", mockCrawler);
         var serviceProvider = services.BuildServiceProvider();
         var factory = new ServiceFactory(serviceProvider);
 
@@ -203,16 +203,16 @@ public class ServiceFactoryTests
 
         // Assert
         crawler.Should().NotBeNull();
-        crawler.Should().BeSameAs(mockCrawler.Object);
+        crawler.Should().BeSameAs(mockCrawler);
     }
 
     [Fact]
     public void CreateCrawler_WithDynamic_ShouldReturnKeyedCrawler()
     {
         // Arrange
-        var mockCrawler = new Mock<ICrawler>();
+        var mockCrawler = Substitute.For<ICrawler>();
         var services = new ServiceCollection();
-        services.AddKeyedSingleton<ICrawler>("Dynamic", mockCrawler.Object);
+        services.AddKeyedSingleton<ICrawler>("Dynamic", mockCrawler);
         var serviceProvider = services.BuildServiceProvider();
         var factory = new ServiceFactory(serviceProvider);
 
@@ -221,7 +221,7 @@ public class ServiceFactoryTests
 
         // Assert
         crawler.Should().NotBeNull();
-        crawler.Should().BeSameAs(mockCrawler.Object);
+        crawler.Should().BeSameAs(mockCrawler);
     }
 
     [Fact]
@@ -260,9 +260,9 @@ public class ServiceFactoryTests
     public void CreateContentExtractor_WithHtml_ShouldReturnHtmlExtractor()
     {
         // Arrange
-        var mockExtractor = new Mock<IContentExtractor>();
+        var mockExtractor = Substitute.For<IContentExtractor>();
         var services = new ServiceCollection();
-        services.AddKeyedSingleton<IContentExtractor>("Html", mockExtractor.Object);
+        services.AddKeyedSingleton<IContentExtractor>("Html", mockExtractor);
         var serviceProvider = services.BuildServiceProvider();
         var factory = new ServiceFactory(serviceProvider);
 
@@ -271,16 +271,16 @@ public class ServiceFactoryTests
 
         // Assert
         extractor.Should().NotBeNull();
-        extractor.Should().BeSameAs(mockExtractor.Object);
+        extractor.Should().BeSameAs(mockExtractor);
     }
 
     [Fact]
     public void CreateContentExtractor_WithPlainText_ShouldReturnTextExtractor()
     {
         // Arrange
-        var mockExtractor = new Mock<IContentExtractor>();
+        var mockExtractor = Substitute.For<IContentExtractor>();
         var services = new ServiceCollection();
-        services.AddKeyedSingleton<IContentExtractor>("Text", mockExtractor.Object);
+        services.AddKeyedSingleton<IContentExtractor>("Text", mockExtractor);
         var serviceProvider = services.BuildServiceProvider();
         var factory = new ServiceFactory(serviceProvider);
 
@@ -289,16 +289,16 @@ public class ServiceFactoryTests
 
         // Assert
         extractor.Should().NotBeNull();
-        extractor.Should().BeSameAs(mockExtractor.Object);
+        extractor.Should().BeSameAs(mockExtractor);
     }
 
     [Fact]
     public void CreateContentExtractor_WithJson_ShouldReturnJsonExtractor()
     {
         // Arrange
-        var mockExtractor = new Mock<IContentExtractor>();
+        var mockExtractor = Substitute.For<IContentExtractor>();
         var services = new ServiceCollection();
-        services.AddKeyedSingleton<IContentExtractor>("Json", mockExtractor.Object);
+        services.AddKeyedSingleton<IContentExtractor>("Json", mockExtractor);
         var serviceProvider = services.BuildServiceProvider();
         var factory = new ServiceFactory(serviceProvider);
 
@@ -307,16 +307,16 @@ public class ServiceFactoryTests
 
         // Assert
         extractor.Should().NotBeNull();
-        extractor.Should().BeSameAs(mockExtractor.Object);
+        extractor.Should().BeSameAs(mockExtractor);
     }
 
     [Fact]
     public void CreateContentExtractor_WithMarkdown_ShouldReturnMarkdownExtractor()
     {
         // Arrange
-        var mockExtractor = new Mock<IContentExtractor>();
+        var mockExtractor = Substitute.For<IContentExtractor>();
         var services = new ServiceCollection();
-        services.AddKeyedSingleton<IContentExtractor>("Markdown", mockExtractor.Object);
+        services.AddKeyedSingleton<IContentExtractor>("Markdown", mockExtractor);
         var serviceProvider = services.BuildServiceProvider();
         var factory = new ServiceFactory(serviceProvider);
 
@@ -325,16 +325,16 @@ public class ServiceFactoryTests
 
         // Assert
         extractor.Should().NotBeNull();
-        extractor.Should().BeSameAs(mockExtractor.Object);
+        extractor.Should().BeSameAs(mockExtractor);
     }
 
     [Fact]
     public void CreateContentExtractor_WithXml_ShouldReturnXmlExtractor()
     {
         // Arrange
-        var mockExtractor = new Mock<IContentExtractor>();
+        var mockExtractor = Substitute.For<IContentExtractor>();
         var services = new ServiceCollection();
-        services.AddKeyedSingleton<IContentExtractor>("Xml", mockExtractor.Object);
+        services.AddKeyedSingleton<IContentExtractor>("Xml", mockExtractor);
         var serviceProvider = services.BuildServiceProvider();
         var factory = new ServiceFactory(serviceProvider);
 
@@ -343,16 +343,16 @@ public class ServiceFactoryTests
 
         // Assert
         extractor.Should().NotBeNull();
-        extractor.Should().BeSameAs(mockExtractor.Object);
+        extractor.Should().BeSameAs(mockExtractor);
     }
 
     [Fact]
     public void CreateContentExtractor_WithUnknownType_ShouldReturnDefaultExtractor()
     {
         // Arrange
-        var mockExtractor = new Mock<IContentExtractor>();
+        var mockExtractor = Substitute.For<IContentExtractor>();
         var services = new ServiceCollection();
-        services.AddKeyedSingleton<IContentExtractor>("Default", mockExtractor.Object);
+        services.AddKeyedSingleton<IContentExtractor>("Default", mockExtractor);
         var serviceProvider = services.BuildServiceProvider();
         var factory = new ServiceFactory(serviceProvider);
 
@@ -361,7 +361,7 @@ public class ServiceFactoryTests
 
         // Assert
         extractor.Should().NotBeNull();
-        extractor.Should().BeSameAs(mockExtractor.Object);
+        extractor.Should().BeSameAs(mockExtractor);
     }
 
     [Theory]
@@ -371,13 +371,13 @@ public class ServiceFactoryTests
     public void CreateContentExtractor_ShouldBeCaseInsensitive(string contentType)
     {
         // Arrange
-        var mockHtml = new Mock<IContentExtractor>();
-        var mockText = new Mock<IContentExtractor>();
-        var mockJson = new Mock<IContentExtractor>();
+        var mockHtml = Substitute.For<IContentExtractor>();
+        var mockText = Substitute.For<IContentExtractor>();
+        var mockJson = Substitute.For<IContentExtractor>();
         var services = new ServiceCollection();
-        services.AddKeyedSingleton<IContentExtractor>("Html", mockHtml.Object);
-        services.AddKeyedSingleton<IContentExtractor>("Text", mockText.Object);
-        services.AddKeyedSingleton<IContentExtractor>("Json", mockJson.Object);
+        services.AddKeyedSingleton<IContentExtractor>("Html", mockHtml);
+        services.AddKeyedSingleton<IContentExtractor>("Text", mockText);
+        services.AddKeyedSingleton<IContentExtractor>("Json", mockJson);
         var serviceProvider = services.BuildServiceProvider();
         var factory = new ServiceFactory(serviceProvider);
 
@@ -396,9 +396,9 @@ public class ServiceFactoryTests
     public void CreateChunkingStrategy_WithValidKey_ShouldReturnStrategy()
     {
         // Arrange
-        var mockStrategy = new Mock<IChunkingStrategy>();
+        var mockStrategy = Substitute.For<IChunkingStrategy>();
         var services = new ServiceCollection();
-        services.AddKeyedSingleton<IChunkingStrategy>("FixedSize", mockStrategy.Object);
+        services.AddKeyedSingleton<IChunkingStrategy>("FixedSize", mockStrategy);
         var serviceProvider = services.BuildServiceProvider();
         var factory = new ServiceFactory(serviceProvider);
 
@@ -407,7 +407,7 @@ public class ServiceFactoryTests
 
         // Assert
         strategy.Should().NotBeNull();
-        strategy.Should().BeSameAs(mockStrategy.Object);
+        strategy.Should().BeSameAs(mockStrategy);
     }
 
     [Fact]
@@ -431,9 +431,9 @@ public class ServiceFactoryTests
     public void CreateAiEnhancementService_WithRegisteredService_ShouldReturnService()
     {
         // Arrange
-        var mockService = new Mock<IAiEnhancementService>();
+        var mockService = Substitute.For<IAiEnhancementService>();
         var services = new ServiceCollection();
-        services.AddSingleton(mockService.Object);
+        services.AddSingleton(mockService);
         var serviceProvider = services.BuildServiceProvider();
         var factory = new ServiceFactory(serviceProvider);
 
@@ -442,7 +442,7 @@ public class ServiceFactoryTests
 
         // Assert
         service.Should().NotBeNull();
-        service.Should().BeSameAs(mockService.Object);
+        service.Should().BeSameAs(mockService);
     }
 
     [Fact]
@@ -471,18 +471,18 @@ public class ServiceFactoryTests
         var services = new ServiceCollection();
 
         // Crawlers
-        services.AddKeyedSingleton<ICrawler>("BreadthFirst", new Mock<ICrawler>().Object);
-        services.AddKeyedSingleton<ICrawler>("DepthFirst", new Mock<ICrawler>().Object);
+        services.AddKeyedSingleton<ICrawler>("BreadthFirst", Substitute.For<ICrawler>());
+        services.AddKeyedSingleton<ICrawler>("DepthFirst", Substitute.For<ICrawler>());
 
         // Content Extractors
-        services.AddKeyedSingleton<IContentExtractor>("Html", new Mock<IContentExtractor>().Object);
-        services.AddKeyedSingleton<IContentExtractor>("Default", new Mock<IContentExtractor>().Object);
+        services.AddKeyedSingleton<IContentExtractor>("Html", Substitute.For<IContentExtractor>());
+        services.AddKeyedSingleton<IContentExtractor>("Default", Substitute.For<IContentExtractor>());
 
         // Chunking Strategies
-        services.AddKeyedSingleton<IChunkingStrategy>("FixedSize", new Mock<IChunkingStrategy>().Object);
+        services.AddKeyedSingleton<IChunkingStrategy>("FixedSize", Substitute.For<IChunkingStrategy>());
 
         // Optional AI service
-        services.AddSingleton<IAiEnhancementService>(new Mock<IAiEnhancementService>().Object);
+        services.AddSingleton<IAiEnhancementService>(Substitute.For<IAiEnhancementService>());
 
         var serviceProvider = services.BuildServiceProvider();
         var factory = new ServiceFactory(serviceProvider);

@@ -51,8 +51,7 @@ public class SiteConfigurationAnalyzer : ISiteConfigurationAnalyzer
         string sourceUrl,
         CancellationToken cancellationToken = default)
     {
-        if (yamlContent == null)
-            throw new ArgumentNullException(nameof(yamlContent));
+        ArgumentNullException.ThrowIfNull(yamlContent);
         if (string.IsNullOrWhiteSpace(yamlContent))
             throw new ArgumentException("YAML content cannot be empty", nameof(yamlContent));
 
@@ -126,7 +125,7 @@ public class SiteConfigurationAnalyzer : ISiteConfigurationAnalyzer
             var lowerFileName = fileName.ToLowerInvariant();
             foreach (var pattern in FileNamePatterns)
             {
-                if (lowerFileName.Contains(pattern.Key.ToLowerInvariant()))
+                if (lowerFileName.Contains(pattern.Key, StringComparison.OrdinalIgnoreCase))
                 {
                     return pattern.Value;
                 }
@@ -247,7 +246,7 @@ public class SiteConfigurationAnalyzer : ISiteConfigurationAnalyzer
 
     #region Private Helper Methods
 
-    private SiteConfigurationType DetectConfigurationTypeFromContent(string yamlContent)
+    private static SiteConfigurationType DetectConfigurationTypeFromContent(string yamlContent)
     {
         var content = yamlContent.ToLowerInvariant();
 
@@ -272,7 +271,7 @@ public class SiteConfigurationAnalyzer : ISiteConfigurationAnalyzer
         return SiteConfigurationType.Generic;
     }
 
-    private string? ExtractFileNameFromUrl(string url)
+    private static string? ExtractFileNameFromUrl(string url)
     {
         try
         {
@@ -285,7 +284,7 @@ public class SiteConfigurationAnalyzer : ISiteConfigurationAnalyzer
         }
     }
 
-    private SiteConfigurationInfo ExtractSiteInfo(Dictionary<string, object> parsedYaml)
+    private static SiteConfigurationInfo ExtractSiteInfo(Dictionary<string, object> parsedYaml)
     {
         return new SiteConfigurationInfo
         {
@@ -300,7 +299,7 @@ public class SiteConfigurationAnalyzer : ISiteConfigurationAnalyzer
         };
     }
 
-    private AuthorInfo? ExtractAuthorInfo(Dictionary<string, object> parsedYaml)
+    private static AuthorInfo? ExtractAuthorInfo(Dictionary<string, object> parsedYaml)
     {
         if (!parsedYaml.TryGetValue("author", out var authorObj))
             return null;
@@ -325,7 +324,7 @@ public class SiteConfigurationAnalyzer : ISiteConfigurationAnalyzer
         return null;
     }
 
-    private Dictionary<string, string> ExtractSocialMedia(Dictionary<string, object> authorDict)
+    private static Dictionary<string, string> ExtractSocialMedia(Dictionary<string, object> authorDict)
     {
         var social = new Dictionary<string, string>();
 
@@ -347,7 +346,7 @@ public class SiteConfigurationAnalyzer : ISiteConfigurationAnalyzer
         return social;
     }
 
-    private BuildConfiguration ExtractBuildConfiguration(Dictionary<string, object> parsedYaml)
+    private static BuildConfiguration ExtractBuildConfiguration(Dictionary<string, object> parsedYaml)
     {
         return new BuildConfiguration
         {
@@ -362,7 +361,7 @@ public class SiteConfigurationAnalyzer : ISiteConfigurationAnalyzer
         };
     }
 
-    private ContentConfiguration ExtractContentConfiguration(Dictionary<string, object> parsedYaml)
+    private static ContentConfiguration ExtractContentConfiguration(Dictionary<string, object> parsedYaml)
     {
         return new ContentConfiguration
         {
@@ -377,7 +376,7 @@ public class SiteConfigurationAnalyzer : ISiteConfigurationAnalyzer
         };
     }
 
-    private Dictionary<string, CollectionConfig> ExtractCollections(Dictionary<string, object> parsedYaml)
+    private static Dictionary<string, CollectionConfig> ExtractCollections(Dictionary<string, object> parsedYaml)
     {
         var collections = new Dictionary<string, CollectionConfig>();
 
@@ -404,7 +403,7 @@ public class SiteConfigurationAnalyzer : ISiteConfigurationAnalyzer
         return collections;
     }
 
-    private IReadOnlyList<DefaultConfig> ExtractDefaults(Dictionary<string, object> parsedYaml)
+    private static List<DefaultConfig> ExtractDefaults(Dictionary<string, object> parsedYaml)
     {
         var defaults = new List<DefaultConfig>();
 
@@ -427,10 +426,10 @@ public class SiteConfigurationAnalyzer : ISiteConfigurationAnalyzer
             }
         }
 
-        return defaults.AsReadOnly();
+        return defaults;
     }
 
-    private DefaultScope? ExtractDefaultScope(Dictionary<string, object> defaultDict)
+    private static DefaultScope? ExtractDefaultScope(Dictionary<string, object> defaultDict)
     {
         if (defaultDict.TryGetValue("scope", out var scopeObj) &&
             scopeObj is Dictionary<string, object> scopeDict)
@@ -445,7 +444,7 @@ public class SiteConfigurationAnalyzer : ISiteConfigurationAnalyzer
         return null;
     }
 
-    private PluginConfiguration ExtractPluginConfiguration(Dictionary<string, object> parsedYaml)
+    private static PluginConfiguration ExtractPluginConfiguration(Dictionary<string, object> parsedYaml)
     {
         return new PluginConfiguration
         {
@@ -455,7 +454,7 @@ public class SiteConfigurationAnalyzer : ISiteConfigurationAnalyzer
         };
     }
 
-    private Dictionary<string, object> ExtractPluginSettings(Dictionary<string, object> parsedYaml)
+    private static Dictionary<string, object> ExtractPluginSettings(Dictionary<string, object> parsedYaml)
     {
         var settings = new Dictionary<string, object>();
 
@@ -473,7 +472,7 @@ public class SiteConfigurationAnalyzer : ISiteConfigurationAnalyzer
         return settings;
     }
 
-    private DeploymentConfiguration ExtractDeploymentConfiguration(Dictionary<string, object> parsedYaml)
+    private static DeploymentConfiguration ExtractDeploymentConfiguration(Dictionary<string, object> parsedYaml)
     {
         return new DeploymentConfiguration
         {
@@ -484,7 +483,7 @@ public class SiteConfigurationAnalyzer : ISiteConfigurationAnalyzer
         };
     }
 
-    private string? DetectDeploymentTarget(Dictionary<string, object> parsedYaml)
+    private static string? DetectDeploymentTarget(Dictionary<string, object> parsedYaml)
     {
         if (parsedYaml.ContainsKey("github") || parsedYaml.ContainsKey("repository"))
             return "GitHub Pages";
@@ -498,7 +497,7 @@ public class SiteConfigurationAnalyzer : ISiteConfigurationAnalyzer
         return null;
     }
 
-    private GitHubPagesConfig? ExtractGitHubPagesConfig(Dictionary<string, object> parsedYaml)
+    private static GitHubPagesConfig? ExtractGitHubPagesConfig(Dictionary<string, object> parsedYaml)
     {
         if (!parsedYaml.TryGetValue("github", out var githubObj))
             return null;
@@ -515,7 +514,7 @@ public class SiteConfigurationAnalyzer : ISiteConfigurationAnalyzer
         };
     }
 
-    private NetlifyConfig? ExtractNetlifyConfig(Dictionary<string, object> parsedYaml)
+    private static NetlifyConfig? ExtractNetlifyConfig(Dictionary<string, object> parsedYaml)
     {
         if (!parsedYaml.TryGetValue("netlify", out var netlifyObj))
             return null;
@@ -532,7 +531,7 @@ public class SiteConfigurationAnalyzer : ISiteConfigurationAnalyzer
         };
     }
 
-    private VercelConfig? ExtractVercelConfig(Dictionary<string, object> parsedYaml)
+    private static VercelConfig? ExtractVercelConfig(Dictionary<string, object> parsedYaml)
     {
         if (!parsedYaml.TryGetValue("vercel", out var vercelObj))
             return null;
@@ -549,7 +548,7 @@ public class SiteConfigurationAnalyzer : ISiteConfigurationAnalyzer
         };
     }
 
-    private SeoConfiguration ExtractSeoConfiguration(Dictionary<string, object> parsedYaml)
+    private static SeoConfiguration ExtractSeoConfiguration(Dictionary<string, object> parsedYaml)
     {
         return new SeoConfiguration
         {
@@ -561,7 +560,7 @@ public class SiteConfigurationAnalyzer : ISiteConfigurationAnalyzer
         };
     }
 
-    private SocialMediaConfig? ExtractSeoSocialMedia(Dictionary<string, object> parsedYaml)
+    private static SocialMediaConfig? ExtractSeoSocialMedia(Dictionary<string, object> parsedYaml)
     {
         if (!parsedYaml.TryGetValue("social", out var socialObj))
             return null;
@@ -579,7 +578,7 @@ public class SiteConfigurationAnalyzer : ISiteConfigurationAnalyzer
         };
     }
 
-    private SitePerformanceConfiguration ExtractPerformanceConfiguration(Dictionary<string, object> parsedYaml)
+    private static SitePerformanceConfiguration ExtractPerformanceConfiguration(Dictionary<string, object> parsedYaml)
     {
         return new SitePerformanceConfiguration
         {
@@ -590,7 +589,7 @@ public class SiteConfigurationAnalyzer : ISiteConfigurationAnalyzer
         };
     }
 
-    private SassConfig? ExtractSassConfig(Dictionary<string, object> parsedYaml)
+    private static SassConfig? ExtractSassConfig(Dictionary<string, object> parsedYaml)
     {
         if (!parsedYaml.TryGetValue("sass", out var sassObj))
             return null;
@@ -606,7 +605,7 @@ public class SiteConfigurationAnalyzer : ISiteConfigurationAnalyzer
         };
     }
 
-    private CacheConfig? ExtractCacheConfig(Dictionary<string, object> parsedYaml)
+    private static CacheConfig? ExtractCacheConfig(Dictionary<string, object> parsedYaml)
     {
         if (!parsedYaml.TryGetValue("cache", out var cacheObj))
             return null;
@@ -622,7 +621,7 @@ public class SiteConfigurationAnalyzer : ISiteConfigurationAnalyzer
         };
     }
 
-    private CdnConfig? ExtractCdnConfig(Dictionary<string, object> parsedYaml)
+    private static CdnConfig? ExtractCdnConfig(Dictionary<string, object> parsedYaml)
     {
         if (!parsedYaml.TryGetValue("cdn", out var cdnObj))
             return null;
@@ -639,7 +638,7 @@ public class SiteConfigurationAnalyzer : ISiteConfigurationAnalyzer
     }
 
     // Validation Methods
-    private void ValidateRequiredSettings(SiteConfiguration configuration, List<ConfigurationIssue> issues)
+    private static void ValidateRequiredSettings(SiteConfiguration configuration, List<ConfigurationIssue> issues)
     {
         if (string.IsNullOrEmpty(configuration.SiteInfo.Title))
         {
@@ -666,7 +665,7 @@ public class SiteConfigurationAnalyzer : ISiteConfigurationAnalyzer
         }
     }
 
-    private void ValidateSecuritySettings(SiteConfiguration configuration, List<ConfigurationIssue> issues)
+    private static void ValidateSecuritySettings(SiteConfiguration configuration, List<ConfigurationIssue> issues)
     {
         // 개발 환경에서 프로덕션 배포 확인
         if (configuration.BuildConfig.Environment == "development" &&
@@ -696,7 +695,7 @@ public class SiteConfigurationAnalyzer : ISiteConfigurationAnalyzer
         }
     }
 
-    private void ValidatePerformanceSettings(SiteConfiguration configuration, List<ConfigurationIssue> issues)
+    private static void ValidatePerformanceSettings(SiteConfiguration configuration, List<ConfigurationIssue> issues)
     {
         // HTML 압축 미사용
         if (!configuration.PerformanceConfig.CompressHtml)
@@ -725,7 +724,7 @@ public class SiteConfigurationAnalyzer : ISiteConfigurationAnalyzer
         }
     }
 
-    private void ValidateSeoSettings(SiteConfiguration configuration, List<ConfigurationIssue> issues)
+    private static void ValidateSeoSettings(SiteConfiguration configuration, List<ConfigurationIssue> issues)
     {
         // Google Analytics 미설정
         if (string.IsNullOrEmpty(configuration.SeoConfig.GoogleAnalytics))
@@ -754,7 +753,7 @@ public class SiteConfigurationAnalyzer : ISiteConfigurationAnalyzer
         }
     }
 
-    private void ValidateCompatibility(SiteConfiguration configuration, List<ConfigurationIssue> issues)
+    private static void ValidateCompatibility(SiteConfiguration configuration, List<ConfigurationIssue> issues)
     {
         // 구버전 플러그인 확인
         var deprecatedPlugins = new[] { "jekyll-paginate", "redcarpet" };
@@ -776,7 +775,7 @@ public class SiteConfigurationAnalyzer : ISiteConfigurationAnalyzer
     }
 
     // Quality Assessment Methods
-    private double CalculateCompletenessScore(SiteConfiguration configuration)
+    private static double CalculateCompletenessScore(SiteConfiguration configuration)
     {
         var score = 0.0;
         var maxScore = 10.0;
@@ -793,7 +792,7 @@ public class SiteConfigurationAnalyzer : ISiteConfigurationAnalyzer
         return Math.Min(score / maxScore, 1.0);
     }
 
-    private double CalculateSecurityScore(SiteConfiguration configuration)
+    private static double CalculateSecurityScore(SiteConfiguration configuration)
     {
         var score = 1.0;
 
@@ -813,7 +812,7 @@ public class SiteConfigurationAnalyzer : ISiteConfigurationAnalyzer
         return Math.Max(score, 0.0);
     }
 
-    private double CalculatePerformanceScore(SiteConfiguration configuration)
+    private static double CalculatePerformanceScore(SiteConfiguration configuration)
     {
         var score = 0.0;
         var maxScore = 4.0;
@@ -826,7 +825,7 @@ public class SiteConfigurationAnalyzer : ISiteConfigurationAnalyzer
         return score / maxScore;
     }
 
-    private double CalculateSeoScore(SiteConfiguration configuration)
+    private static double CalculateSeoScore(SiteConfiguration configuration)
     {
         var score = 0.0;
         var maxScore = 6.0;
@@ -841,7 +840,7 @@ public class SiteConfigurationAnalyzer : ISiteConfigurationAnalyzer
         return score / maxScore;
     }
 
-    private double CalculateBestPracticesScore(SiteConfiguration configuration)
+    private static double CalculateBestPracticesScore(SiteConfiguration configuration)
     {
         var score = 1.0;
 
@@ -855,7 +854,7 @@ public class SiteConfigurationAnalyzer : ISiteConfigurationAnalyzer
         return Math.Max(score, 0.0);
     }
 
-    private ConfigurationIssueSummary CalculateIssueSummary(IReadOnlyList<ConfigurationIssue> issues)
+    private static ConfigurationIssueSummary CalculateIssueSummary(IReadOnlyList<ConfigurationIssue> issues)
     {
         return new ConfigurationIssueSummary
         {
@@ -868,7 +867,7 @@ public class SiteConfigurationAnalyzer : ISiteConfigurationAnalyzer
     }
 
     // Recommendation Methods
-    private void AddPerformanceRecommendations(SiteConfiguration configuration, List<ConfigurationRecommendation> recommendations)
+    private static void AddPerformanceRecommendations(SiteConfiguration configuration, List<ConfigurationRecommendation> recommendations)
     {
         if (!configuration.PerformanceConfig.CompressHtml)
         {
@@ -901,7 +900,7 @@ public class SiteConfigurationAnalyzer : ISiteConfigurationAnalyzer
         }
     }
 
-    private void AddSecurityRecommendations(SiteConfiguration configuration, List<ConfigurationRecommendation> recommendations)
+    private static void AddSecurityRecommendations(SiteConfiguration configuration, List<ConfigurationRecommendation> recommendations)
     {
         if (configuration.BuildConfig.ShowDrafts && configuration.BuildConfig.Environment == "production")
         {
@@ -919,7 +918,7 @@ public class SiteConfigurationAnalyzer : ISiteConfigurationAnalyzer
         }
     }
 
-    private void AddSeoRecommendations(SiteConfiguration configuration, List<ConfigurationRecommendation> recommendations)
+    private static void AddSeoRecommendations(SiteConfiguration configuration, List<ConfigurationRecommendation> recommendations)
     {
         if (string.IsNullOrEmpty(configuration.SeoConfig.GoogleAnalytics))
         {
@@ -952,7 +951,7 @@ public class SiteConfigurationAnalyzer : ISiteConfigurationAnalyzer
         }
     }
 
-    private void AddBestPracticeRecommendations(SiteConfiguration configuration, List<ConfigurationRecommendation> recommendations)
+    private static void AddBestPracticeRecommendations(SiteConfiguration configuration, List<ConfigurationRecommendation> recommendations)
     {
         var deprecatedPlugins = configuration.PluginConfig.Plugins
             .Where(p => new[] { "jekyll-paginate", "redcarpet" }.Contains(p, StringComparer.OrdinalIgnoreCase))
@@ -982,7 +981,7 @@ public class SiteConfigurationAnalyzer : ISiteConfigurationAnalyzer
     }
 
     // Conversion Methods
-    private Dictionary<string, object> ConvertConfigurationFormat(SiteConfiguration configuration, SiteConfigurationType targetType)
+    private static Dictionary<string, object> ConvertConfigurationFormat(SiteConfiguration configuration, SiteConfigurationType targetType)
     {
         var converted = new Dictionary<string, object>(configuration.ParsedYaml);
 
@@ -995,7 +994,7 @@ public class SiteConfigurationAnalyzer : ISiteConfigurationAnalyzer
         };
     }
 
-    private Dictionary<string, object> ConvertToJekyllFormat(Dictionary<string, object> config)
+    private static Dictionary<string, object> ConvertToJekyllFormat(Dictionary<string, object> config)
     {
         var jekyllConfig = new Dictionary<string, object>(config);
 
@@ -1009,7 +1008,7 @@ public class SiteConfigurationAnalyzer : ISiteConfigurationAnalyzer
         return jekyllConfig;
     }
 
-    private Dictionary<string, object> ConvertToHugoFormat(Dictionary<string, object> config)
+    private static Dictionary<string, object> ConvertToHugoFormat(Dictionary<string, object> config)
     {
         var hugoConfig = new Dictionary<string, object>();
 
@@ -1029,7 +1028,7 @@ public class SiteConfigurationAnalyzer : ISiteConfigurationAnalyzer
         return hugoConfig;
     }
 
-    private Dictionary<string, object> ConvertToGitBookFormat(Dictionary<string, object> config)
+    private static Dictionary<string, object> ConvertToGitBookFormat(Dictionary<string, object> config)
     {
         var gitbookConfig = new Dictionary<string, object>();
 
@@ -1050,7 +1049,7 @@ public class SiteConfigurationAnalyzer : ISiteConfigurationAnalyzer
     }
 
     // Migration Methods
-    private double CalculateCompatibilityScore(SiteConfigurationType source, SiteConfigurationType target)
+    private static double CalculateCompatibilityScore(SiteConfigurationType source, SiteConfigurationType target)
     {
         if (source == target) return 1.0;
 
@@ -1064,7 +1063,7 @@ public class SiteConfigurationAnalyzer : ISiteConfigurationAnalyzer
         };
     }
 
-    private IReadOnlyList<MigrationStep> GenerateMigrationSteps(SiteConfigurationType source, SiteConfigurationType target)
+    private static List<MigrationStep> GenerateMigrationSteps(SiteConfigurationType source, SiteConfigurationType target)
     {
         var steps = new List<MigrationStep>();
 
@@ -1101,10 +1100,10 @@ public class SiteConfigurationAnalyzer : ISiteConfigurationAnalyzer
             });
         }
 
-        return steps.AsReadOnly();
+        return steps;
     }
 
-    private IReadOnlyList<IncompatibleSetting> FindIncompatibleSettings(SiteConfiguration sourceConfig, SiteConfigurationType targetType)
+    private static List<IncompatibleSetting> FindIncompatibleSettings(SiteConfiguration sourceConfig, SiteConfigurationType targetType)
     {
         var incompatible = new List<IncompatibleSetting>();
 
@@ -1136,26 +1135,25 @@ public class SiteConfigurationAnalyzer : ISiteConfigurationAnalyzer
             }
         }
 
-        return incompatible.AsReadOnly();
+        return incompatible;
     }
 
-    private IReadOnlyList<string> GenerateAdditionalTasks(SiteConfigurationType source, SiteConfigurationType target)
+    private static List<string> GenerateAdditionalTasks(SiteConfigurationType source, SiteConfigurationType target)
     {
         var tasks = new List<string>();
 
         if (source == SiteConfigurationType.Jekyll && target == SiteConfigurationType.Hugo)
         {
-            tasks.AddRange(new[]
-            {
+            tasks.AddRange([
                 "Liquid 템플릿을 Go 템플릿으로 변환",
                 "Front Matter 형식 검토 및 수정",
                 "이미지 및 정적 파일 경로 업데이트",
                 "테마 설정 및 레이아웃 조정",
                 "빌드 및 배포 스크립트 수정"
-            });
+            ]);
         }
 
-        return tasks.AsReadOnly();
+        return tasks;
     }
 
     // Helper Methods
@@ -1164,7 +1162,7 @@ public class SiteConfigurationAnalyzer : ISiteConfigurationAnalyzer
     /// YamlDotNet deserializes nested objects as Dictionary<object, object>, not Dictionary<string, object>.
     /// This helper converts object dictionaries to string dictionaries.
     /// </summary>
-    private Dictionary<string, object>? ConvertToStringDictionary(object obj)
+    private static Dictionary<string, object>? ConvertToStringDictionary(object obj)
     {
         if (obj is Dictionary<string, object> stringDict)
             return stringDict;
@@ -1185,12 +1183,12 @@ public class SiteConfigurationAnalyzer : ISiteConfigurationAnalyzer
         return null;
     }
 
-    private string? GetStringValue(Dictionary<string, object> dict, string key)
+    private static string? GetStringValue(Dictionary<string, object> dict, string key)
     {
         return dict.TryGetValue(key, out var value) ? value?.ToString() : null;
     }
 
-    private bool GetBoolValue(Dictionary<string, object> dict, string key, bool defaultValue = false)
+    private static bool GetBoolValue(Dictionary<string, object> dict, string key, bool defaultValue = false)
     {
         if (dict.TryGetValue(key, out var value))
         {
@@ -1204,7 +1202,7 @@ public class SiteConfigurationAnalyzer : ISiteConfigurationAnalyzer
         return defaultValue;
     }
 
-    private int GetIntValue(Dictionary<string, object> dict, string key, int defaultValue = 0)
+    private static int GetIntValue(Dictionary<string, object> dict, string key, int defaultValue = 0)
     {
         if (dict.TryGetValue(key, out var value))
         {
@@ -1218,16 +1216,16 @@ public class SiteConfigurationAnalyzer : ISiteConfigurationAnalyzer
         return defaultValue;
     }
 
-    private IReadOnlyList<string> GetStringArrayValue(Dictionary<string, object> dict, string key)
+    private static List<string> GetStringArrayValue(Dictionary<string, object> dict, string key)
     {
         if (dict.TryGetValue(key, out var value) && value is IEnumerable<object> enumerable)
         {
-            return enumerable.Select(item => item?.ToString()).Where(s => s != null).Cast<string>().ToArray();
+            return enumerable.Select(item => item?.ToString()).Where(s => s != null).Cast<string>().ToList();
         }
-        return Array.Empty<string>();
+        return [];
     }
 
-    private Dictionary<string, object> GetDictionaryValue(Dictionary<string, object> dict, string key)
+    private static Dictionary<string, object> GetDictionaryValue(Dictionary<string, object> dict, string key)
     {
         if (dict.TryGetValue(key, out var value) && value is Dictionary<string, object> dictValue)
         {
@@ -1236,7 +1234,7 @@ public class SiteConfigurationAnalyzer : ISiteConfigurationAnalyzer
         return new Dictionary<string, object>();
     }
 
-    private Dictionary<string, string> GetStringDictionaryValue(Dictionary<string, object> dict, string key)
+    private static Dictionary<string, string> GetStringDictionaryValue(Dictionary<string, object> dict, string key)
     {
         var result = new Dictionary<string, string>();
         if (dict.TryGetValue(key, out var value) && value is Dictionary<string, object> dictValue)

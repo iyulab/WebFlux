@@ -17,7 +17,7 @@ namespace WebFlux.Tests.Services;
 /// </summary>
 public class ResilienceServiceTests
 {
-    private readonly IResilienceService _resilienceService;
+    private readonly ResilienceService _resilienceService;
     private readonly ILogger<ResilienceService> _logger;
 
     public ResilienceServiceTests()
@@ -442,9 +442,9 @@ public class ResilienceServiceTests
         databasePolicy.ExecutionOrder.Should().Contain(PolicyType.Bulkhead);
         databasePolicy.Bulkhead.Should().NotBeNull();
 
-        Func<CancellationToken, Task<string>> operation = async _ =>
+        Func<CancellationToken, Task<string>> operation = async ct =>
         {
-            await Task.Delay(10);
+            await Task.Delay(10, ct);
             return expectedResult;
         };
 
@@ -965,9 +965,9 @@ public class ResilienceServiceTests
         };
 
         var expectedResult = "timeout-bulkhead result";
-        Func<CancellationToken, Task<string>> operation = async _ =>
+        Func<CancellationToken, Task<string>> operation = async ct =>
         {
-            await Task.Delay(10);
+            await Task.Delay(10, ct);
             return expectedResult;
         };
 
@@ -1036,9 +1036,9 @@ public class ResilienceServiceTests
         for (int i = 0; i < 10; i++)
         {
             await _resilienceService.ExecuteWithRetryAsync(
-                async _ =>
+                async ct =>
                 {
-                    await Task.Delay(10);
+                    await Task.Delay(10, ct);
                     return $"result-{i}";
                 },
                 retryPolicy);

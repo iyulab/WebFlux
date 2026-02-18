@@ -168,7 +168,7 @@ public class ConfigurationOption
     /// <summary>
     /// 필수 여부
     /// </summary>
-    public bool IsRequired { get; set; } = false;
+    public bool IsRequired { get; set; }
 
     /// <summary>
     /// 유효한 값 목록

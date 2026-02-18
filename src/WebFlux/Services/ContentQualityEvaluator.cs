@@ -11,6 +11,7 @@ namespace WebFlux.Services;
 /// </summary>
 public partial class ContentQualityEvaluator : IContentQualityEvaluator
 {
+    private static readonly char[] WordSplitChars = [' ', '\n', '\r', '\t'];
     private readonly ILogger<ContentQualityEvaluator> _logger;
 
     // 페이월 감지 키워드
@@ -107,9 +108,7 @@ public partial class ContentQualityEvaluator : IContentQualityEvaluator
             NoiseRatio = Math.Max(0, 1 - contentRatio)
         };
 
-        _logger.LogDebug(
-            "Evaluated quality for {Url}: Score={Score:P0}, Paywall={Paywall}, AdDensity={AdDensity:P0}",
-            content.Url, quality.OverallScore, quality.HasPaywall, quality.AdDensity);
+        LogQualityEvaluated(_logger, content.Url, quality.OverallScore, quality.HasPaywall, quality.AdDensity);
 
         return Task.FromResult(quality);
     }
@@ -188,9 +187,9 @@ public partial class ContentQualityEvaluator : IContentQualityEvaluator
         }
 
         // 간단한 휴리스틱 기반 언어 감지
-        var koreanCount = KoreanCharRegex().Matches(text).Count;
-        var chineseCount = ChineseCharRegex().Matches(text).Count;
-        var japaneseCount = JapaneseCharRegex().Matches(text).Count;
+        var koreanCount = KoreanCharRegex().Count(text);
+        var chineseCount = ChineseCharRegex().Count(text);
+        var japaneseCount = JapaneseCharRegex().Count(text);
         var totalChars = text.Length;
 
         if (totalChars == 0) return "en";
@@ -223,7 +222,7 @@ public partial class ContentQualityEvaluator : IContentQualityEvaluator
         }
 
         // 광고 태그 카운트
-        adCount += AdTagRegex().Matches(html).Count;
+        adCount += AdTagRegex().Count(html);
 
         // 정규화 (최대 20개 광고 기준)
         return Math.Min(1.0, adCount / 20.0);
@@ -255,8 +254,8 @@ public partial class ContentQualityEvaluator : IContentQualityEvaluator
         // GPT-4 기준 대략적인 토큰 추정
         // 영어: ~4자 = 1토큰
         // 한국어/중국어/일본어: ~1.5자 = 1토큰
-        var koreanCount = KoreanCharRegex().Matches(text).Count;
-        var cjkCount = CjkCharRegex().Matches(text).Count;
+        var koreanCount = KoreanCharRegex().Count(text);
+        var cjkCount = CjkCharRegex().Count(text);
 
         var englishChars = text.Length - cjkCount;
         var englishTokens = englishChars / 4.0;
@@ -265,7 +264,7 @@ public partial class ContentQualityEvaluator : IContentQualityEvaluator
         return (int)Math.Ceiling(englishTokens + cjkTokens);
     }
 
-    private bool DetectLoginRequired(string html, string text)
+    private static bool DetectLoginRequired(string html, string text)
     {
         var combinedContent = (html + " " + text).ToLowerInvariant();
 
@@ -318,7 +317,7 @@ public partial class ContentQualityEvaluator : IContentQualityEvaluator
             return 0;
         }
 
-        return text.Split(new[] { ' ', '\n', '\r', '\t' }, StringSplitOptions.RemoveEmptyEntries).Length;
+        return text.Split(WordSplitChars, StringSplitOptions.RemoveEmptyEntries).Length;
     }
 
     private static int CountOccurrences(string text, string pattern)
@@ -438,4 +437,11 @@ public partial class ContentQualityEvaluator : IContentQualityEvaluator
 
     [GeneratedRegex(@"\s+")]
     private static partial Regex MultiSpaceRegex();
+
+    // ===================================================================
+    // LoggerMessage Definitions
+    // ===================================================================
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Evaluated quality for {Url}: Score={Score}, Paywall={Paywall}, AdDensity={AdDensity}")]
+    private static partial void LogQualityEvaluated(ILogger logger, string? Url, double Score, bool Paywall, double AdDensity);
 }

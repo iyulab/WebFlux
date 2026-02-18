@@ -26,6 +26,7 @@ public class HttpClientServiceTests : IDisposable
     {
         _httpClient?.Dispose();
         _mockHandler?.Dispose();
+        GC.SuppressFinalize(this);
     }
 
     #region Constructor Tests
@@ -456,7 +457,7 @@ public class HttpClientServiceTests : IDisposable
         // Arrange
         using var httpClient = new HttpClient(new MockHttpMessageHandler());
         var service = new HttpClientService(httpClient);
-        var mockHandler = (MockHttpMessageHandler)httpClient.GetType()
+        var mockHandler = httpClient.GetType()
             .GetField("_handler", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?
             .GetValue(httpClient) as MockHttpMessageHandler;
 

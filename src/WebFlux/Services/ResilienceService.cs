@@ -14,7 +14,7 @@ namespace WebFlux.Services;
 /// 재시도, 회로차단기, 시간초과, 벌크헤드 패턴을 통한 안정성 보장
 /// HTTP 요청, 파일 I/O, 외부 서비스 호출의 회복탄력성 제공
 /// </summary>
-public class ResilienceService : IResilienceService
+public partial class ResilienceService : IResilienceService
 {
     private readonly ILogger<ResilienceService> _logger;
     private readonly ConcurrentDictionary<string, CircuitBreakerInfo> _circuitBreakerStates;
@@ -29,7 +29,7 @@ public class ResilienceService : IResilienceService
         _bulkheadStates = new ConcurrentDictionary<string, BulkheadInfo>();
         _events = new ConcurrentBag<ResilienceEvent>();
 
-        _logger.LogInformation("ResilienceService initialized");
+        LogResilienceServiceInitialized(_logger);
     }
 
     public async Task<T> ExecuteWithRetryAsync<T>(
@@ -204,7 +204,7 @@ public class ResilienceService : IResilienceService
             var timeoutOccurrences = events.Count(e => e.EventType == ResilienceEventType.Timeout);
             var bulkheadRejections = events.Count(e => e.EventType == ResilienceEventType.BulkheadRejected);
 
-            var averageExecutionTime = events.Any()
+            var averageExecutionTime = events.Count != 0
                 ? TimeSpan.FromTicks((long)events.Average(e => e.ExecutionTime.Ticks))
                 : TimeSpan.Zero;
 
@@ -227,10 +227,7 @@ public class ResilienceService : IResilienceService
 
     public CircuitBreakerState GetCircuitBreakerState(string circuitBreakerName)
     {
-        if (circuitBreakerName == null)
-            throw new ArgumentNullException(nameof(circuitBreakerName));
-        if (string.IsNullOrEmpty(circuitBreakerName))
-            throw new ArgumentException("Circuit breaker name cannot be empty", nameof(circuitBreakerName));
+        ArgumentException.ThrowIfNullOrEmpty(circuitBreakerName);
 
         return _circuitBreakerStates.TryGetValue(circuitBreakerName, out var info)
             ? info.State
@@ -241,25 +238,21 @@ public class ResilienceService : IResilienceService
     {
         ArgumentException.ThrowIfNullOrEmpty(circuitBreakerName);
 
-        _logger.LogInformation("Manual circuit breaker state change requested for {CircuitBreakerName}: {State}",
-            circuitBreakerName, open ? "Open" : "Closed");
+        LogCircuitBreakerStateChange(_logger, circuitBreakerName, open ? "Open" : "Closed");
 
         await Task.CompletedTask;
     }
 
     public double GetBulkheadUtilization(string bulkheadName)
     {
-        if (bulkheadName == null)
-            throw new ArgumentNullException(nameof(bulkheadName));
-        if (string.IsNullOrEmpty(bulkheadName))
-            throw new ArgumentException("Bulkhead name cannot be empty", nameof(bulkheadName));
+        ArgumentException.ThrowIfNullOrEmpty(bulkheadName);
 
         return _bulkheadStates.TryGetValue(bulkheadName, out var info)
             ? info.Utilization
             : 0.0;
     }
 
-    private IAsyncPolicy<T> CreateRetryPolicy<T>(RetryPolicy retryPolicy)
+    private static IAsyncPolicy<T> CreateRetryPolicy<T>(RetryPolicy retryPolicy)
     {
         var nonGenericPolicy = Policy.Handle<Exception>(ex =>
             retryPolicy.ShouldRetry?.Invoke(ex) ?? true);
@@ -284,13 +277,13 @@ public class ResilienceService : IResilienceService
                     (retryPolicy.UseJitter ? Random.Shared.Next(0, (int)retryPolicy.BaseDelay.TotalMilliseconds) * TimeSpan.TicksPerMillisecond : 0),
                     retryPolicy.MaxDelay.Ticks))),
 
-            _ => throw new ArgumentOutOfRangeException(nameof(retryPolicy.Strategy))
+            _ => throw new ArgumentOutOfRangeException(nameof(retryPolicy), retryPolicy.Strategy, "Unsupported retry strategy")
         };
 
         return concretePolicy.AsAsyncPolicy<T>();
     }
 
-    private IAsyncPolicy<T> CreateCircuitBreakerPolicy<T>(WebFlux.Core.Models.CircuitBreakerPolicy circuitBreakerPolicy)
+    private static IAsyncPolicy<T> CreateCircuitBreakerPolicy<T>(WebFlux.Core.Models.CircuitBreakerPolicy circuitBreakerPolicy)
     {
         var nonGenericPolicy = Policy.Handle<Exception>()
             .CircuitBreakerAsync(
@@ -300,7 +293,7 @@ public class ResilienceService : IResilienceService
         return nonGenericPolicy.AsAsyncPolicy<T>();
     }
 
-    private IAsyncPolicy<T> CreateTimeoutPolicy<T>(WebFlux.Core.Models.TimeoutPolicy timeoutPolicy)
+    private static AsyncPolicy<T> CreateTimeoutPolicy<T>(WebFlux.Core.Models.TimeoutPolicy timeoutPolicy)
     {
         return timeoutPolicy.Strategy switch
         {
@@ -310,18 +303,18 @@ public class ResilienceService : IResilienceService
             WebFlux.Core.Models.TimeoutStrategy.Pessimistic => Policy.TimeoutAsync<T>(
                 timeoutPolicy.Timeout),
 
-            _ => throw new ArgumentOutOfRangeException(nameof(timeoutPolicy.Strategy))
+            _ => throw new ArgumentOutOfRangeException(nameof(timeoutPolicy), timeoutPolicy.Strategy, "Unsupported timeout strategy")
         };
     }
 
-    private IAsyncPolicy<T> CreateBulkheadPolicy<T>(WebFlux.Core.Models.BulkheadPolicy bulkheadPolicy)
+    private static AsyncPolicy<T> CreateBulkheadPolicy<T>(WebFlux.Core.Models.BulkheadPolicy bulkheadPolicy)
     {
         return Policy.BulkheadAsync<T>(
             bulkheadPolicy.MaxParallelization,
             bulkheadPolicy.MaxQueuingActions);
     }
 
-    private IAsyncPolicy<T> CreateCompositePolicy<T>(ResiliencePolicy resiliencePolicy)
+    private static IAsyncPolicy<T> CreateCompositePolicy<T>(ResiliencePolicy resiliencePolicy)
     {
         var policies = new List<IAsyncPolicy<T>>();
 
@@ -379,4 +372,14 @@ public class ResilienceService : IResilienceService
             }
         }
     }
+
+    // ===================================================================
+    // LoggerMessage Definitions
+    // ===================================================================
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "ResilienceService initialized")]
+    private static partial void LogResilienceServiceInitialized(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Manual circuit breaker state change requested for {CircuitBreakerName}: {State}")]
+    private static partial void LogCircuitBreakerStateChange(ILogger logger, string CircuitBreakerName, string State);
 }

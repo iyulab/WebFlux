@@ -151,7 +151,7 @@ public class MetadataQualityValidationTest
         var richMetadata = CreateRichMetadataForTesting();
 
         // Act
-        var qualityScore = _extractor.CalculateQualityScore(richMetadata);
+        var qualityScore = MetadataExtractor.CalculateQualityScore(richMetadata);
 
         // Assert - Phase 5C 목표 달성 확인
         qualityScore.Should().BeGreaterThan(0.90,

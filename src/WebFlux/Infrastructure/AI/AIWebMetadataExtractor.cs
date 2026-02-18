@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
@@ -10,7 +11,7 @@ namespace WebFlux.Infrastructure.AI;
 /// AI 기반 웹 메타데이터 추출기
 /// ITextCompletionService를 사용하여 웹 콘텐츠에서 메타데이터를 추출합니다
 /// </summary>
-public class AIWebMetadataExtractor : IWebMetadataExtractor
+public partial class AIWebMetadataExtractor : IWebMetadataExtractor
 {
     private readonly ITextCompletionService _completionService;
     private readonly ILogger<AIWebMetadataExtractor> _logger;
@@ -42,7 +43,7 @@ public class AIWebMetadataExtractor : IWebMetadataExtractor
 
         try
         {
-            _logger.LogInformation("Extracting metadata for URL: {Url}, Schema: {Schema}", url, schema);
+            LogExtractingMetadata(_logger, url, schema);
 
             // 1. 프롬프트 생성
             var prompt = BuildPrompt(content, url, htmlMetadata, schema, customPrompt);
@@ -56,16 +57,13 @@ public class AIWebMetadataExtractor : IWebMetadataExtractor
             // 4. HTML 메타데이터와 융합
             var enrichedMetadata = MergeWithHtmlMetadata(aiMetadata, htmlMetadata, url);
 
-            _logger.LogInformation(
-                "Metadata extraction completed. Confidence: {Confidence}, Topics: {TopicCount}",
-                enrichedMetadata.OverallConfidence,
-                enrichedMetadata.Topics.Count);
+            LogMetadataExtractionCompleted(_logger, enrichedMetadata.OverallConfidence, enrichedMetadata.Topics.Count);
 
             return enrichedMetadata;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to extract metadata for URL: {Url}", url);
+            LogMetadataExtractionFailed(_logger, ex, url);
             throw;
         }
     }
@@ -79,12 +77,12 @@ public class AIWebMetadataExtractor : IWebMetadataExtractor
     {
         var itemList = items.ToList();
 
-        if (!itemList.Any())
+        if (itemList.Count == 0)
         {
             return Array.Empty<EnrichedMetadata>();
         }
 
-        _logger.LogInformation("Starting batch metadata extraction for {Count} items", itemList.Count);
+        LogBatchExtractionStarting(_logger, itemList.Count);
 
         // 병렬 처리 (API 호출 최적화)
         var tasks = itemList.Select(item =>
@@ -92,7 +90,7 @@ public class AIWebMetadataExtractor : IWebMetadataExtractor
 
         var results = await Task.WhenAll(tasks);
 
-        _logger.LogInformation("Batch extraction completed. Processed {Count} items", results.Length);
+        LogBatchExtractionCompleted(_logger, results.Length);
 
         return results;
     }
@@ -124,7 +122,7 @@ public class AIWebMetadataExtractor : IWebMetadataExtractor
     /// <summary>
     /// 스키마별 AI 프롬프트 생성
     /// </summary>
-    private string BuildPrompt(
+    private static string BuildPrompt(
         string content,
         string url,
         HtmlMetadataSnapshot? htmlMetadata,
@@ -135,7 +133,7 @@ public class AIWebMetadataExtractor : IWebMetadataExtractor
 
         sb.AppendLine("You are a metadata extraction expert. Analyze the following web content and extract structured metadata in JSON format.");
         sb.AppendLine();
-        sb.AppendLine($"**URL**: {url}");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"**URL**: {url}");
         sb.AppendLine();
 
         // HTML 메타데이터 힌트 추가
@@ -144,9 +142,9 @@ public class AIWebMetadataExtractor : IWebMetadataExtractor
             sb.AppendLine("**HTML Metadata Hints**:");
             if (htmlMetadata.OpenGraph != null)
             {
-                sb.AppendLine($"- Title: {htmlMetadata.OpenGraph.Title}");
-                sb.AppendLine($"- Description: {htmlMetadata.OpenGraph.Description}");
-                sb.AppendLine($"- Type: {htmlMetadata.OpenGraph.Type}");
+                sb.AppendLine(CultureInfo.InvariantCulture, $"- Title: {htmlMetadata.OpenGraph.Title}");
+                sb.AppendLine(CultureInfo.InvariantCulture, $"- Description: {htmlMetadata.OpenGraph.Description}");
+                sb.AppendLine(CultureInfo.InvariantCulture, $"- Type: {htmlMetadata.OpenGraph.Type}");
             }
             sb.AppendLine();
         }
@@ -174,7 +172,7 @@ public class AIWebMetadataExtractor : IWebMetadataExtractor
     /// <summary>
     /// 스키마별 추출 프롬프트 반환
     /// </summary>
-    private string GetSchemaPrompt(MetadataSchema schema)
+    private static string GetSchemaPrompt(MetadataSchema schema)
     {
         return schema switch
         {
@@ -255,7 +253,7 @@ Extract the following fields for articles/blog posts:
         {
             // JSON 추출 (마크다운 코드 블록 제거)
             var jsonContent = response.Trim();
-            if (jsonContent.StartsWith("```"))
+            if (jsonContent.StartsWith("```", StringComparison.Ordinal))
             {
                 var lines = jsonContent.Split('\n');
                 jsonContent = string.Join('\n', lines.Skip(1).SkipLast(1));
@@ -266,7 +264,7 @@ Extract the following fields for articles/blog posts:
         }
         catch (JsonException ex)
         {
-            _logger.LogError(ex, "Failed to parse AI response as JSON: {Response}", response);
+            LogAiResponseParseFailed(_logger, ex, response);
             return new Dictionary<string, object>();
         }
     }
@@ -274,7 +272,7 @@ Extract the following fields for articles/blog posts:
     /// <summary>
     /// HTML 메타데이터와 AI 메타데이터 융합
     /// </summary>
-    private EnrichedMetadata MergeWithHtmlMetadata(
+    private static EnrichedMetadata MergeWithHtmlMetadata(
         Dictionary<string, object> aiMetadata,
         HtmlMetadataSnapshot? htmlMetadata,
         string url)
@@ -367,4 +365,26 @@ Extract the following fields for articles/blog posts:
 
         return enriched;
     }
+
+    // ===================================================================
+    // LoggerMessage Definitions
+    // ===================================================================
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Extracting metadata for URL: {Url}, Schema: {Schema}")]
+    private static partial void LogExtractingMetadata(ILogger logger, string Url, MetadataSchema Schema);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Metadata extraction completed. Confidence: {Confidence}, Topics: {TopicCount}")]
+    private static partial void LogMetadataExtractionCompleted(ILogger logger, float Confidence, int TopicCount);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to extract metadata for URL: {Url}")]
+    private static partial void LogMetadataExtractionFailed(ILogger logger, Exception ex, string Url);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Starting batch metadata extraction for {Count} items")]
+    private static partial void LogBatchExtractionStarting(ILogger logger, int Count);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Batch extraction completed. Processed {Count} items")]
+    private static partial void LogBatchExtractionCompleted(ILogger logger, int Count);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to parse AI response as JSON: {Response}")]
+    private static partial void LogAiResponseParseFailed(ILogger logger, Exception ex, string Response);
 }

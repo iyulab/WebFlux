@@ -140,7 +140,7 @@ public class QualityEvaluationTests : IAsyncLifetime
         links.Should().NotContain(l => l.StartsWith("javascript:", StringComparison.OrdinalIgnoreCase));
         links.Should().NotContain(l => l.StartsWith("mailto:", StringComparison.OrdinalIgnoreCase));
         links.Should().NotContain(l => l.StartsWith("tel:", StringComparison.OrdinalIgnoreCase));
-        links.Should().NotContain(l => l.StartsWith("#"));
+        links.Should().NotContain(l => l.StartsWith('#'));
     }
 
     #endregion
@@ -199,7 +199,7 @@ public class QualityEvaluationTests : IAsyncLifetime
 
         // Act
         var result = await _crawler.CrawlAsync(url);
-        var html = result.HtmlContent!.ToLower();
+        var html = result.HtmlContent!.ToLowerInvariant();
 
         // Assert - quotes.toscrape.com 특성
         html.Should().Contain("quote", "인용문 관련 콘텐츠가 있어야 합니다");

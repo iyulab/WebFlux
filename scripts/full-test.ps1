@@ -16,7 +16,7 @@ param(
 $ErrorActionPreference = "Stop"
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $rootDir = Split-Path -Parent $scriptDir
-$solutionPath = Join-Path $rootDir "src\WebFlux.sln"
+$solutionPath = Join-Path $rootDir "WebFlux.slnx"
 $testProject = Join-Path $rootDir "tests\WebFlux.Tests\WebFlux.Tests.csproj"
 $coverageDir = Join-Path $rootDir "coverage"
 

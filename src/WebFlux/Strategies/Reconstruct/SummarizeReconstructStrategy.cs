@@ -99,7 +99,7 @@ public class SummarizeReconstructStrategy : IReconstructStrategy
         return TimeSpan.FromMilliseconds(estimatedTokens * 10); // 토큰당 10ms 가정
     }
 
-    private string BuildSummaryPrompt(AnalyzedContent content, int targetLength, string? additionalContext)
+    private static string BuildSummaryPrompt(AnalyzedContent content, int targetLength, string? additionalContext)
     {
         var contextSection = !string.IsNullOrEmpty(additionalContext)
             ? $"\n\nAdditional Context: {additionalContext}"
@@ -116,7 +116,7 @@ Content:
 Summary:";
     }
 
-    private double EstimateQuality(string summary, string original)
+    private static double EstimateQuality(string summary, string original)
     {
         // 간단한 품질 추정: 요약 길이가 목표 범위 내에 있는지 확인
         var ratio = (double)summary.Length / original.Length;
@@ -128,7 +128,7 @@ Summary:";
         return 0.5; // 비율이 적절하지 않음
     }
 
-    private int EstimateTokens(string prompt, string response)
+    private static int EstimateTokens(string prompt, string response)
     {
         // 대략적인 토큰 수 추정 (1 토큰 ≈ 4자)
         return (prompt.Length + response.Length) / 4;

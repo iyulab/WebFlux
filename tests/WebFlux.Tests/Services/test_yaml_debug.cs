@@ -19,9 +19,8 @@ Console.WriteLine($"Keys: {string.Join(", ", parsed.Keys)}");
 Console.WriteLine($"Title type: {parsed["title"].GetType().Name}");
 Console.WriteLine($"Author exists: {parsed.ContainsKey("author")}");
 
-if (parsed.ContainsKey("author"))
+if (parsed.TryGetValue("author", out var author))
 {
-    var author = parsed["author"];
     Console.WriteLine($"Author type: {author.GetType().FullName}");
     Console.WriteLine($"Is Dictionary<string,object>? {author is Dictionary<string, object>}");
     Console.WriteLine($"Is IDictionary? {author is System.Collections.IDictionary}");

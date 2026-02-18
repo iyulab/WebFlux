@@ -72,8 +72,11 @@
   <!-- ═══════════════════════════════════════════════════════════════════════ -->
   <PropertyGroup>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <NoWarn>$(NoWarn);CS1591</NoWarn>
-    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <!-- CS1570/1591(XML doc), CS7022(top-level statements) -->
+    <NoWarn>$(NoWarn);CS1570;CS1591;CS7022</NoWarn>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
   </PropertyGroup>
 
   <!-- ═══════════════════════════════════════════════════════════════════════ -->

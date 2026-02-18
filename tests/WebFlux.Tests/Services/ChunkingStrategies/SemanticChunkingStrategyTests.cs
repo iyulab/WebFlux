@@ -4,7 +4,7 @@ using WebFlux.Core.Interfaces;
 using WebFlux.Services.ChunkingStrategies;
 using Xunit;
 using FluentAssertions;
-using Moq;
+using NSubstitute;
 
 namespace WebFlux.Tests.Services.ChunkingStrategies;
 
@@ -71,8 +71,8 @@ public class SemanticChunkingStrategyTests
         // Arrange
         var content = new ExtractedContent
         {
-            Text = null,
-            MainContent = null,
+            Text = null!,
+            MainContent = null!,
             Url = "https://example.com"
         };
 
@@ -316,8 +316,8 @@ public class SemanticChunkingStrategyTests
         var content = new ExtractedContent
         {
             MainContent = "Test content",
-            Url = null,
-            OriginalUrl = null
+            Url = null!,
+            OriginalUrl = null!
         };
 
         // Act
@@ -416,10 +416,10 @@ public class SemanticChunkingStrategyTests
     public void Constructor_WithEmbeddingService_ShouldStoreService()
     {
         // Arrange
-        var mockEmbeddingService = new Mock<ITextEmbeddingService>();
+        var mockEmbeddingService = Substitute.For<ITextEmbeddingService>();
 
         // Act
-        var strategy = new SemanticChunkingStrategy(null, mockEmbeddingService.Object);
+        var strategy = new SemanticChunkingStrategy(null, mockEmbeddingService);
 
         // Assert
         strategy.Should().NotBeNull();
@@ -430,10 +430,10 @@ public class SemanticChunkingStrategyTests
     public void Constructor_WithEventPublisher_ShouldStorePublisher()
     {
         // Arrange
-        var mockEventPublisher = new Mock<IEventPublisher>();
+        var mockEventPublisher = Substitute.For<IEventPublisher>();
 
         // Act
-        var strategy = new SemanticChunkingStrategy(mockEventPublisher.Object);
+        var strategy = new SemanticChunkingStrategy(mockEventPublisher);
 
         // Assert
         strategy.Should().NotBeNull();
@@ -444,11 +444,11 @@ public class SemanticChunkingStrategyTests
     public void Constructor_WithBothServices_ShouldStoreBoth()
     {
         // Arrange
-        var mockEventPublisher = new Mock<IEventPublisher>();
-        var mockEmbeddingService = new Mock<ITextEmbeddingService>();
+        var mockEventPublisher = Substitute.For<IEventPublisher>();
+        var mockEmbeddingService = Substitute.For<ITextEmbeddingService>();
 
         // Act
-        var strategy = new SemanticChunkingStrategy(mockEventPublisher.Object, mockEmbeddingService.Object);
+        var strategy = new SemanticChunkingStrategy(mockEventPublisher, mockEmbeddingService);
 
         // Assert
         strategy.Should().NotBeNull();
@@ -462,8 +462,8 @@ public class SemanticChunkingStrategyTests
     public async Task ChunkAsync_WithEmbeddingService_ShouldUseSentenceBasedChunking()
     {
         // Arrange
-        var mockEmbeddingService = new Mock<ITextEmbeddingService>();
-        var strategy = new SemanticChunkingStrategy(null, mockEmbeddingService.Object);
+        var mockEmbeddingService = Substitute.For<ITextEmbeddingService>();
+        var strategy = new SemanticChunkingStrategy(null, mockEmbeddingService);
 
         var text = "Sentence one. Sentence two! Sentence three?";
         var content = new ExtractedContent
@@ -484,8 +484,8 @@ public class SemanticChunkingStrategyTests
     public async Task ChunkAsync_WithEmbeddingService_ShouldSplitBySentencePunctuation()
     {
         // Arrange
-        var mockEmbeddingService = new Mock<ITextEmbeddingService>();
-        var strategy = new SemanticChunkingStrategy(null, mockEmbeddingService.Object);
+        var mockEmbeddingService = Substitute.For<ITextEmbeddingService>();
+        var strategy = new SemanticChunkingStrategy(null, mockEmbeddingService);
 
         // Create long sentences that will exceed chunk size
         var sentence1 = string.Join(" ", Enumerable.Repeat("word", 300)) + ".";
@@ -510,8 +510,8 @@ public class SemanticChunkingStrategyTests
     public async Task ChunkAsync_WithEmbeddingService_ShouldHandlePeriod()
     {
         // Arrange
-        var mockEmbeddingService = new Mock<ITextEmbeddingService>();
-        var strategy = new SemanticChunkingStrategy(null, mockEmbeddingService.Object);
+        var mockEmbeddingService = Substitute.For<ITextEmbeddingService>();
+        var strategy = new SemanticChunkingStrategy(null, mockEmbeddingService);
 
         var text = "First sentence. Second sentence. Third sentence.";
         var content = new ExtractedContent
@@ -532,8 +532,8 @@ public class SemanticChunkingStrategyTests
     public async Task ChunkAsync_WithEmbeddingService_ShouldHandleExclamation()
     {
         // Arrange
-        var mockEmbeddingService = new Mock<ITextEmbeddingService>();
-        var strategy = new SemanticChunkingStrategy(null, mockEmbeddingService.Object);
+        var mockEmbeddingService = Substitute.For<ITextEmbeddingService>();
+        var strategy = new SemanticChunkingStrategy(null, mockEmbeddingService);
 
         var text = "Exciting sentence! Another exciting one! Last one!";
         var content = new ExtractedContent
@@ -556,8 +556,8 @@ public class SemanticChunkingStrategyTests
     public async Task ChunkAsync_WithEmbeddingService_ShouldHandleQuestion()
     {
         // Arrange
-        var mockEmbeddingService = new Mock<ITextEmbeddingService>();
-        var strategy = new SemanticChunkingStrategy(null, mockEmbeddingService.Object);
+        var mockEmbeddingService = Substitute.For<ITextEmbeddingService>();
+        var strategy = new SemanticChunkingStrategy(null, mockEmbeddingService);
 
         var text = "Is this working? Does it handle questions? What about this?";
         var content = new ExtractedContent
@@ -580,8 +580,8 @@ public class SemanticChunkingStrategyTests
     public async Task ChunkAsync_WithEmbeddingService_ShouldFilterEmptySentences()
     {
         // Arrange
-        var mockEmbeddingService = new Mock<ITextEmbeddingService>();
-        var strategy = new SemanticChunkingStrategy(null, mockEmbeddingService.Object);
+        var mockEmbeddingService = Substitute.For<ITextEmbeddingService>();
+        var strategy = new SemanticChunkingStrategy(null, mockEmbeddingService);
 
         var text = "Valid sentence. . . Another valid one.";
         var content = new ExtractedContent
@@ -602,8 +602,8 @@ public class SemanticChunkingStrategyTests
     public async Task ChunkAsync_WithEmbeddingService_ShouldRespectMaxChunkSize()
     {
         // Arrange
-        var mockEmbeddingService = new Mock<ITextEmbeddingService>();
-        var strategy = new SemanticChunkingStrategy(null, mockEmbeddingService.Object);
+        var mockEmbeddingService = Substitute.For<ITextEmbeddingService>();
+        var strategy = new SemanticChunkingStrategy(null, mockEmbeddingService);
 
         var sentences = Enumerable.Range(1, 20)
             .Select(i => string.Join(" ", Enumerable.Repeat($"word{i}", 100)) + ".");
@@ -629,8 +629,8 @@ public class SemanticChunkingStrategyTests
     public async Task ChunkAsync_WithEmbeddingService_ShouldJoinSentencesWithPeriod()
     {
         // Arrange
-        var mockEmbeddingService = new Mock<ITextEmbeddingService>();
-        var strategy = new SemanticChunkingStrategy(null, mockEmbeddingService.Object);
+        var mockEmbeddingService = Substitute.For<ITextEmbeddingService>();
+        var strategy = new SemanticChunkingStrategy(null, mockEmbeddingService);
 
         var text = "First. Second. Third.";
         var content = new ExtractedContent
@@ -651,8 +651,8 @@ public class SemanticChunkingStrategyTests
     public async Task ChunkAsync_WithEmbeddingService_ShouldGenerateSequenceNumbers()
     {
         // Arrange
-        var mockEmbeddingService = new Mock<ITextEmbeddingService>();
-        var strategy = new SemanticChunkingStrategy(null, mockEmbeddingService.Object);
+        var mockEmbeddingService = Substitute.For<ITextEmbeddingService>();
+        var strategy = new SemanticChunkingStrategy(null, mockEmbeddingService);
 
         var sentences = Enumerable.Range(1, 10)
             .Select(i => string.Join(" ", Enumerable.Repeat($"sentence{i}", 200)) + ".");
@@ -678,8 +678,8 @@ public class SemanticChunkingStrategyTests
     public async Task ChunkAsync_WithEmbeddingService_ShouldSetCorrectMetadata()
     {
         // Arrange
-        var mockEmbeddingService = new Mock<ITextEmbeddingService>();
-        var strategy = new SemanticChunkingStrategy(null, mockEmbeddingService.Object);
+        var mockEmbeddingService = Substitute.For<ITextEmbeddingService>();
+        var strategy = new SemanticChunkingStrategy(null, mockEmbeddingService);
 
         var text = "Test sentence one. Test sentence two.";
         var content = new ExtractedContent
@@ -704,8 +704,8 @@ public class SemanticChunkingStrategyTests
     public async Task ChunkAsync_WithEmbeddingService_AndMixedPunctuation_ShouldHandleAll()
     {
         // Arrange
-        var mockEmbeddingService = new Mock<ITextEmbeddingService>();
-        var strategy = new SemanticChunkingStrategy(null, mockEmbeddingService.Object);
+        var mockEmbeddingService = Substitute.For<ITextEmbeddingService>();
+        var strategy = new SemanticChunkingStrategy(null, mockEmbeddingService);
 
         var text = "Statement one. Question two? Exclamation three! Another statement.";
         var content = new ExtractedContent
@@ -737,7 +737,7 @@ public class SemanticChunkingStrategyTests
         var content = new ExtractedContent
         {
             MainContent = "Test content",
-            Url = null,
+            Url = null!,
             OriginalUrl = "https://original.com"
         };
 

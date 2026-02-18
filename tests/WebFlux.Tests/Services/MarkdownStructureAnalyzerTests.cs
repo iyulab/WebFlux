@@ -12,7 +12,12 @@ namespace WebFlux.Tests.Services;
 /// </summary>
 public class MarkdownStructureAnalyzerTests
 {
-    private readonly IMarkdownStructureAnalyzer _analyzer;
+    private static readonly string[] ExpectedTags = ["RAG", "AI", ".NET", "SDK"];
+    private static readonly string[] ExpectedH2Headers = ["Table of Contents", "Installation", "Quick Start", "Advanced Features", "API Reference"];
+    private static readonly string[] ExpectedTableHeaders = ["Strategy", "Speed", "Quality", "Memory"];
+    private static readonly string[] ExpectedFrontMatterTags = ["test", "markdown", "yaml"];
+
+    private readonly MarkdownStructureAnalyzer _analyzer;
 
     public MarkdownStructureAnalyzerTests()
     {
@@ -144,7 +149,7 @@ For detailed API documentation, visit:
         result.Metadata.Title.Should().Be("WebFlux SDK Guide");
         result.Metadata.Description.Should().Be("RAG preprocessing SDK for .NET");
         result.Metadata.Author.Should().Be("Iyulab");
-        result.Metadata.Tags.Should().Contain(new[] { "RAG", "AI", ".NET", "SDK" });
+        result.Metadata.Tags.Should().Contain(ExpectedTags);
 
         // 헤딩 구조 검증 (정확한 계층 구조)
         result.Headings.Should().HaveCount(7);
@@ -155,9 +160,7 @@ For detailed API documentation, visit:
 
         var h2Headers = result.Headings.Where(h => h.Level == 2).ToList();
         h2Headers.Should().HaveCount(4);
-        h2Headers.Select(h => h.Text).Should().Contain(new[] {
-            "Table of Contents", "Installation", "Quick Start", "Advanced Features", "API Reference"
-        });
+        h2Headers.Select(h => h.Text).Should().Contain(ExpectedH2Headers);
 
         // 코드 블록 검증
         result.CodeBlocks.Should().HaveCountGreaterThanOrEqualTo(4);
@@ -183,7 +186,7 @@ For detailed API documentation, visit:
         // 테이블 검증
         result.Tables.Should().HaveCount(1);
         var table = result.Tables[0];
-        table.Headers.Should().Contain(new[] { "Strategy", "Speed", "Quality", "Memory" });
+        table.Headers.Should().Contain(ExpectedTableHeaders);
         table.Rows.Should().HaveCount(4);
 
         // 목차 검증
@@ -292,7 +295,7 @@ This is the main content of the document.
         result.Metadata.Title.Should().Be("Test Post");
         result.Metadata.Author.Should().Be("John Doe");
         result.Metadata.CreatedAt.Should().Be(new DateTimeOffset(2025, 9, 18, 0, 0, 0, TimeSpan.Zero));
-        result.Metadata.Tags.Should().Contain(new[] { "test", "markdown", "yaml" });
+        result.Metadata.Tags.Should().Contain(ExpectedFrontMatterTags);
         // Published 속성은 모델에 없으므로 생략
         result.Metadata.Categories.Should().Contain("documentation");
 
@@ -385,15 +388,15 @@ This is the main content of the document.
 
         for (int i = 1; i <= sectionCount; i++)
         {
-            builder.AppendLine($"## Section {i}");
+            builder.AppendLine(System.Globalization.CultureInfo.InvariantCulture, $"## Section {i}");
             builder.AppendLine();
-            builder.AppendLine($"This is the content of section {i}. It contains some **bold** text and a [link](https://example.com/section{i}).");
+            builder.AppendLine(System.Globalization.CultureInfo.InvariantCulture, $"This is the content of section {i}. It contains some **bold** text and a [link](https://example.com/section{i}).");
             builder.AppendLine();
 
             if (i % 10 == 0)
             {
                 builder.AppendLine("```csharp");
-                builder.AppendLine($"var section{i} = new Section() {{ Id = {i} }};");
+                builder.AppendLine(System.Globalization.CultureInfo.InvariantCulture, $"var section{i} = new Section() {{ Id = {i} }};");
                 builder.AppendLine("```");
                 builder.AppendLine();
             }

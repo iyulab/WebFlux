@@ -129,9 +129,9 @@ public class CacheModelsTests
     public void CacheOperationType_ShouldBeDefined()
     {
         // Assert
-        Enum.IsDefined(typeof(CacheOperationType), CacheOperationType.Set).Should().BeTrue();
-        Enum.IsDefined(typeof(CacheOperationType), CacheOperationType.Remove).Should().BeTrue();
-        Enum.IsDefined(typeof(CacheOperationType), CacheOperationType.Expire).Should().BeTrue();
+        Enum.IsDefined<CacheOperationType>(CacheOperationType.Set).Should().BeTrue();
+        Enum.IsDefined<CacheOperationType>(CacheOperationType.Remove).Should().BeTrue();
+        Enum.IsDefined<CacheOperationType>(CacheOperationType.Expire).Should().BeTrue();
     }
 
     [Theory]
@@ -141,7 +141,7 @@ public class CacheModelsTests
     public void CacheOperationType_AllValuesShouldBeValid(CacheOperationType type)
     {
         // Assert
-        Enum.IsDefined(typeof(CacheOperationType), type).Should().BeTrue();
+        Enum.IsDefined<CacheOperationType>(type).Should().BeTrue();
     }
 
     #endregion

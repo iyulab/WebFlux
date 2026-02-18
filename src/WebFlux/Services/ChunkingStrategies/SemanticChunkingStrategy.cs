@@ -10,6 +10,8 @@ namespace WebFlux.Services.ChunkingStrategies;
 /// </summary>
 public class SemanticChunkingStrategy : BaseChunkingStrategy
 {
+    private static readonly string[] ParagraphSplitSeparators = ["\n\n", "\r\n\r\n"];
+    private static readonly char[] SentenceSplitChars = ['.', '!', '?'];
     private readonly ITextEmbeddingService? _embeddingService;
 
     public override string Name => "Semantic";
@@ -51,7 +53,7 @@ public class SemanticChunkingStrategy : BaseChunkingStrategy
     {
         await Task.CompletedTask;
 
-        var paragraphs = text.Split(new[] { "\n\n", "\r\n\r\n" }, StringSplitOptions.RemoveEmptyEntries);
+        var paragraphs = text.Split(ParagraphSplitSeparators, StringSplitOptions.RemoveEmptyEntries);
         var chunks = new List<WebContentChunk>();
         var currentChunk = new List<string>();
         var currentLength = 0;
@@ -84,7 +86,7 @@ public class SemanticChunkingStrategy : BaseChunkingStrategy
     private Task<IReadOnlyList<WebContentChunk>> SimpleSemanticChunking(string text, int maxChunkSize, string sourceUrl, CancellationToken cancellationToken)
     {
         // 문장 단위로 분할
-        var sentences = text.Split(new[] { '.', '!', '?' }, StringSplitOptions.RemoveEmptyEntries)
+        var sentences = text.Split(SentenceSplitChars, StringSplitOptions.RemoveEmptyEntries)
                            .Select(s => s.Trim())
                            .Where(s => !string.IsNullOrEmpty(s))
                            .ToList();

@@ -10,7 +10,7 @@ namespace WebFlux.Services.ContentExtractors;
 /// Crawl4AI의 PruningContentFilter 개념을 .NET으로 구현
 /// DOM 노드별 점수를 계산하여 낮은 점수의 노드를 제거
 /// </summary>
-public class TextDensityFilter
+public partial class TextDensityFilter
 {
     private readonly ILogger<TextDensityFilter>? _logger;
 
@@ -104,7 +104,7 @@ public class TextDensityFilter
             }
         }
 
-        // 점수가 낮은 노드 제거 (자식→부모 순서로 제거하여 중복 방지)
+        // 점수가 낮은 노드 제거 (자식->부모 순서로 제거하여 중복 방지)
         foreach (var element in removals.OrderByDescending(e => GetDepth(e)))
         {
             // 이미 제거된 노드의 자식이면 건너뜀
@@ -116,7 +116,7 @@ public class TextDensityFilter
 
         var result = body.InnerHtml;
 
-        _logger?.LogDebug("Text density filtering completed: {RemovedCount} nodes removed", removals.Count);
+        if (_logger != null) LogDensityFilterCompleted(_logger, removals.Count);
 
         return result;
     }
@@ -232,7 +232,7 @@ public class TextDensityFilter
 
     /// <summary>
     /// class/id 속성 기반 가중치 조정
-    /// 단어 경계 매칭으로 false positive 방지 (예: "content-warning" → "content" 오매칭 방지)
+    /// 단어 경계 매칭으로 false positive 방지 (예: "content-warning" -> "content" 오매칭 방지)
     /// </summary>
     private static double CalculateClassIdBonus(IElement element)
     {
@@ -264,7 +264,7 @@ public class TextDensityFilter
 
     /// <summary>
     /// 단어 경계 매칭: CSS 클래스명에서 하이픈/언더스코어를 구분자로 사용
-    /// "article-content" → "article" 매칭, "ad-hoc" → "ad" 비매칭
+    /// "article-content" -> "article" 매칭, "ad-hoc" -> "ad" 비매칭
     /// </summary>
     private static bool MatchesWordBoundary(string text, string keyword)
     {
@@ -301,4 +301,11 @@ public class TextDensityFilter
         }
         return depth;
     }
+
+    // ===================================================================
+    // LoggerMessage Definitions
+    // ===================================================================
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Text density filtering completed: {RemovedCount} nodes removed")]
+    private static partial void LogDensityFilterCompleted(ILogger logger, int RemovedCount);
 }

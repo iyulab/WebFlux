@@ -174,7 +174,7 @@ public class NoneReconstructStrategyTests
         Assert.Equal(1.0, result.Metrics.CompressionRatio);
     }
 
-    private AnalyzedContent CreateSampleAnalyzedContent()
+    private static AnalyzedContent CreateSampleAnalyzedContent()
     {
         return new AnalyzedContent
         {

@@ -49,97 +49,6 @@ public class ProcessingResult<T>
         new Dictionary<string, object>();
 
     /// <summary>
-    /// 성공 결과를 생성합니다.
-    /// </summary>
-    /// <param name="data">결과 데이터</param>
-    /// <param name="warnings">경고 메시지 목록</param>
-    /// <param name="processingTimeMs">처리 시간</param>
-    /// <param name="metadata">추가 메타데이터</param>
-    /// <returns>성공 결과</returns>
-    public static ProcessingResult<T> Success(
-        T data,
-        IReadOnlyList<string>? warnings = null,
-        long processingTimeMs = 0,
-        IReadOnlyDictionary<string, object>? metadata = null)
-    {
-        var now = DateTimeOffset.UtcNow;
-        return new ProcessingResult<T>
-        {
-            IsSuccess = true,
-            Data = data,
-            Warnings = warnings ?? Array.Empty<string>(),
-            ProcessingTimeMs = processingTimeMs,
-            StartTime = now.AddMilliseconds(-processingTimeMs),
-            EndTime = now,
-            Metadata = metadata ?? new Dictionary<string, object>()
-        };
-    }
-
-    /// <summary>
-    /// 실패 결과를 생성합니다.
-    /// </summary>
-    /// <param name="error">오류 정보</param>
-    /// <param name="processingTimeMs">처리 시간</param>
-    /// <param name="metadata">추가 메타데이터</param>
-    /// <returns>실패 결과</returns>
-    public static ProcessingResult<T> Failure(
-        ProcessingError error,
-        long processingTimeMs = 0,
-        IReadOnlyDictionary<string, object>? metadata = null)
-    {
-        var now = DateTimeOffset.UtcNow;
-        return new ProcessingResult<T>
-        {
-            IsSuccess = false,
-            Error = error,
-            ProcessingTimeMs = processingTimeMs,
-            StartTime = now.AddMilliseconds(-processingTimeMs),
-            EndTime = now,
-            Metadata = metadata ?? new Dictionary<string, object>()
-        };
-    }
-
-    /// <summary>
-    /// 예외로부터 실패 결과를 생성합니다.
-    /// </summary>
-    /// <param name="exception">예외</param>
-    /// <param name="processingTimeMs">처리 시간</param>
-    /// <param name="metadata">추가 메타데이터</param>
-    /// <returns>실패 결과</returns>
-    public static ProcessingResult<T> FromException(
-        Exception exception,
-        long processingTimeMs = 0,
-        IReadOnlyDictionary<string, object>? metadata = null)
-    {
-        var error = ProcessingError.FromException(exception);
-        return Failure(error, processingTimeMs, metadata);
-    }
-
-    /// <summary>
-    /// 오류 메시지로부터 실패 결과를 생성합니다.
-    /// </summary>
-    /// <param name="errorMessage">오류 메시지</param>
-    /// <param name="errorCode">오류 코드</param>
-    /// <param name="processingTimeMs">처리 시간</param>
-    /// <param name="metadata">추가 메타데이터</param>
-    /// <returns>실패 결과</returns>
-    public static ProcessingResult<T> FromError(
-        string errorMessage,
-        string? errorCode = null,
-        long processingTimeMs = 0,
-        IReadOnlyDictionary<string, object>? metadata = null)
-    {
-        var error = new ProcessingError
-        {
-            Message = errorMessage,
-            Code = errorCode ?? "UNKNOWN_ERROR",
-            Severity = ErrorSeverity.Error,
-            Timestamp = DateTimeOffset.UtcNow
-        };
-        return Failure(error, processingTimeMs, metadata);
-    }
-
-    /// <summary>
     /// 다른 타입의 ProcessingResult로 변환합니다.
     /// </summary>
     /// <typeparam name="TNew">새로운 결과 타입</typeparam>
@@ -177,7 +86,7 @@ public class ProcessingResult<T>
         }
         catch (Exception ex)
         {
-            return ProcessingResult<TNew>.FromException(ex, ProcessingTimeMs, Metadata);
+            return ProcessingResult.FromException<TNew>(ex, ProcessingTimeMs, Metadata);
         }
     }
 
@@ -213,6 +122,7 @@ public class ProcessingResult<T>
 
 /// <summary>
 /// 비제네릭 ProcessingResult 유틸리티 클래스
+/// CA1000 준수: 제네릭 타입의 정적 멤버를 이 비제네릭 클래스에 배치
 /// </summary>
 public static class ProcessingResult
 {
@@ -222,7 +132,7 @@ public static class ProcessingResult
     /// <returns>성공 결과</returns>
     public static ProcessingResult<object> Success()
     {
-        return ProcessingResult<object>.Success(new object());
+        return Success<object>(new object());
     }
 
     /// <summary>
@@ -234,7 +144,35 @@ public static class ProcessingResult
     /// <returns>성공 결과</returns>
     public static ProcessingResult<T> Success<T>(T data, params string[] warnings)
     {
-        return ProcessingResult<T>.Success(data, warnings, 0);
+        return Success(data, (IReadOnlyList<string>)warnings, 0);
+    }
+
+    /// <summary>
+    /// 성공 결과를 생성합니다.
+    /// </summary>
+    /// <typeparam name="T">결과 타입</typeparam>
+    /// <param name="data">결과 데이터</param>
+    /// <param name="warnings">경고 메시지 목록</param>
+    /// <param name="processingTimeMs">처리 시간</param>
+    /// <param name="metadata">추가 메타데이터</param>
+    /// <returns>성공 결과</returns>
+    public static ProcessingResult<T> Success<T>(
+        T data,
+        IReadOnlyList<string>? warnings = null,
+        long processingTimeMs = 0,
+        IReadOnlyDictionary<string, object>? metadata = null)
+    {
+        var now = DateTimeOffset.UtcNow;
+        return new ProcessingResult<T>
+        {
+            IsSuccess = true,
+            Data = data,
+            Warnings = warnings ?? Array.Empty<string>(),
+            ProcessingTimeMs = processingTimeMs,
+            StartTime = now.AddMilliseconds(-processingTimeMs),
+            EndTime = now,
+            Metadata = metadata ?? new Dictionary<string, object>()
+        };
     }
 
     /// <summary>
@@ -246,7 +184,32 @@ public static class ProcessingResult
     /// <returns>실패 결과</returns>
     public static ProcessingResult<T> Failure<T>(string errorMessage, string? errorCode = null)
     {
-        return ProcessingResult<T>.FromError(errorMessage, errorCode);
+        return FromError<T>(errorMessage, errorCode);
+    }
+
+    /// <summary>
+    /// 실패 결과를 생성합니다.
+    /// </summary>
+    /// <typeparam name="T">결과 타입</typeparam>
+    /// <param name="error">오류 정보</param>
+    /// <param name="processingTimeMs">처리 시간</param>
+    /// <param name="metadata">추가 메타데이터</param>
+    /// <returns>실패 결과</returns>
+    public static ProcessingResult<T> Failure<T>(
+        ProcessingError error,
+        long processingTimeMs = 0,
+        IReadOnlyDictionary<string, object>? metadata = null)
+    {
+        var now = DateTimeOffset.UtcNow;
+        return new ProcessingResult<T>
+        {
+            IsSuccess = false,
+            Error = error,
+            ProcessingTimeMs = processingTimeMs,
+            StartTime = now.AddMilliseconds(-processingTimeMs),
+            EndTime = now,
+            Metadata = metadata ?? new Dictionary<string, object>()
+        };
     }
 
     /// <summary>
@@ -254,9 +217,40 @@ public static class ProcessingResult
     /// </summary>
     /// <typeparam name="T">결과 타입</typeparam>
     /// <param name="exception">예외</param>
+    /// <param name="processingTimeMs">처리 시간</param>
+    /// <param name="metadata">추가 메타데이터</param>
     /// <returns>실패 결과</returns>
-    public static ProcessingResult<T> FromException<T>(Exception exception)
+    public static ProcessingResult<T> FromException<T>(
+        Exception exception,
+        long processingTimeMs = 0,
+        IReadOnlyDictionary<string, object>? metadata = null)
     {
-        return ProcessingResult<T>.FromException(exception);
+        var error = ProcessingError.FromException(exception);
+        return Failure<T>(error, processingTimeMs, metadata);
+    }
+
+    /// <summary>
+    /// 오류 메시지로부터 실패 결과를 생성합니다.
+    /// </summary>
+    /// <typeparam name="T">결과 타입</typeparam>
+    /// <param name="errorMessage">오류 메시지</param>
+    /// <param name="errorCode">오류 코드</param>
+    /// <param name="processingTimeMs">처리 시간</param>
+    /// <param name="metadata">추가 메타데이터</param>
+    /// <returns>실패 결과</returns>
+    public static ProcessingResult<T> FromError<T>(
+        string errorMessage,
+        string? errorCode = null,
+        long processingTimeMs = 0,
+        IReadOnlyDictionary<string, object>? metadata = null)
+    {
+        var error = new ProcessingError
+        {
+            Message = errorMessage,
+            Code = errorCode ?? "UNKNOWN_ERROR",
+            Severity = ErrorSeverity.Error,
+            Timestamp = DateTimeOffset.UtcNow
+        };
+        return Failure<T>(error, processingTimeMs, metadata);
     }
 }

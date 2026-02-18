@@ -9,12 +9,13 @@ using WebFlux.Core.Options;
 namespace WebFlux.Services.ContentExtractors;
 
 /// <summary>
-/// HTML→Markdown 변환 추출기
+/// HTML->Markdown 변환 추출기
 /// ReverseMarkdown 기반으로 HTML 구조를 보존하는 Markdown 변환 수행
-/// 파이프라인: HtmlContentCleaner → ReverseMarkdown → TextDensityFilter
+/// 파이프라인: HtmlContentCleaner -> ReverseMarkdown -> TextDensityFilter
 /// </summary>
-public class HtmlToMarkdownExtractor : IContentExtractor
+public partial class HtmlToMarkdownExtractor : IContentExtractor
 {
+    private static readonly char[] WordSplitChars = [' ', '\t', '\n', '\r'];
     private readonly ILogger<HtmlToMarkdownExtractor>? _logger;
     private readonly HtmlContentCleaner _cleaner;
     private readonly TextDensityFilter _densityFilter;
@@ -68,7 +69,7 @@ public class HtmlToMarkdownExtractor : IContentExtractor
         }
         catch (Exception ex)
         {
-            _logger?.LogWarning(ex, "HtmlToMarkdown conversion failed, falling back to BasicContentExtractor for {Url}", sourceUrl);
+            if (_logger != null) LogConversionFallback(_logger, ex, sourceUrl);
             return await _fallbackExtractor.ExtractFromHtmlAsync(htmlContent, sourceUrl, enableMetadataExtraction, cancellationToken)
                 .ConfigureAwait(false);
         }
@@ -86,18 +87,18 @@ public class HtmlToMarkdownExtractor : IContentExtractor
         // 제목 먼저 추출 (원본 HTML에서)
         var title = ExtractTitle(htmlContent);
 
-        // [1] HtmlContentCleaner — nav/header/footer/광고 제거, URL 절대경로 변환
+        // [1] HtmlContentCleaner -- nav/header/footer/광고 제거, URL 절대경로 변환
         var cleanedHtml = await _cleaner.CleanAsync(
             htmlContent, sourceUrl, HtmlCleaningOptions.Default, cancellationToken)
             .ConfigureAwait(false);
 
-        // [2] ReverseMarkdown.Convert() — HTML→Markdown (GFM)
+        // [2] ReverseMarkdown.Convert() -- HTML->Markdown (GFM)
         var rawMarkdown = ConvertToMarkdown(cleanedHtml);
 
-        // → RawMarkdown에 저장
+        // -> RawMarkdown에 저장
         string? fitMarkdown = null;
 
-        // [3] TextDensityFilter — 보일러플레이트 제거 (선택적)
+        // [3] TextDensityFilter -- 보일러플레이트 제거 (선택적)
         try
         {
             var filteredHtml = await _densityFilter.FilterAsync(cleanedHtml, cancellationToken)
@@ -110,7 +111,7 @@ public class HtmlToMarkdownExtractor : IContentExtractor
         }
         catch (Exception ex)
         {
-            _logger?.LogDebug(ex, "TextDensityFilter failed, using RawMarkdown as FitMarkdown");
+            if (_logger != null) LogDensityFilterFailed(_logger, ex);
         }
 
         // [4] 메타데이터 추출
@@ -154,9 +155,7 @@ public class HtmlToMarkdownExtractor : IContentExtractor
             extracted.Metadata.FieldSources["description"] = MetadataSource.Html;
         }
 
-        _logger?.LogInformation(
-            "HTML-to-Markdown extraction completed for {Url}: RawMarkdown={RawLength}, FitMarkdown={FitLength}",
-            sourceUrl, rawMarkdown.Length, fitMarkdown?.Length ?? 0);
+        if (_logger != null) LogExtractionCompleted(_logger, sourceUrl, rawMarkdown.Length, fitMarkdown?.Length ?? 0);
 
         return extracted;
     }
@@ -274,7 +273,7 @@ public class HtmlToMarkdownExtractor : IContentExtractor
         if (string.IsNullOrWhiteSpace(text))
             return 0;
 
-        return text.Split(new[] { ' ', '\t', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries).Length;
+        return text.Split(WordSplitChars, StringSplitOptions.RemoveEmptyEntries).Length;
     }
 
     #region IContentExtractor 나머지 메서드 (BasicContentExtractor에 위임)
@@ -332,4 +331,17 @@ public class HtmlToMarkdownExtractor : IContentExtractor
     }
 
     #endregion
+
+    // ===================================================================
+    // LoggerMessage Definitions
+    // ===================================================================
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "HtmlToMarkdown conversion failed, falling back to BasicContentExtractor for {Url}")]
+    private static partial void LogConversionFallback(ILogger logger, Exception ex, string Url);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "TextDensityFilter failed, using RawMarkdown as FitMarkdown")]
+    private static partial void LogDensityFilterFailed(ILogger logger, Exception ex);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "HTML-to-Markdown extraction completed for {Url}: RawMarkdown={RawLength}, FitMarkdown={FitLength}")]
+    private static partial void LogExtractionCompleted(ILogger logger, string Url, int RawLength, int FitLength);
 }

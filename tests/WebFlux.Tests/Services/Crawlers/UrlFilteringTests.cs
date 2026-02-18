@@ -1,5 +1,5 @@
 using FluentAssertions;
-using Moq;
+using NSubstitute;
 using WebFlux.Core.Interfaces;
 using WebFlux.Core.Options;
 using WebFlux.Services.Crawlers;
@@ -34,9 +34,9 @@ public class UrlFilteringTests
 
     public UrlFilteringTests()
     {
-        var mockHttp = new Mock<IHttpClientService>();
-        var mockPublisher = new Mock<IEventPublisher>();
-        _crawler = new TestCrawlerForFiltering(mockHttp.Object, mockPublisher.Object);
+        var mockHttp = Substitute.For<IHttpClientService>();
+        var mockPublisher = Substitute.For<IEventPublisher>();
+        _crawler = new TestCrawlerForFiltering(mockHttp, mockPublisher);
     }
 
     [Fact]

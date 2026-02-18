@@ -11,7 +11,7 @@ namespace WebFlux.Services.AiEnhancement;
 /// 기본 AI 증강 서비스 구현
 /// ITextCompletionService를 활용하여 콘텐츠 요약, 재작성, 메타데이터 추출 수행
 /// </summary>
-public class BasicAiEnhancementService : IAiEnhancementService
+public partial class BasicAiEnhancementService : IAiEnhancementService
 {
     private readonly ITextCompletionService _llm;
     private readonly ILogger<BasicAiEnhancementService> _logger;
@@ -34,8 +34,7 @@ public class BasicAiEnhancementService : IAiEnhancementService
     {
         options ??= new SummaryOptions();
 
-        _logger.LogInformation("    ⏳ AI: Generating summary ({Length} chars, style: {Style})...",
-            content.Length, options.Style);
+        LogGeneratingSummary(_logger, content.Length, options.Style);
 
         var prompt = BuildSummaryPrompt(content, options);
 
@@ -48,7 +47,7 @@ public class BasicAiEnhancementService : IAiEnhancementService
 
         var summary = await _llm.CompleteAsync(prompt, completionOptions, cancellationToken);
 
-        _logger.LogInformation("    ✅ AI: Summary generated ({Length} chars)", summary.Length);
+        LogSummaryGenerated(_logger, summary.Length);
 
         return summary.Trim();
     }
@@ -63,8 +62,7 @@ public class BasicAiEnhancementService : IAiEnhancementService
     {
         options ??= new RewriteOptions();
 
-        _logger.LogDebug("Rewriting content ({Length} chars) for audience: {Audience}",
-            content.Length, options.TargetAudience);
+        LogRewritingContent(_logger, content.Length, options.TargetAudience);
 
         var prompt = BuildRewritePrompt(content, options);
 
@@ -77,7 +75,7 @@ public class BasicAiEnhancementService : IAiEnhancementService
 
         var rewritten = await _llm.CompleteAsync(prompt, completionOptions, cancellationToken);
 
-        _logger.LogDebug("Content rewritten: {Length} chars", rewritten.Length);
+        LogContentRewritten(_logger, rewritten.Length);
 
         return rewritten.Trim();
     }
@@ -92,7 +90,7 @@ public class BasicAiEnhancementService : IAiEnhancementService
     {
         options ??= new MetadataExtractionOptions();
 
-        _logger.LogInformation("    ⏳ AI: Extracting metadata ({Length} chars)...", content.Length);
+        LogExtractingMetadata(_logger, content.Length);
 
         var prompt = BuildMetadataPrompt(content, options);
 
@@ -107,8 +105,7 @@ public class BasicAiEnhancementService : IAiEnhancementService
 
         var metadata = ParseMetadataResponse(response, options);
 
-        _logger.LogInformation("    ✅ AI: Metadata extracted ({KeywordCount} keywords, {TopicCount} topics)",
-            metadata.Keywords.Count, metadata.Topics.Count);
+        LogMetadataExtracted(_logger, metadata.Keywords.Count, metadata.Topics.Count);
 
         return metadata;
     }
@@ -125,8 +122,7 @@ public class BasicAiEnhancementService : IAiEnhancementService
 
         var startTime = DateTimeOffset.UtcNow;
 
-        _logger.LogInformation("Enhancing content ({Length} chars) - Summary: {EnableSummary}, Rewrite: {EnableRewrite}, Metadata: {EnableMetadata}",
-            content.Length, options.EnableSummary, options.EnableRewrite, options.EnableMetadata);
+        LogEnhancingContent(_logger, content.Length, options.EnableSummary, options.EnableRewrite, options.EnableMetadata);
 
         string? summary = null;
         string? rewritten = null;
@@ -163,7 +159,7 @@ public class BasicAiEnhancementService : IAiEnhancementService
 
         var processingTime = (long)(DateTimeOffset.UtcNow - startTime).TotalMilliseconds;
 
-        _logger.LogInformation("Content enhancement completed in {Duration}ms", processingTime);
+        LogEnhancementCompleted(_logger, processingTime);
 
         return new EnhancedContent
         {
@@ -208,16 +204,16 @@ public class BasicAiEnhancementService : IAiEnhancementService
         }
         catch (Exception ex)
         {
-            _logger.LogDebug(ex, "AI service availability check failed (this is expected during initialization)");
+            LogAvailabilityCheckFailed(_logger, ex);
             return false;
         }
     }
 
     #region Prompt Builders
 
-    private string BuildSummaryPrompt(string content, SummaryOptions options)
+    private static string BuildSummaryPrompt(string content, SummaryOptions options)
     {
-        var styleInstructions = options.Style.ToLower() switch
+        var styleInstructions = options.Style.ToLowerInvariant() switch
         {
             "concise" => "Create a very concise summary in 2-3 sentences.",
             "detailed" => "Create a comprehensive summary covering all key points.",
@@ -235,9 +231,9 @@ Content:
 Summary:";
     }
 
-    private string BuildRewritePrompt(string content, RewriteOptions options)
+    private static string BuildRewritePrompt(string content, RewriteOptions options)
     {
-        var audienceInstruction = options.TargetAudience.ToLower() switch
+        var audienceInstruction = options.TargetAudience.ToLowerInvariant() switch
         {
             "beginner" => "Rewrite for absolute beginners with no prior knowledge.",
             "technical" => "Rewrite for technical professionals with domain expertise.",
@@ -267,7 +263,7 @@ Original Content:
 Rewritten Content:";
     }
 
-    private string BuildMetadataPrompt(string content, MetadataExtractionOptions options)
+    private static string BuildMetadataPrompt(string content, MetadataExtractionOptions options)
     {
         var fields = new List<string>();
 
@@ -313,12 +309,12 @@ Metadata JSON:";
 
     #region Helpers
 
-    private string TruncateContent(string content, int maxLength)
+    private static string TruncateContent(string content, int maxLength)
     {
         if (content.Length <= maxLength)
             return content;
 
-        return content.Substring(0, maxLength) + "\n\n[Content truncated...]";
+        return string.Concat(content.AsSpan(0, maxLength), "\n\n[Content truncated...]");
     }
 
     private EnrichedMetadata ParseMetadataResponse(string response, MetadataExtractionOptions options)
@@ -402,7 +398,7 @@ Metadata JSON:";
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to parse metadata JSON, returning empty metadata");
+            LogMetadataParseFailed(_logger, ex);
             return new EnrichedMetadata
             {
                 Source = MetadataSource.AI,
@@ -412,21 +408,21 @@ Metadata JSON:";
         }
     }
 
-    private string? GetJsonString(JsonElement element, string propertyName)
+    private static string? GetJsonString(JsonElement element, string propertyName)
     {
         return element.TryGetProperty(propertyName, out var prop) && prop.ValueKind == JsonValueKind.String
             ? prop.GetString()
             : null;
     }
 
-    private int? GetJsonInt(JsonElement element, string propertyName)
+    private static int? GetJsonInt(JsonElement element, string propertyName)
     {
         return element.TryGetProperty(propertyName, out var prop) && prop.ValueKind == JsonValueKind.Number
             ? prop.GetInt32()
             : null;
     }
 
-    private IReadOnlyList<string> GetJsonStringArray(JsonElement element, string propertyName)
+    private static IReadOnlyList<string> GetJsonStringArray(JsonElement element, string propertyName)
     {
         if (!element.TryGetProperty(propertyName, out var prop) || prop.ValueKind != JsonValueKind.Array)
             return Array.Empty<string>();
@@ -442,4 +438,38 @@ Metadata JSON:";
     }
 
     #endregion
+
+    // ===================================================================
+    // LoggerMessage Definitions
+    // ===================================================================
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "    AI: Generating summary ({Length} chars, style: {Style})...")]
+    private static partial void LogGeneratingSummary(ILogger logger, int Length, string Style);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "    AI: Summary generated ({Length} chars)")]
+    private static partial void LogSummaryGenerated(ILogger logger, int Length);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Rewriting content ({Length} chars) for audience: {Audience}")]
+    private static partial void LogRewritingContent(ILogger logger, int Length, string Audience);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Content rewritten: {Length} chars")]
+    private static partial void LogContentRewritten(ILogger logger, int Length);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "    AI: Extracting metadata ({Length} chars)...")]
+    private static partial void LogExtractingMetadata(ILogger logger, int Length);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "    AI: Metadata extracted ({KeywordCount} keywords, {TopicCount} topics)")]
+    private static partial void LogMetadataExtracted(ILogger logger, int KeywordCount, int TopicCount);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Enhancing content ({Length} chars) - Summary: {EnableSummary}, Rewrite: {EnableRewrite}, Metadata: {EnableMetadata}")]
+    private static partial void LogEnhancingContent(ILogger logger, int Length, bool EnableSummary, bool EnableRewrite, bool EnableMetadata);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Content enhancement completed in {Duration}ms")]
+    private static partial void LogEnhancementCompleted(ILogger logger, long Duration);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "AI service availability check failed (this is expected during initialization)")]
+    private static partial void LogAvailabilityCheckFailed(ILogger logger, Exception ex);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to parse metadata JSON, returning empty metadata")]
+    private static partial void LogMetadataParseFailed(ILogger logger, Exception ex);
 }

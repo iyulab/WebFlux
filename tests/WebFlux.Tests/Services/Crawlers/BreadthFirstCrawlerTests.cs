@@ -1,5 +1,5 @@
 using System.Net;
-using Moq;
+using NSubstitute;
 using WebFlux.Core.Interfaces;
 using WebFlux.Core.Models;
 using WebFlux.Core.Options;
@@ -15,20 +15,20 @@ namespace WebFlux.Tests.Services.Crawlers;
 /// </summary>
 public class BreadthFirstCrawlerTests : IDisposable
 {
-    private readonly Mock<IHttpClientService> _mockHttpClient;
-    private readonly Mock<IEventPublisher> _mockEventPublisher;
+    private readonly IHttpClientService _mockHttpClient;
+    private readonly IEventPublisher _mockEventPublisher;
     private readonly BreadthFirstCrawler _crawler;
 
     public BreadthFirstCrawlerTests()
     {
-        _mockHttpClient = new Mock<IHttpClientService>();
-        _mockEventPublisher = new Mock<IEventPublisher>();
-        _crawler = new BreadthFirstCrawler(_mockHttpClient.Object, _mockEventPublisher.Object);
+        _mockHttpClient = Substitute.For<IHttpClientService>();
+        _mockEventPublisher = Substitute.For<IEventPublisher>();
+        _crawler = new BreadthFirstCrawler(_mockHttpClient, _mockEventPublisher);
     }
 
     public void Dispose()
     {
-        // Cleanup if needed
+        GC.SuppressFinalize(this);
     }
 
     #region Constructor Tests
@@ -38,7 +38,7 @@ public class BreadthFirstCrawlerTests : IDisposable
     {
         // Act & Assert
         var ex = Assert.Throws<ArgumentNullException>(() =>
-            new BreadthFirstCrawler(null!, _mockEventPublisher.Object));
+            new BreadthFirstCrawler(null!, _mockEventPublisher));
 
         ex.ParamName.Should().Be("httpClient");
     }
@@ -48,7 +48,7 @@ public class BreadthFirstCrawlerTests : IDisposable
     {
         // Act & Assert
         var ex = Assert.Throws<ArgumentNullException>(() =>
-            new BreadthFirstCrawler(_mockHttpClient.Object, null!));
+            new BreadthFirstCrawler(_mockHttpClient, null!));
 
         ex.ParamName.Should().Be("eventPublisher");
     }
@@ -70,8 +70,8 @@ public class BreadthFirstCrawlerTests : IDisposable
             RequestMessage = new HttpRequestMessage { RequestUri = new Uri(url) }
         };
 
-        _mockHttpClient.Setup(c => c.GetAsync(url, null, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(response);
+        _mockHttpClient.GetAsync(url, null, Arg.Any<CancellationToken>())
+            .Returns(response);
 
         // Act
         var result = await _crawler.CrawlAsync(url);
@@ -173,8 +173,8 @@ public class BreadthFirstCrawlerTests : IDisposable
             RequestMessage = new HttpRequestMessage { RequestUri = new Uri(url) }
         };
 
-        _mockHttpClient.Setup(c => c.GetAsync(url, null, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(response);
+        _mockHttpClient.GetAsync(url, null, Arg.Any<CancellationToken>())
+            .Returns(response);
     }
 
     #endregion

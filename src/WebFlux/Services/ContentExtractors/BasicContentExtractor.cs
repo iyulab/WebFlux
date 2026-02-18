@@ -10,6 +10,7 @@ namespace WebFlux.Services.ContentExtractors;
 /// </summary>
 public class BasicContentExtractor : IContentExtractor
 {
+    private static readonly char[] WordSplitChars = [' ', '\t', '\n', '\r'];
     private readonly IEventPublisher _eventPublisher;
 
     public BasicContentExtractor(IEventPublisher? eventPublisher)
@@ -28,9 +29,9 @@ public class BasicContentExtractor : IContentExtractor
             MainContent = cleanText.Trim(), // 주요 콘텐츠는 추출된 텍스트와 동일하게 설정
             Url = sourceUrl,
             Title = ExtractTitle(htmlContent),
-            WordCount = cleanText.Split(new[] { ' ', '\t', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries).Length,
+            WordCount = cleanText.Split(WordSplitChars, StringSplitOptions.RemoveEmptyEntries).Length,
             CharacterCount = cleanText.Length,
-            ReadingTimeMinutes = Math.Max(1, cleanText.Split(new[] { ' ', '\t', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries).Length / 200.0)
+            ReadingTimeMinutes = Math.Max(1, cleanText.Split(WordSplitChars, StringSplitOptions.RemoveEmptyEntries).Length / 200.0)
         };
 
         if (enableMetadataExtraction)
@@ -40,7 +41,7 @@ public class BasicContentExtractor : IContentExtractor
                 Url = sourceUrl,
                 Domain = !string.IsNullOrEmpty(sourceUrl) ? new Uri(sourceUrl).Host : string.Empty,
                 Title = extracted.Title,
-                Description = cleanText.Length > 200 ? cleanText.Substring(0, 200) + "..." : cleanText,
+                Description = cleanText.Length > 200 ? string.Concat(cleanText.AsSpan(0, 200), "...") : cleanText,
                 Language = "en",
                 Source = MetadataSource.Html,
                 ExtractedAt = DateTimeOffset.UtcNow
@@ -125,7 +126,7 @@ public class BasicContentExtractor : IContentExtractor
 
     public Task<ExtractedContent> ExtractAutoAsync(string content, string sourceUrl, string? contentType = null, CancellationToken cancellationToken = default)
     {
-        return contentType?.ToLower() switch
+        return contentType?.ToLowerInvariant() switch
         {
             "text/html" or "application/xhtml+xml" => ExtractFromHtmlAsync(content, sourceUrl, false, cancellationToken),
             "text/markdown" => ExtractFromMarkdownAsync(content, sourceUrl, cancellationToken),
@@ -161,7 +162,7 @@ public class BasicContentExtractor : IContentExtractor
         };
     }
 
-    private string ExtractTitle(string content)
+    private static string ExtractTitle(string content)
     {
         if (string.IsNullOrEmpty(content))
             return "Untitled";
@@ -176,7 +177,7 @@ public class BasicContentExtractor : IContentExtractor
 /// <summary>
 /// 이벤트 발행이 필요 없는 경우를 위한 Null Object 패턴 구현
 /// </summary>
-internal class NullEventPublisher : IEventPublisher
+internal sealed class NullEventPublisher : IEventPublisher
 {
     public Task PublishAsync(ProcessingEvent processingEvent, CancellationToken cancellationToken = default)
     {
@@ -212,7 +213,7 @@ internal class NullEventPublisher : IEventPublisher
         };
     }
 
-    private class NullDisposable : IDisposable
+    private sealed class NullDisposable : IDisposable
     {
         public void Dispose() { }
     }

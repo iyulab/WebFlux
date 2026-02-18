@@ -55,12 +55,12 @@ public class ChunkingOptions : IValidatable
     /// <summary>
     /// 테이블 분할 여부 (기본값: false)
     /// </summary>
-    public bool SplitTables { get; set; } = false;
+    public bool SplitTables { get; set; }
 
     /// <summary>
     /// 코드 블록 분할 여부 (기본값: false)
     /// </summary>
-    public bool SplitCodeBlocks { get; set; } = false;
+    public bool SplitCodeBlocks { get; set; }
 
     /// <summary>
     /// 이미지 설명 포함 여부 (기본값: true)
@@ -75,7 +75,7 @@ public class ChunkingOptions : IValidatable
     /// <summary>
     /// 계층 구조 생성 여부 (기본값: false)
     /// </summary>
-    public bool CreateHierarchy { get; set; } = false;
+    public bool CreateHierarchy { get; set; }
 
     /// <summary>
     /// 병렬 처리 여부 (기본값: true)
@@ -106,7 +106,7 @@ public class ChunkingOptions : IValidatable
     /// <summary>
     /// 메모리 최적화 모드 사용 여부 (기본값: false)
     /// </summary>
-    public bool UseMemoryOptimization { get; set; } = false;
+    public bool UseMemoryOptimization { get; set; }
 
     /// <summary>
     /// 메모리 사용량 최소화 여부 (UseMemoryOptimization의 별칭)
@@ -126,7 +126,7 @@ public class ChunkingOptions : IValidatable
     /// 멀티모달 처리 활성화 여부 (Phase 5A.3 재설계)
     /// 모든 청킹 전략에 선택적으로 적용 가능
     /// </summary>
-    public bool EnableMultimodalProcessing { get; set; } = false;
+    public bool EnableMultimodalProcessing { get; set; }
 
     /// <summary>
     /// 멀티모달 처리 옵션

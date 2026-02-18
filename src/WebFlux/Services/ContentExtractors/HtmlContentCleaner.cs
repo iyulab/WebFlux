@@ -11,7 +11,7 @@ namespace WebFlux.Services.ContentExtractors;
 /// nav, header, footer, 광고 등 노이즈 요소를 제거하고 메인 콘텐츠를 추출
 /// Firecrawl의 CSS 셀렉터 패턴 참고
 /// </summary>
-public class HtmlContentCleaner
+public partial class HtmlContentCleaner
 {
     private readonly ILogger<HtmlContentCleaner>? _logger;
 
@@ -139,8 +139,7 @@ public class HtmlContentCleaner
         var body = document.Body;
         var result = body?.InnerHtml ?? document.DocumentElement?.OuterHtml ?? html;
 
-        _logger?.LogDebug("HTML cleaning completed: original {OriginalLength} chars -> cleaned {CleanedLength} chars",
-            html.Length, result.Length);
+        if (_logger != null) LogHtmlCleaningCompleted(_logger, html.Length, result.Length);
 
         return result;
     }
@@ -211,7 +210,7 @@ public class HtmlContentCleaner
     /// <summary>
     /// 상대 URL을 절대 URL로 변환
     /// </summary>
-    private void ConvertRelativeUrls(IDocument document, string sourceUrl)
+    private static void ConvertRelativeUrls(IDocument document, string sourceUrl)
     {
         if (!Uri.TryCreate(sourceUrl, UriKind.Absolute, out var baseUri))
             return;
@@ -338,4 +337,11 @@ public class HtmlContentCleaner
 
         return candidates.FirstOrDefault().Url;
     }
+
+    // ===================================================================
+    // LoggerMessage Definitions
+    // ===================================================================
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "HTML cleaning completed: original {OriginalLength} chars -> cleaned {CleanedLength} chars")]
+    private static partial void LogHtmlCleaningCompleted(ILogger logger, int OriginalLength, int CleanedLength);
 }

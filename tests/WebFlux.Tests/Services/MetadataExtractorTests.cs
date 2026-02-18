@@ -138,7 +138,7 @@ public class MetadataExtractorTests
         var metadata = CreateCompleteMetadata();
 
         // Act
-        var score = _extractor.CalculateQualityScore(metadata);
+        var score = MetadataExtractor.CalculateQualityScore(metadata);
 
         // Assert
         score.Should().BeGreaterThan(0.8);
@@ -154,7 +154,7 @@ public class MetadataExtractorTests
         };
 
         // Act
-        var score = _extractor.CalculateQualityScore(metadata);
+        var score = MetadataExtractor.CalculateQualityScore(metadata);
 
         // Assert
         score.Should().BeLessThan(0.3);
@@ -208,13 +208,11 @@ public class MetadataExtractorTests
         // This test would require actual HTTP requests
         // For now, we'll skip it in the unit test suite
         // Integration tests should cover real website scenarios
-
-        // Note: This test should be moved to integration test suite
-        // as it requires network access
+        _ = url;
         await Task.CompletedTask;
     }
 
-    private void ValidateBasicMetadata(BasicHtmlMetadata basic)
+    private static void ValidateBasicMetadata(BasicHtmlMetadata basic)
     {
         basic.Title.Should().NotBeNullOrEmpty();
         basic.Description.Should().NotBeNullOrEmpty();
@@ -222,7 +220,7 @@ public class MetadataExtractorTests
         basic.Language.Should().NotBeNullOrEmpty();
     }
 
-    private void ValidateOpenGraphMetadata(OpenGraphMetadata og)
+    private static void ValidateOpenGraphMetadata(OpenGraphMetadata og)
     {
         og.Title.Should().NotBeNullOrEmpty();
         og.Description.Should().NotBeNullOrEmpty();
@@ -230,7 +228,7 @@ public class MetadataExtractorTests
         og.Type.Should().NotBeNullOrEmpty();
     }
 
-    private void ValidateTwitterCardsMetadata(TwitterCardsMetadata twitter)
+    private static void ValidateTwitterCardsMetadata(TwitterCardsMetadata twitter)
     {
         twitter.Card.Should().NotBeNullOrEmpty();
         twitter.Title.Should().NotBeNullOrEmpty();
@@ -238,33 +236,33 @@ public class MetadataExtractorTests
         twitter.Image.Should().NotBeNullOrEmpty();
     }
 
-    private void ValidateSchemaOrgMetadata(SchemaOrgMetadata schema)
+    private static void ValidateSchemaOrgMetadata(SchemaOrgMetadata schema)
     {
         schema.MainEntityType.Should().NotBeNullOrEmpty();
         schema.RawJsonLd.Should().NotBeEmpty();
     }
 
-    private void ValidateDublinCoreMetadata(DublinCoreMetadata dublin)
+    private static void ValidateDublinCoreMetadata(DublinCoreMetadata dublin)
     {
         dublin.Title.Should().NotBeNullOrEmpty();
         dublin.Creator.Should().NotBeNullOrEmpty();
         dublin.Type.Should().NotBeNullOrEmpty();
     }
 
-    private void ValidateDocumentStructure(DocumentStructure structure)
+    private static void ValidateDocumentStructure(DocumentStructure structure)
     {
         structure.Headings.Should().NotBeEmpty();
         structure.EstimatedReadingTimeMinutes.Should().BeGreaterThan(0);
         structure.ComplexityScore.Should().BeGreaterThan(0);
     }
 
-    private void ValidateAccessibilityMetadata(AccessibilityMetadata accessibility)
+    private static void ValidateAccessibilityMetadata(AccessibilityMetadata accessibility)
     {
         accessibility.AccessibilityScore.Should().BeGreaterThanOrEqualTo(0);
         accessibility.AccessibilityScore.Should().BeLessThanOrEqualTo(100);
     }
 
-    private WebMetadata CreateCompleteMetadata()
+    private static WebMetadata CreateCompleteMetadata()
     {
         return new WebMetadata
         {
@@ -846,7 +844,7 @@ public class MetadataExtractorIntegrationTests
         metadata.Structure.EstimatedReadingTimeMinutes.Should().BeGreaterThan(5);
     }
 
-    private async Task CreateTestDataFile(string filePath)
+    private static async Task CreateTestDataFile(string filePath)
     {
         var content = @"<!DOCTYPE html>
 <html lang=""ko"">
@@ -876,7 +874,7 @@ public class MetadataExtractorIntegrationTests
         await File.WriteAllTextAsync(filePath, content);
     }
 
-    private async Task CreateBlogPostTestFile(string filePath)
+    private static async Task CreateBlogPostTestFile(string filePath)
     {
         var content = @"<!DOCTYPE html>
 <html lang=""en"">

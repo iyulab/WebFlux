@@ -96,7 +96,7 @@ public class ExpandReconstructStrategy : IReconstructStrategy
         return TimeSpan.FromMilliseconds(estimatedTokens * 10);
     }
 
-    private string BuildExpansionPrompt(AnalyzedContent content, double expansionRatio, string? additionalContext)
+    private static string BuildExpansionPrompt(AnalyzedContent content, double expansionRatio, string? additionalContext)
     {
         var targetLength = (int)(content.CleanedContent.Length * expansionRatio);
         var contextSection = !string.IsNullOrEmpty(additionalContext)
@@ -118,7 +118,7 @@ Original Content:
 Expanded Content:";
     }
 
-    private double EstimateQuality(string expanded, string original)
+    private static double EstimateQuality(string expanded, string original)
     {
         var ratio = (double)expanded.Length / original.Length;
 

@@ -147,11 +147,11 @@ public class ComponentDiagnosticTests
 
         // Output
         var htmlTableCount = System.Text.RegularExpressions.Regex
-            .Matches(html, @"<table[\s>]", System.Text.RegularExpressions.RegexOptions.IgnoreCase).Count;
+            .Count(html, @"<table[\s>]", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
         var cleanedTableCount = System.Text.RegularExpressions.Regex
-            .Matches(cleanedHtml, @"<table[\s>]", System.Text.RegularExpressions.RegexOptions.IgnoreCase).Count;
+            .Count(cleanedHtml, @"<table[\s>]", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
         var mdTableCount = System.Text.RegularExpressions.Regex
-            .Matches(markdown, @"\|.*\|.*\|").Count;
+            .Count(markdown, @"\|.*\|.*\|");
 
         _output.WriteLine($"[{category}/{name}] Tables: HTML={htmlTableCount}, Cleaned={cleanedTableCount}, Markdown={mdTableCount}");
 
@@ -173,9 +173,9 @@ public class ComponentDiagnosticTests
 
         // Output
         var htmlImageCount = System.Text.RegularExpressions.Regex
-            .Matches(html, @"<img\s", System.Text.RegularExpressions.RegexOptions.IgnoreCase).Count;
+            .Count(html, @"<img\s", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
         var mdImageCount = System.Text.RegularExpressions.Regex
-            .Matches(markdown, @"!\[.*?\]\(.+?\)").Count;
+            .Count(markdown, @"!\[.*?\]\(.+?\)");
 
         _output.WriteLine($"[{category}/{name}] Images: HTML={htmlImageCount}, Markdown={mdImageCount}");
 

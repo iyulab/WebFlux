@@ -26,12 +26,12 @@ public class TextCompletionOptions : IValidatable
     /// <summary>
     /// 빈도 페널티 (-2.0 - 2.0, 기본값: 0.0)
     /// </summary>
-    public double FrequencyPenalty { get; set; } = 0.0;
+    public double FrequencyPenalty { get; set; }
 
     /// <summary>
     /// 존재 페널티 (-2.0 - 2.0, 기본값: 0.0)
     /// </summary>
-    public double PresencePenalty { get; set; } = 0.0;
+    public double PresencePenalty { get; set; }
 
     /// <summary>
     /// 시스템 프롬프트 (선택적)

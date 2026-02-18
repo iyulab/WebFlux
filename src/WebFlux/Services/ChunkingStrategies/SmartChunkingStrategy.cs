@@ -10,6 +10,8 @@ namespace WebFlux.Services.ChunkingStrategies;
 /// </summary>
 public class SmartChunkingStrategy : BaseChunkingStrategy
 {
+    private static readonly string[] ParagraphSplitSeparators = ["\n\n", "\r\n\r\n"];
+
     public override string Name => "Smart";
     public override string Description => "구조 인식 청킹 - HTML/Markdown 헤더 기반 맥락 보존";
 
@@ -35,7 +37,7 @@ public class SmartChunkingStrategy : BaseChunkingStrategy
         }
 
         // 헤딩 구조가 있으면 활용, 없으면 문단 기반으로 분할
-        if (content.Headings?.Any() == true)
+        if (content.Headings?.Count > 0)
         {
             return SplitByHeadings(text, content.Headings, maxChunkSize, sourceUrl);
         }
@@ -48,7 +50,7 @@ public class SmartChunkingStrategy : BaseChunkingStrategy
     /// <summary>
     /// 헤딩 구조를 기반으로 분할
     /// </summary>
-    private IReadOnlyList<WebContentChunk> SplitByHeadings(string text, List<string> headings, int maxChunkSize, string sourceUrl)
+    private List<WebContentChunk> SplitByHeadings(string text, List<string> headings, int maxChunkSize, string sourceUrl)
     {
         var chunks = new List<WebContentChunk>();
         var sections = new List<string>();
@@ -76,16 +78,16 @@ public class SmartChunkingStrategy : BaseChunkingStrategy
             chunks.Add(CreateChunk(currentSection.Trim(), sequenceNumber, sourceUrl));
         }
 
-        return chunks.AsReadOnly();
+        return chunks;
     }
 
     /// <summary>
     /// 구조적 요소를 기반으로 분할 (헤딩이 없는 경우)
     /// </summary>
-    private IReadOnlyList<WebContentChunk> SplitByStructuralElements(string text, int maxChunkSize, string sourceUrl)
+    private List<WebContentChunk> SplitByStructuralElements(string text, int maxChunkSize, string sourceUrl)
     {
         // 헤딩이 없으면 문단 기반으로 분할
-        var paragraphs = text.Split(new[] { "\n\n", "\r\n\r\n" }, StringSplitOptions.RemoveEmptyEntries);
+        var paragraphs = text.Split(ParagraphSplitSeparators, StringSplitOptions.RemoveEmptyEntries);
         var chunks = new List<WebContentChunk>();
         var currentChunk = new List<string>();
         var currentLength = 0;
@@ -109,17 +111,17 @@ public class SmartChunkingStrategy : BaseChunkingStrategy
             chunks.Add(CreateChunk(string.Join("\n\n", currentChunk), sequenceNumber, sourceUrl));
         }
 
-        return chunks.AsReadOnly();
+        return chunks;
     }
 
     /// <summary>
     /// 라인이 헤딩인지 판단
     /// </summary>
-    private bool IsHeading(string line)
+    private static bool IsHeading(string line)
     {
         var trimmed = line.Trim();
-        return trimmed.StartsWith("#") || // Markdown 헤딩
-               trimmed.StartsWith("<h") || // HTML 헤딩
-               (trimmed.Length > 0 && trimmed.Length < 100 && !trimmed.Contains(".")); // 짧은 제목 라인
+        return trimmed.StartsWith('#') || // Markdown 헤딩
+               trimmed.StartsWith("<h", StringComparison.Ordinal) || // HTML 헤딩
+               (trimmed.Length > 0 && trimmed.Length < 100 && !trimmed.Contains('.')); // 짧은 제목 라인
     }
 }

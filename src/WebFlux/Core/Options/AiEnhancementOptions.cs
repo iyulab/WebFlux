@@ -36,10 +36,10 @@ public class RewriteOptions
     public string Tone { get; set; } = "professional";
 
     /// <summary>기술 용어 설명 추가</summary>
-    public bool ExplainTechnicalTerms { get; set; } = false;
+    public bool ExplainTechnicalTerms { get; set; }
 
     /// <summary>예제 추가</summary>
-    public bool AddExamples { get; set; } = false;
+    public bool AddExamples { get; set; }
 }
 
 /// <summary>
@@ -54,7 +54,7 @@ public class MetadataExtractionOptions
     public bool ExtractTopics { get; set; } = true;
 
     /// <summary>감정 분석 활성화</summary>
-    public bool AnalyzeSentiment { get; set; } = false;
+    public bool AnalyzeSentiment { get; set; }
 
     /// <summary>최대 키워드 수</summary>
     public int MaxKeywords { get; set; } = 10;
@@ -84,7 +84,7 @@ public class EnhancementOptions
     public bool EnableSummary { get; set; } = true;
 
     /// <summary>재작성 활성화</summary>
-    public bool EnableRewrite { get; set; } = false;
+    public bool EnableRewrite { get; set; }
 
     /// <summary>메타데이터 추출 활성화</summary>
     public bool EnableMetadata { get; set; } = true;

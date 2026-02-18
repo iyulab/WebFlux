@@ -13,8 +13,8 @@ public class EventPublisher : IEventPublisher
     private readonly ConcurrentDictionary<Type, List<Func<ProcessingEvent, Task>>> _asyncHandlers = new();
     private readonly ConcurrentDictionary<Type, List<Action<ProcessingEvent>>> _syncHandlers = new();
     private readonly object _lock = new();
-    private long _totalEventsPublished = 0;
-    private long _publishErrors = 0;
+    private long _totalEventsPublished;
+    private long _publishErrors;
     private readonly ConcurrentDictionary<string, long> _eventsByType = new();
 
     /// <summary>
@@ -24,7 +24,7 @@ public class EventPublisher : IEventPublisher
     /// <param name="cancellationToken">취소 토큰</param>
     public async Task PublishAsync(ProcessingEvent processingEvent, CancellationToken cancellationToken = default)
     {
-        if (processingEvent == null) throw new ArgumentNullException(nameof(processingEvent));
+        ArgumentNullException.ThrowIfNull(processingEvent);
 
         Interlocked.Increment(ref _totalEventsPublished);
         var eventTypeName = processingEvent.GetType().Name;
@@ -85,18 +85,19 @@ public class EventPublisher : IEventPublisher
     /// <returns>구독 해제용 IDisposable</returns>
     public IDisposable Subscribe<T>(Func<T, Task> handler) where T : ProcessingEvent
     {
-        if (handler == null) throw new ArgumentNullException(nameof(handler));
+        ArgumentNullException.ThrowIfNull(handler);
 
         var eventType = typeof(T);
         var wrappedHandler = new Func<ProcessingEvent, Task>(evt => handler((T)evt));
 
         lock (_lock)
         {
-            if (!_asyncHandlers.ContainsKey(eventType))
+            if (!_asyncHandlers.TryGetValue(eventType, out var list))
             {
-                _asyncHandlers[eventType] = new List<Func<ProcessingEvent, Task>>();
+                list = new List<Func<ProcessingEvent, Task>>();
+                _asyncHandlers[eventType] = list;
             }
-            _asyncHandlers[eventType].Add(wrappedHandler);
+            list.Add(wrappedHandler);
         }
 
         return new EventSubscription(() =>
@@ -123,18 +124,19 @@ public class EventPublisher : IEventPublisher
     /// <returns>구독 해제용 IDisposable</returns>
     public IDisposable Subscribe<T>(Action<T> handler) where T : ProcessingEvent
     {
-        if (handler == null) throw new ArgumentNullException(nameof(handler));
+        ArgumentNullException.ThrowIfNull(handler);
 
         var eventType = typeof(T);
         var wrappedHandler = new Action<ProcessingEvent>(evt => handler((T)evt));
 
         lock (_lock)
         {
-            if (!_syncHandlers.ContainsKey(eventType))
+            if (!_syncHandlers.TryGetValue(eventType, out var list))
             {
-                _syncHandlers[eventType] = new List<Action<ProcessingEvent>>();
+                list = new List<Action<ProcessingEvent>>();
+                _syncHandlers[eventType] = list;
             }
-            _syncHandlers[eventType].Add(wrappedHandler);
+            list.Add(wrappedHandler);
         }
 
         return new EventSubscription(() =>
@@ -160,7 +162,7 @@ public class EventPublisher : IEventPublisher
     /// <returns>구독 해제용 IDisposable</returns>
     public IDisposable SubscribeAll(Func<ProcessingEvent, Task> handler)
     {
-        if (handler == null) throw new ArgumentNullException(nameof(handler));
+        ArgumentNullException.ThrowIfNull(handler);
 
         var subscriptions = new List<IDisposable>();
 
@@ -175,11 +177,12 @@ public class EventPublisher : IEventPublisher
         {
             lock (_lock)
             {
-                if (!_asyncHandlers.ContainsKey(eventType))
+                if (!_asyncHandlers.TryGetValue(eventType, out var handlerList))
                 {
-                    _asyncHandlers[eventType] = new List<Func<ProcessingEvent, Task>>();
+                    handlerList = new List<Func<ProcessingEvent, Task>>();
+                    _asyncHandlers[eventType] = handlerList;
                 }
-                _asyncHandlers[eventType].Add(handler);
+                handlerList.Add(handler);
             }
 
             subscriptions.Add(new EventSubscription(() =>
@@ -234,7 +237,7 @@ public class EventPublisher : IEventPublisher
 public class EventSubscription : IDisposable
 {
     private readonly Action _unsubscribe;
-    private bool _disposed = false;
+    private bool _disposed;
 
     public EventSubscription(Action unsubscribe)
     {
@@ -248,6 +251,7 @@ public class EventSubscription : IDisposable
             _unsubscribe();
             _disposed = true;
         }
+        GC.SuppressFinalize(this);
     }
 }
 
@@ -257,7 +261,7 @@ public class EventSubscription : IDisposable
 public class CompositeEventSubscription : IDisposable
 {
     private readonly List<IDisposable> _subscriptions;
-    private bool _disposed = false;
+    private bool _disposed;
 
     public CompositeEventSubscription(List<IDisposable> subscriptions)
     {
@@ -274,16 +278,8 @@ public class CompositeEventSubscription : IDisposable
             }
             _disposed = true;
         }
+        GC.SuppressFinalize(this);
     }
-}
-
-// 이벤트 클래스들 (하위 호환성 유지, Core/Models/Events/ 통합 이벤트 사용 권장)
-[Obsolete("Use CrawlingStartedEvent from Core.Models instead")]
-public class CrawlStartedEvent : ProcessingEvent
-{
-    public override string EventType => "CrawlStarted";
-    public List<string> StartUrls { get; set; } = new();
-    public CrawlConfiguration Configuration { get; set; } = new();
 }
 
 public class UrlProcessingStartedEvent : ProcessingEvent
@@ -307,28 +303,4 @@ public class UrlProcessingFailedEvent : ProcessingEvent
     public override string EventType => "UrlProcessingFailed";
     public string Url { get; set; } = string.Empty;
     public string Error { get; set; } = string.Empty;
-}
-
-[Obsolete("Use CrawlingCompletedEvent from Core.Models instead")]
-public class CrawlCompletedEvent : ProcessingEvent
-{
-    public override string EventType => "CrawlCompleted";
-    public int TotalProcessed { get; set; }
-    public int SuccessCount { get; set; }
-    public int ErrorCount { get; set; }
-    public TimeSpan Duration { get; set; }
-}
-
-[Obsolete("Use ErrorOccurredEvent from Core.Models instead")]
-public class CrawlErrorEvent : ProcessingEvent
-{
-    public override string EventType => "CrawlError";
-    public string Url { get; set; } = string.Empty;
-    public string Error { get; set; } = string.Empty;
-}
-
-[Obsolete("Use CrawlWarningEventV2 from Core.Models.Events instead")]
-public class CrawlWarningEvent : ProcessingEvent
-{
-    public override string EventType => "CrawlWarning";
 }

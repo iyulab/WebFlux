@@ -299,7 +299,7 @@ public static class QualityMeasurer
         if (!mainMatch.Success)
             return 0;
 
-        return Regex.Matches(mainMatch.Value, @"<table[\s>]", RegexOptions.IgnoreCase).Count;
+        return Regex.Count(mainMatch.Value, @"<table[\s>]", RegexOptions.IgnoreCase);
     }
 
     private static List<string> ExtractMainContentTexts(string html)

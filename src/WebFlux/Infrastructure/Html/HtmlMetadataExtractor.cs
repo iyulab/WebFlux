@@ -9,7 +9,7 @@ namespace WebFlux.Infrastructure.Html;
 /// HTML 메타데이터 추출기
 /// meta 태그, OpenGraph, Twitter Card, JSON-LD를 추출합니다
 /// </summary>
-public class HtmlMetadataExtractor
+public partial class HtmlMetadataExtractor
 {
     private readonly ILogger<HtmlMetadataExtractor> _logger;
 
@@ -28,7 +28,7 @@ public class HtmlMetadataExtractor
 
         try
         {
-            _logger.LogDebug("Extracting HTML metadata from URL: {Url}", url);
+            LogExtractingHtmlMetadata(_logger, url);
 
             var doc = new HtmlDocument();
             doc.LoadHtml(html);
@@ -50,16 +50,13 @@ public class HtmlMetadataExtractor
             // 4. JSON-LD 구조화 데이터 추출
             ExtractJsonLd(doc, snapshot);
 
-            _logger.LogDebug(
-                "HTML metadata extraction completed. OpenGraph: {HasOG}, TwitterCard: {HasTwitter}",
-                snapshot.OpenGraph != null,
-                snapshot.TwitterCard != null);
+            LogHtmlMetadataExtractionCompleted(_logger, snapshot.OpenGraph != null, snapshot.TwitterCard != null);
 
             return snapshot;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to extract HTML metadata from URL: {Url}", url);
+            LogHtmlMetadataExtractionFailed(_logger, ex, url);
             throw;
         }
     }
@@ -71,7 +68,7 @@ public class HtmlMetadataExtractor
     /// <summary>
     /// 표준 meta 태그 추출
     /// </summary>
-    private void ExtractMetaTags(HtmlDocument doc, HtmlMetadataSnapshot snapshot)
+    private static void ExtractMetaTags(HtmlDocument doc, HtmlMetadataSnapshot snapshot)
     {
         var metaTags = doc.DocumentNode.SelectNodes("//meta[@name and @content]");
         if (metaTags == null) return;
@@ -91,10 +88,10 @@ public class HtmlMetadataExtractor
     /// <summary>
     /// OpenGraph 메타데이터 추출
     /// </summary>
-    private OpenGraphData? ExtractOpenGraph(HtmlDocument doc)
+    private static OpenGraphData? ExtractOpenGraph(HtmlDocument doc)
     {
         var ogTags = doc.DocumentNode.SelectNodes("//meta[starts-with(@property, 'og:')]");
-        if (ogTags == null || !ogTags.Any()) return null;
+        if (ogTags == null || ogTags.Count == 0) return null;
 
         var og = new OpenGraphData();
 
@@ -159,10 +156,10 @@ public class HtmlMetadataExtractor
     /// <summary>
     /// Twitter Card 메타데이터 추출
     /// </summary>
-    private TwitterCardData? ExtractTwitterCard(HtmlDocument doc)
+    private static TwitterCardData? ExtractTwitterCard(HtmlDocument doc)
     {
         var twitterTags = doc.DocumentNode.SelectNodes("//meta[starts-with(@name, 'twitter:') or starts-with(@property, 'twitter:')]");
-        if (twitterTags == null || !twitterTags.Any()) return null;
+        if (twitterTags == null || twitterTags.Count == 0) return null;
 
         var twitter = new TwitterCardData();
 
@@ -223,8 +220,24 @@ public class HtmlMetadataExtractor
             }
             catch (System.Text.Json.JsonException ex)
             {
-                _logger.LogWarning(ex, "Failed to parse JSON-LD structured data");
+                LogJsonLdParseFailed(_logger, ex);
             }
         }
     }
+
+    // ===================================================================
+    // LoggerMessage Definitions
+    // ===================================================================
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Extracting HTML metadata from URL: {Url}")]
+    private static partial void LogExtractingHtmlMetadata(ILogger logger, string Url);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "HTML metadata extraction completed. OpenGraph: {HasOg}, TwitterCard: {HasTwitter}")]
+    private static partial void LogHtmlMetadataExtractionCompleted(ILogger logger, bool HasOg, bool HasTwitter);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to extract HTML metadata from URL: {Url}")]
+    private static partial void LogHtmlMetadataExtractionFailed(ILogger logger, Exception ex, string Url);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to parse JSON-LD structured data")]
+    private static partial void LogJsonLdParseFailed(ILogger logger, Exception ex);
 }

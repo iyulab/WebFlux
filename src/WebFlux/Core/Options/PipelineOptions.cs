@@ -37,7 +37,7 @@ public class PipelineOptions : IValidatable
     /// <summary>
     /// 파이프라인 단계 활성화/비활성화
     /// </summary>
-    public PipelineStageFlags EnabledStages { get; set; } = PipelineStageFlags.All;
+    public PipelineStage EnabledStages { get; set; } = PipelineStage.All;
 
     /// <summary>
     /// 진행률 보고 간격 (밀리초)
@@ -85,7 +85,7 @@ public class PipelineOptions : IValidatable
 /// 파이프라인 단계 플래그
 /// </summary>
 [Flags]
-public enum PipelineStageFlags
+public enum PipelineStage
 {
     /// <summary>모든 단계 비활성화</summary>
     None = 0,

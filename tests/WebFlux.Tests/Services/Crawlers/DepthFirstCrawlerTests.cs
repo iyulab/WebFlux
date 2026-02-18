@@ -1,5 +1,5 @@
 using System.Net;
-using Moq;
+using NSubstitute;
 using WebFlux.Core.Interfaces;
 using WebFlux.Core.Models;
 using WebFlux.Core.Options;
@@ -15,20 +15,20 @@ namespace WebFlux.Tests.Services.Crawlers;
 /// </summary>
 public class DepthFirstCrawlerTests : IDisposable
 {
-    private readonly Mock<IHttpClientService> _mockHttpClient;
-    private readonly Mock<IEventPublisher> _mockEventPublisher;
+    private readonly IHttpClientService _mockHttpClient;
+    private readonly IEventPublisher _mockEventPublisher;
     private readonly DepthFirstCrawler _crawler;
 
     public DepthFirstCrawlerTests()
     {
-        _mockHttpClient = new Mock<IHttpClientService>();
-        _mockEventPublisher = new Mock<IEventPublisher>();
-        _crawler = new DepthFirstCrawler(_mockHttpClient.Object, _mockEventPublisher.Object);
+        _mockHttpClient = Substitute.For<IHttpClientService>();
+        _mockEventPublisher = Substitute.For<IEventPublisher>();
+        _crawler = new DepthFirstCrawler(_mockHttpClient, _mockEventPublisher);
     }
 
     public void Dispose()
     {
-        // Cleanup if needed
+        GC.SuppressFinalize(this);
     }
 
     #region Constructor Tests
@@ -38,7 +38,7 @@ public class DepthFirstCrawlerTests : IDisposable
     {
         // Act & Assert
         var ex = Assert.Throws<ArgumentNullException>(() =>
-            new DepthFirstCrawler(null!, _mockEventPublisher.Object));
+            new DepthFirstCrawler(null!, _mockEventPublisher));
 
         ex.ParamName.Should().Be("httpClient");
     }
@@ -48,7 +48,7 @@ public class DepthFirstCrawlerTests : IDisposable
     {
         // Act & Assert
         var ex = Assert.Throws<ArgumentNullException>(() =>
-            new DepthFirstCrawler(_mockHttpClient.Object, null!));
+            new DepthFirstCrawler(_mockHttpClient, null!));
 
         ex.ParamName.Should().Be("eventPublisher");
     }
@@ -70,8 +70,8 @@ public class DepthFirstCrawlerTests : IDisposable
             RequestMessage = new HttpRequestMessage { RequestUri = new Uri(url) }
         };
 
-        _mockHttpClient.Setup(c => c.GetAsync(url, null, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(response);
+        _mockHttpClient.GetAsync(url, null, Arg.Any<CancellationToken>())
+            .Returns(response);
 
         // Act
         var result = await _crawler.CrawlAsync(url);
@@ -92,9 +92,6 @@ public class DepthFirstCrawlerTests : IDisposable
     public async Task CrawlWebsiteAsync_ShouldUseDepthFirstTraversal()
     {
         // Arrange - 링크 구조 설정
-        // Root -> Page1 (첫 번째 링크) -> Page1A (깊이 우선이면 Page1A가 Page2보다 먼저)
-        // Root -> Page2
-
         var rootUrl = "https://example.com";
         var rootHtml = "<html><body><a href='/page1'>Page1</a><a href='/page2'>Page2</a></body></html>";
         var page1Html = "<html><body><a href='/page1a'>Page1A</a></body></html>";
@@ -116,16 +113,13 @@ public class DepthFirstCrawlerTests : IDisposable
         }
 
         // Assert - DFS는 깊이 우선으로 방문
-        // Root -> Page1 -> Page1A -> Page2 순서 (Page1의 자식을 먼저 탐색)
         results.Should().HaveCountGreaterThanOrEqualTo(3);
         results[0].Url.Should().Be(rootUrl);
 
-        // Page1이 먼저 방문되고, Page1A가 Page2보다 먼저 방문되어야 함 (DFS)
         var page1Index = results.FindIndex(r => r.Url.Contains("/page1") && !r.Url.Contains("/page1a"));
         var page1aIndex = results.FindIndex(r => r.Url.Contains("/page1a"));
         var page2Index = results.FindIndex(r => r.Url.Contains("/page2"));
 
-        // Page1 다음에 Page1A가 와야 하고, Page2는 그 이후 (DFS 특성)
         if (page1Index >= 0 && page1aIndex >= 0 && page2Index >= 0)
         {
             page1Index.Should().BeLessThan(page1aIndex, "Page1 should be visited before Page1A");
@@ -157,7 +151,7 @@ public class DepthFirstCrawlerTests : IDisposable
             results.Add(result);
         }
 
-        // Assert - MaxDepth=1이면 depth 0과 1만 방문
+        // Assert
         results.Should().HaveCountLessThanOrEqualTo(2);
         results.All(r => r.Depth <= 1).Should().BeTrue();
     }
@@ -206,8 +200,8 @@ public class DepthFirstCrawlerTests : IDisposable
             RequestMessage = new HttpRequestMessage { RequestUri = new Uri(url) }
         };
 
-        _mockHttpClient.Setup(c => c.GetAsync(url, null, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(response);
+        _mockHttpClient.GetAsync(url, null, Arg.Any<CancellationToken>())
+            .Returns(response);
     }
 
     #endregion

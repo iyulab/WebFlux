@@ -102,9 +102,9 @@ public class RewriteReconstructStrategy : IReconstructStrategy
         return TimeSpan.FromMilliseconds(estimatedTokens * 10);
     }
 
-    private string BuildRewritePrompt(AnalyzedContent content, string style, string? additionalContext)
+    private static string BuildRewritePrompt(AnalyzedContent content, string style, string? additionalContext)
     {
-        var styleInstructions = style.ToLower() switch
+        var styleInstructions = style.ToLowerInvariant() switch
         {
             "formal" => "Use formal, professional language appropriate for business or academic settings.",
             "casual" => "Use conversational, friendly language that's easy to understand.",

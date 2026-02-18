@@ -69,8 +69,8 @@ public class FixedSizeChunkingStrategyTests
         // Arrange
         var content = new ExtractedContent
         {
-            Text = null,
-            MainContent = null,
+            Text = null!,
+            MainContent = null!,
             Url = "https://example.com"
         };
 
@@ -290,7 +290,7 @@ public class FixedSizeChunkingStrategyTests
         var text = "This is regular text";
         var content = new ExtractedContent
         {
-            MainContent = null,
+            MainContent = null!,
             Text = text,
             Url = "https://example.com"
         };
@@ -331,8 +331,8 @@ public class FixedSizeChunkingStrategyTests
         var content = new ExtractedContent
         {
             MainContent = "Test content",
-            Url = null,
-            OriginalUrl = null
+            Url = null!,
+            OriginalUrl = null!
         };
 
         // Act

@@ -69,8 +69,8 @@ public class ParagraphChunkingStrategyTests
         // Arrange
         var content = new ExtractedContent
         {
-            Text = null,
-            MainContent = null,
+            Text = null!,
+            MainContent = null!,
             Url = "https://example.com"
         };
 

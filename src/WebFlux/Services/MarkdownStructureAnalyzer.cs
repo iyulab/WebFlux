@@ -24,6 +24,7 @@ namespace WebFlux.Services;
 /// </summary>
 public class MarkdownStructureAnalyzer : IMarkdownStructureAnalyzer
 {
+    private static readonly string[] ParagraphSplitSeparators = ["\n\n", "\r\n\r\n"];
     private readonly MarkdownPipeline _pipeline;
     private static readonly Regex WordCountRegex = new(@"\b\w+\b", RegexOptions.Compiled);
     private static readonly Regex YamlFrontMatterRegex = new(@"^---\s*\n(.*?)\n---\s*\n", RegexOptions.Compiled | RegexOptions.Singleline);
@@ -207,7 +208,7 @@ public class MarkdownStructureAnalyzer : IMarkdownStructureAnalyzer
 
     // Private helper methods
 
-    private (string content, Dictionary<string, object> frontMatter) ExtractFrontMatter(string markdownContent)
+    private static (string content, Dictionary<string, object> frontMatter) ExtractFrontMatter(string markdownContent)
     {
         var frontMatter = new Dictionary<string, object>();
         var content = markdownContent;
@@ -235,7 +236,7 @@ public class MarkdownStructureAnalyzer : IMarkdownStructureAnalyzer
         return (content, frontMatter);
     }
 
-    private Task<MarkdownStructureInfo> ExtractStructureInfoAsync(
+    private static Task<MarkdownStructureInfo> ExtractStructureInfoAsync(
         MarkdownDocument document,
         string content,
         string sourceUrl,
@@ -278,7 +279,7 @@ public class MarkdownStructureAnalyzer : IMarkdownStructureAnalyzer
         });
     }
 
-    private IReadOnlyList<MarkdownHeading> ExtractHeadings(MarkdownDocument document, string[] lines)
+    private static List<MarkdownHeading> ExtractHeadings(MarkdownDocument document, string[] lines)
     {
         var headings = new List<MarkdownHeading>();
         var headingStack = new Stack<MarkdownHeading>();
@@ -328,7 +329,7 @@ public class MarkdownStructureAnalyzer : IMarkdownStructureAnalyzer
         return headings;
     }
 
-    private TableOfContents GenerateTableOfContents(IReadOnlyList<MarkdownHeading> headings)
+    private static TableOfContents GenerateTableOfContents(IReadOnlyList<MarkdownHeading> headings)
     {
         var tocItems = new List<TocItem>();
         var maxDepth = 0;
@@ -358,7 +359,7 @@ public class MarkdownStructureAnalyzer : IMarkdownStructureAnalyzer
         };
     }
 
-    private string GenerateTocMarkdown(List<TocItem> items)
+    private static string GenerateTocMarkdown(List<TocItem> items)
     {
         var toc = new System.Text.StringBuilder();
         toc.AppendLine("## Table of Contents");
@@ -367,13 +368,13 @@ public class MarkdownStructureAnalyzer : IMarkdownStructureAnalyzer
         foreach (var item in items)
         {
             var indent = new string(' ', (item.Level - 1) * 2);
-            toc.AppendLine($"{indent}- [{item.Title}]({item.Link})");
+            toc.AppendLine(System.Globalization.CultureInfo.InvariantCulture, $"{indent}- [{item.Title}]({item.Link})");
         }
 
         return toc.ToString();
     }
 
-    private IReadOnlyList<MarkdownCodeBlock> ExtractCodeBlocks(MarkdownDocument document, string[] lines)
+    private static List<MarkdownCodeBlock> ExtractCodeBlocks(MarkdownDocument document, string[] lines)
     {
         var codeBlocks = new List<MarkdownCodeBlock>();
 
@@ -400,7 +401,7 @@ public class MarkdownStructureAnalyzer : IMarkdownStructureAnalyzer
         return codeBlocks;
     }
 
-    private IReadOnlyList<MarkdownLink> ExtractLinks(MarkdownDocument document)
+    private static List<MarkdownLink> ExtractLinks(MarkdownDocument document)
     {
         var links = new List<MarkdownLink>();
 
@@ -423,7 +424,7 @@ public class MarkdownStructureAnalyzer : IMarkdownStructureAnalyzer
         return links;
     }
 
-    private IReadOnlyList<MarkdownImage> ExtractImages(MarkdownDocument document)
+    private static List<MarkdownImage> ExtractImages(MarkdownDocument document)
     {
         var images = new List<MarkdownImage>();
 
@@ -443,7 +444,7 @@ public class MarkdownStructureAnalyzer : IMarkdownStructureAnalyzer
         return images;
     }
 
-    private IReadOnlyList<MarkdownTable> ExtractTables(MarkdownDocument document, string[] lines)
+    private static List<MarkdownTable> ExtractTables(MarkdownDocument document, string[] lines)
     {
         var tables = new List<MarkdownTable>();
 
@@ -489,7 +490,7 @@ public class MarkdownStructureAnalyzer : IMarkdownStructureAnalyzer
         return tables;
     }
 
-    private IReadOnlyList<MarkdownList> ExtractLists(MarkdownDocument document, string[] lines)
+    private static List<MarkdownList> ExtractLists(MarkdownDocument document, string[] lines)
     {
         var lists = new List<MarkdownList>();
 
@@ -532,7 +533,7 @@ public class MarkdownStructureAnalyzer : IMarkdownStructureAnalyzer
         return lists;
     }
 
-    private IReadOnlyList<MarkdownQuote> ExtractQuotes(MarkdownDocument document, string[] lines)
+    private static List<MarkdownQuote> ExtractQuotes(MarkdownDocument document, string[] lines)
     {
         var quotes = new List<MarkdownQuote>();
 
@@ -554,14 +555,14 @@ public class MarkdownStructureAnalyzer : IMarkdownStructureAnalyzer
         return quotes;
     }
 
-    private IReadOnlyList<MarkdownMath> ExtractMathExpressions(MarkdownDocument document)
+    private static List<MarkdownMath> ExtractMathExpressions(MarkdownDocument document)
     {
         var mathExpressions = new List<MarkdownMath>();
 
         // Math extension이 활성화된 경우 수식 추출
         foreach (var math in document.Descendants().Where(d => d.GetType().Name.Contains("Math")))
         {
-            var expression = math.ToString();
+            var expression = math.ToString() ?? string.Empty;
             var isInline = math.GetType().Name.Contains("Inline");
 
             var markdownMath = new MarkdownMath
@@ -578,7 +579,7 @@ public class MarkdownStructureAnalyzer : IMarkdownStructureAnalyzer
         return mathExpressions;
     }
 
-    private IReadOnlyList<MarkdownFootnote> ExtractFootnotes(MarkdownDocument document)
+    private static List<MarkdownFootnote> ExtractFootnotes(MarkdownDocument document)
     {
         var footnotes = new List<MarkdownFootnote>();
 
@@ -586,7 +587,7 @@ public class MarkdownStructureAnalyzer : IMarkdownStructureAnalyzer
         foreach (var footnote in document.Descendants().Where(d => d.GetType().Name.Contains("Footnote")))
         {
             var id = footnote.GetType().GetProperty("Label")?.GetValue(footnote)?.ToString() ?? "";
-            var content = footnote.ToString();
+            var content = footnote.ToString() ?? string.Empty;
 
             var markdownFootnote = new MarkdownFootnote
             {
@@ -602,7 +603,7 @@ public class MarkdownStructureAnalyzer : IMarkdownStructureAnalyzer
         return footnotes;
     }
 
-    private IReadOnlyList<MarkdownEmbed> ExtractEmbeds(IReadOnlyList<MarkdownLink> links)
+    private static List<MarkdownEmbed> ExtractEmbeds(IReadOnlyList<MarkdownLink> links)
     {
         var embeds = new List<MarkdownEmbed>();
 
@@ -626,16 +627,16 @@ public class MarkdownStructureAnalyzer : IMarkdownStructureAnalyzer
         return embeds;
     }
 
-    private MarkdownStatistics CalculateStatistics(string content, MarkdownDocument document)
+    private static MarkdownStatistics CalculateStatistics(string content, MarkdownDocument document)
     {
         var lines = content.Split('\n');
         var contentLines = lines.Where(l => !string.IsNullOrWhiteSpace(l)).Count();
-        var words = WordCountRegex.Matches(content).Count;
+        var words = WordCountRegex.Count(content);
         var characters = content.Length;
         var charactersNoSpaces = content.Replace(" ", "").Replace("\t", "").Replace("\n", "").Replace("\r", "").Length;
 
         // 문단 수 계산 (빈 줄로 구분)
-        var paragraphs = content.Split(new[] { "\n\n", "\r\n\r\n" }, StringSplitOptions.RemoveEmptyEntries).Length;
+        var paragraphs = content.Split(ParagraphSplitSeparators, StringSplitOptions.RemoveEmptyEntries).Length;
 
         // 읽기 시간 계산 (평균 250단어/분)
         var readingTime = Math.Max(1, (int)Math.Ceiling(words / 250.0));
@@ -660,7 +661,7 @@ public class MarkdownStructureAnalyzer : IMarkdownStructureAnalyzer
         };
     }
 
-    private MarkdownDocumentMetadata ExtractMetadata(Dictionary<string, object> frontMatter, IReadOnlyList<MarkdownHeading> headings, string content)
+    private static MarkdownDocumentMetadata ExtractMetadata(Dictionary<string, object> frontMatter, IReadOnlyList<MarkdownHeading> headings, string content)
     {
         var title = frontMatter.GetValueOrDefault("title")?.ToString() ??
                    headings.FirstOrDefault(h => h.Level == 1)?.Text ??
@@ -680,8 +681,8 @@ public class MarkdownStructureAnalyzer : IMarkdownStructureAnalyzer
 
         if (frontMatter.GetValueOrDefault("date")?.ToString() is string dateStr)
         {
-            DateTimeOffset.TryParse(dateStr, out var date);
-            createdAt = date;
+            if (DateTimeOffset.TryParse(dateStr, out var date))
+                createdAt = date;
         }
 
         return new MarkdownDocumentMetadata
@@ -700,7 +701,7 @@ public class MarkdownStructureAnalyzer : IMarkdownStructureAnalyzer
 
     // Validation and Assessment methods
 
-    private double ValidateHeadingStructure(IReadOnlyList<MarkdownHeading> headings)
+    private static double ValidateHeadingStructure(IReadOnlyList<MarkdownHeading> headings)
     {
         if (!headings.Any()) return 0.0;
 
@@ -721,7 +722,7 @@ public class MarkdownStructureAnalyzer : IMarkdownStructureAnalyzer
         return Math.Max(0.0, score);
     }
 
-    private double ValidateLinks(IReadOnlyList<MarkdownLink> links)
+    private static double ValidateLinks(IReadOnlyList<MarkdownLink> links)
     {
         if (!links.Any()) return 1.0;
 
@@ -729,7 +730,7 @@ public class MarkdownStructureAnalyzer : IMarkdownStructureAnalyzer
         return (double)validLinks / links.Count;
     }
 
-    private double ValidateCodeBlocks(IReadOnlyList<MarkdownCodeBlock> codeBlocks)
+    private static double ValidateCodeBlocks(IReadOnlyList<MarkdownCodeBlock> codeBlocks)
     {
         if (!codeBlocks.Any()) return 1.0;
 
@@ -737,7 +738,7 @@ public class MarkdownStructureAnalyzer : IMarkdownStructureAnalyzer
         return (double)validBlocks / codeBlocks.Count;
     }
 
-    private double ValidateTables(IReadOnlyList<MarkdownTable> tables)
+    private static double ValidateTables(IReadOnlyList<MarkdownTable> tables)
     {
         if (!tables.Any()) return 1.0;
 
@@ -745,7 +746,7 @@ public class MarkdownStructureAnalyzer : IMarkdownStructureAnalyzer
         return (double)validTables / tables.Count;
     }
 
-    private double ValidateLists(IReadOnlyList<MarkdownList> lists)
+    private static double ValidateLists(IReadOnlyList<MarkdownList> lists)
     {
         if (!lists.Any()) return 1.0;
 
@@ -753,7 +754,7 @@ public class MarkdownStructureAnalyzer : IMarkdownStructureAnalyzer
         return (double)validLists / lists.Count;
     }
 
-    private double ValidateImages(IReadOnlyList<MarkdownImage> images)
+    private static double ValidateImages(IReadOnlyList<MarkdownImage> images)
     {
         if (!images.Any()) return 1.0;
 
@@ -763,7 +764,7 @@ public class MarkdownStructureAnalyzer : IMarkdownStructureAnalyzer
 
     // Helper methods
 
-    private string GenerateHeadingId(string text)
+    private static string GenerateHeadingId(string text)
     {
         return text.ToLowerInvariant()
                   .Replace(" ", "-")
@@ -773,18 +774,18 @@ public class MarkdownStructureAnalyzer : IMarkdownStructureAnalyzer
                   .Replace(",", "");
     }
 
-    private MarkdownLinkType DetermineLinkType(string? url)
+    private static MarkdownLinkType DetermineLinkType(string? url)
     {
         if (string.IsNullOrEmpty(url)) return MarkdownLinkType.Inline;
 
-        if (url.StartsWith("#")) return MarkdownLinkType.Internal;
-        if (url.StartsWith("mailto:")) return MarkdownLinkType.Email;
+        if (url.StartsWith('#')) return MarkdownLinkType.Internal;
+        if (url.StartsWith("mailto:", StringComparison.Ordinal)) return MarkdownLinkType.Email;
         if (Uri.IsWellFormedUriString(url, UriKind.Absolute)) return MarkdownLinkType.AutoLink;
 
         return MarkdownLinkType.Inline;
     }
 
-    private MarkdownEmbedType DetermineEmbedType(string url)
+    private static MarkdownEmbedType DetermineEmbedType(string url)
     {
         if (url.Contains("youtube.com") || url.Contains("youtu.be")) return MarkdownEmbedType.YouTube;
         if (url.Contains("vimeo.com")) return MarkdownEmbedType.Vimeo;
@@ -795,7 +796,7 @@ public class MarkdownStructureAnalyzer : IMarkdownStructureAnalyzer
         return MarkdownEmbedType.Generic;
     }
 
-    private double CalculateComplexityScore(MarkdownDocument document)
+    private static double CalculateComplexityScore(MarkdownDocument document)
     {
         var score = 0.0;
         var totalElements = document.Descendants().Count();
@@ -818,7 +819,7 @@ public class MarkdownStructureAnalyzer : IMarkdownStructureAnalyzer
         return Math.Min(1.0, score / 10.0); // 최대 1.0으로 정규화
     }
 
-    private double CalculateReadabilityScore(int words, int characters, int paragraphs)
+    private static double CalculateReadabilityScore(int words, int characters, int paragraphs)
     {
         if (words == 0 || paragraphs == 0) return 0.0;
 
@@ -832,7 +833,7 @@ public class MarkdownStructureAnalyzer : IMarkdownStructureAnalyzer
         return Math.Max(0.0, Math.Min(1.0, score / 100.0));
     }
 
-    private int CountElements(MarkdownStructureInfo structureInfo)
+    private static int CountElements(MarkdownStructureInfo structureInfo)
     {
         return structureInfo.Headings.Count +
                structureInfo.CodeBlocks.Count +
@@ -843,18 +844,18 @@ public class MarkdownStructureAnalyzer : IMarkdownStructureAnalyzer
                structureInfo.Quotes.Count;
     }
 
-    private IReadOnlyList<string> ExtractListFromFrontMatter(Dictionary<string, object> frontMatter, string key)
+    private static List<string> ExtractListFromFrontMatter(Dictionary<string, object> frontMatter, string key)
     {
         if (frontMatter.GetValueOrDefault(key)?.ToString() is string value)
         {
             return value.Split(',', StringSplitOptions.RemoveEmptyEntries)
                        .Select(s => s.Trim())
-                       .ToArray();
+                       .ToList();
         }
-        return Array.Empty<string>();
+        return [];
     }
 
-    private double AssessStructuralQuality(MarkdownStructureInfo structureInfo, List<QualityIssue> issues, List<string> recommendations, List<string> strengths)
+    private static double AssessStructuralQuality(MarkdownStructureInfo structureInfo, List<QualityIssue> issues, List<string> recommendations, List<string> strengths)
     {
         var score = 1.0;
 
@@ -884,7 +885,7 @@ public class MarkdownStructureAnalyzer : IMarkdownStructureAnalyzer
         return Math.Max(0.0, score);
     }
 
-    private double AssessContentQuality(MarkdownStructureInfo structureInfo, List<QualityIssue> issues, List<string> recommendations, List<string> strengths)
+    private static double AssessContentQuality(MarkdownStructureInfo structureInfo, List<QualityIssue> issues, List<string> recommendations, List<string> strengths)
     {
         var score = 1.0;
 
@@ -918,7 +919,7 @@ public class MarkdownStructureAnalyzer : IMarkdownStructureAnalyzer
         return Math.Max(0.0, score);
     }
 
-    private double AssessAccessibility(MarkdownStructureInfo structureInfo, List<QualityIssue> issues, List<string> recommendations)
+    private static double AssessAccessibility(MarkdownStructureInfo structureInfo, List<QualityIssue> issues, List<string> recommendations)
     {
         var score = 1.0;
 
@@ -931,7 +932,7 @@ public class MarkdownStructureAnalyzer : IMarkdownStructureAnalyzer
         }
 
         // 헤딩 순서 검사
-        if (structureInfo.Headings.Any() && structureInfo.Headings.First().Level != 1)
+        if (structureInfo.Headings.Count > 0 && structureInfo.Headings[0].Level != 1)
         {
             issues.Add(new QualityIssue
             {
@@ -946,7 +947,7 @@ public class MarkdownStructureAnalyzer : IMarkdownStructureAnalyzer
         return Math.Max(0.0, score);
     }
 
-    private double AssessSeoFriendliness(MarkdownStructureInfo structureInfo, List<QualityIssue> issues, List<string> recommendations)
+    private static double AssessSeoFriendliness(MarkdownStructureInfo structureInfo, List<QualityIssue> issues, List<string> recommendations)
     {
         var score = 1.0;
 

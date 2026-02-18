@@ -8,7 +8,7 @@ namespace WebFlux.Services;
 /// 도메인별 Rate Limiter 구현
 /// ConcurrentDictionary 기반 도메인별 SemaphoreSlim 관리
 /// </summary>
-public class DomainRateLimiter : IDomainRateLimiter, IDisposable
+public partial class DomainRateLimiter : IDomainRateLimiter, IDisposable
 {
     private readonly ILogger<DomainRateLimiter> _logger;
     private readonly ConcurrentDictionary<string, DomainState> _domainStates = new();
@@ -50,9 +50,7 @@ public class DomainRateLimiter : IDomainRateLimiter, IDisposable
         {
             var waitTime = await WaitIfNeededAsync(state, cancellationToken).ConfigureAwait(false);
 
-            _logger.LogDebug(
-                "Executing operation for domain {Domain} after {WaitMs}ms wait",
-                normalizedDomain, waitTime.TotalMilliseconds);
+            LogExecutingOperation(_logger, normalizedDomain, waitTime.TotalMilliseconds);
 
             var result = await operation().ConfigureAwait(false);
 
@@ -88,9 +86,7 @@ public class DomainRateLimiter : IDomainRateLimiter, IDisposable
         var state = GetOrCreateState(normalizedDomain);
         state.MinInterval = minimumInterval;
 
-        _logger.LogInformation(
-            "Set rate limit for domain {Domain}: {IntervalMs}ms",
-            normalizedDomain, minimumInterval.TotalMilliseconds);
+        LogDomainLimitSet(_logger, normalizedDomain, minimumInterval.TotalMilliseconds);
     }
 
     /// <inheritdoc />
@@ -111,7 +107,7 @@ public class DomainRateLimiter : IDomainRateLimiter, IDisposable
 
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogDebug("No robots.txt found for domain {Domain}", normalizedDomain);
+                LogNoRobotsTxt(_logger, normalizedDomain);
                 return;
             }
 
@@ -121,14 +117,12 @@ public class DomainRateLimiter : IDomainRateLimiter, IDisposable
             if (crawlDelay.HasValue)
             {
                 SetDomainLimit(normalizedDomain, TimeSpan.FromSeconds(crawlDelay.Value));
-                _logger.LogInformation(
-                    "Applied crawl-delay from robots.txt for domain {Domain}: {Delay}s",
-                    normalizedDomain, crawlDelay.Value);
+                LogCrawlDelayApplied(_logger, normalizedDomain, crawlDelay.Value);
             }
         }
         catch (Exception ex)
         {
-            _logger.LogDebug(ex, "Failed to read robots.txt for domain {Domain}", normalizedDomain);
+            LogRobotsTxtFailed(_logger, ex, normalizedDomain);
         }
     }
 
@@ -210,7 +204,7 @@ public class DomainRateLimiter : IDomainRateLimiter, IDisposable
         if (_domainStates.TryRemove(normalizedDomain, out var state))
         {
             state.Semaphore.Dispose();
-            _logger.LogDebug("Removed rate limit for domain {Domain}", normalizedDomain);
+            LogDomainLimitRemoved(_logger, normalizedDomain);
         }
     }
 
@@ -226,7 +220,7 @@ public class DomainRateLimiter : IDomainRateLimiter, IDisposable
         _totalRequests = 0;
         _totalWaitTimeMs = 0;
 
-        _logger.LogInformation("Rate limiter reset");
+        LogRateLimiterReset(_logger);
     }
 
     private DomainState GetOrCreateState(string domain)
@@ -250,7 +244,7 @@ public class DomainRateLimiter : IDomainRateLimiter, IDisposable
 
         if (waitTime > TimeSpan.Zero)
         {
-            _logger.LogDebug("Waiting {WaitMs}ms before next request", waitTime.TotalMilliseconds);
+            LogWaitingBeforeRequest(_logger, waitTime.TotalMilliseconds);
 
             await Task.Delay(waitTime, cancellationToken).ConfigureAwait(false);
 
@@ -296,12 +290,12 @@ public class DomainRateLimiter : IDomainRateLimiter, IDisposable
         {
             var trimmedLine = line.Trim().ToLowerInvariant();
 
-            if (trimmedLine.StartsWith("user-agent:"))
+            if (trimmedLine.StartsWith("user-agent:", StringComparison.Ordinal))
             {
                 var agent = trimmedLine.Substring("user-agent:".Length).Trim();
-                inUserAgentAll = agent == "*" || agent.Contains("webflux");
+                inUserAgentAll = agent == "*" || agent.Contains("webflux", StringComparison.Ordinal);
             }
-            else if (inUserAgentAll && trimmedLine.StartsWith("crawl-delay:"))
+            else if (inUserAgentAll && trimmedLine.StartsWith("crawl-delay:", StringComparison.Ordinal))
             {
                 var delayStr = trimmedLine.Substring("crawl-delay:".Length).Trim();
 
@@ -329,12 +323,13 @@ public class DomainRateLimiter : IDomainRateLimiter, IDisposable
 
         _domainStates.Clear();
         _disposed = true;
+        GC.SuppressFinalize(this);
     }
 
     /// <summary>
     /// 도메인별 상태 정보
     /// </summary>
-    private class DomainState
+    private sealed class DomainState
     {
         public TimeSpan MinInterval { get; set; }
         public DateTimeOffset? LastRequestTime { get; set; }
@@ -342,4 +337,32 @@ public class DomainRateLimiter : IDomainRateLimiter, IDisposable
         public long RequestCount;
         public long TotalWaitTimeMs;
     }
+
+    // ===================================================================
+    // LoggerMessage Definitions
+    // ===================================================================
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Executing operation for domain {Domain} after {WaitMs}ms wait")]
+    private static partial void LogExecutingOperation(ILogger logger, string Domain, double WaitMs);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Set rate limit for domain {Domain}: {IntervalMs}ms")]
+    private static partial void LogDomainLimitSet(ILogger logger, string Domain, double IntervalMs);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "No robots.txt found for domain {Domain}")]
+    private static partial void LogNoRobotsTxt(ILogger logger, string Domain);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Applied crawl-delay from robots.txt for domain {Domain}: {Delay}s")]
+    private static partial void LogCrawlDelayApplied(ILogger logger, string Domain, int Delay);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Failed to read robots.txt for domain {Domain}")]
+    private static partial void LogRobotsTxtFailed(ILogger logger, Exception ex, string Domain);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Removed rate limit for domain {Domain}")]
+    private static partial void LogDomainLimitRemoved(ILogger logger, string Domain);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Rate limiter reset")]
+    private static partial void LogRateLimiterReset(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Waiting {WaitMs}ms before next request")]
+    private static partial void LogWaitingBeforeRequest(ILogger logger, double WaitMs);
 }

@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Logging;
-using Moq;
+using NSubstitute;
 using WebFlux.Core.Interfaces;
 using WebFlux.Core.Models;
 using WebFlux.Core.Options;
@@ -14,23 +14,23 @@ namespace WebFlux.Tests.Services;
 /// ExtractContent API 단위 테스트
 /// DeepResearch 통합을 위한 경량 추출 API 검증
 /// </summary>
-public class ExtractContentTests
+public class ExtractContentTests : IDisposable
 {
-    private readonly Mock<IServiceFactory> _mockServiceFactory;
-    private readonly Mock<IEventPublisher> _mockEventPublisher;
-    private readonly Mock<ILogger<WebContentProcessor>> _mockLogger;
+    private readonly IServiceFactory _mockServiceFactory;
+    private readonly IEventPublisher _mockEventPublisher;
+    private readonly ILogger<WebContentProcessor> _mockLogger;
     private readonly WebContentProcessor _processor;
 
     public ExtractContentTests()
     {
-        _mockServiceFactory = new Mock<IServiceFactory>();
-        _mockEventPublisher = new Mock<IEventPublisher>();
-        _mockLogger = new Mock<ILogger<WebContentProcessor>>();
+        _mockServiceFactory = Substitute.For<IServiceFactory>();
+        _mockEventPublisher = Substitute.For<IEventPublisher>();
+        _mockLogger = Substitute.For<ILogger<WebContentProcessor>>();
 
         _processor = new WebContentProcessor(
-            _mockServiceFactory.Object,
-            _mockEventPublisher.Object,
-            _mockLogger.Object);
+            _mockServiceFactory,
+            _mockEventPublisher,
+            _mockLogger);
     }
 
     #region ExtractContentAsync Tests
@@ -140,9 +140,9 @@ public class ExtractContentTests
         var url = "https://example.com";
         var options = new ExtractOptions { UseDynamicRendering = true };
 
-        var mockCrawler = new Mock<ICrawler>();
-        mockCrawler.Setup(c => c.CrawlAsync(It.IsAny<string>(), It.IsAny<CrawlOptions>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new CrawlResult
+        var mockCrawler = Substitute.For<ICrawler>();
+        mockCrawler.CrawlAsync(Arg.Any<string>(), Arg.Any<CrawlOptions>(), Arg.Any<CancellationToken>())
+            .Returns(new CrawlResult
             {
                 Url = url,
                 Content = "<html><body>Test</body></html>",
@@ -151,14 +151,14 @@ public class ExtractContentTests
                 IsSuccess = true
             });
 
-        _mockServiceFactory.Setup(f => f.CreateCrawler(CrawlStrategy.Dynamic)).Returns(mockCrawler.Object);
+        _mockServiceFactory.CreateCrawler(CrawlStrategy.Dynamic).Returns(mockCrawler);
         SetupExtractor();
 
         // Act
         var result = await _processor.ExtractContentAsync(url, options);
 
         // Assert
-        _mockServiceFactory.Verify(f => f.CreateCrawler(CrawlStrategy.Dynamic), Times.Once);
+        _mockServiceFactory.Received(1).CreateCrawler(CrawlStrategy.Dynamic);
     }
 
     [Fact]
@@ -169,10 +169,10 @@ public class ExtractContentTests
         var options = new ExtractOptions { EvaluateQuality = true };
         SetupSuccessfulCrawl(url);
 
-        var mockQualityEvaluator = new Mock<IContentQualityEvaluator>();
-        mockQualityEvaluator.Setup(e => e.EvaluateAsync(It.IsAny<ExtractedContent>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new ContentQualityInfo { OverallScore = 0.8 });
-        _mockServiceFactory.Setup(f => f.TryCreateContentQualityEvaluator()).Returns(mockQualityEvaluator.Object);
+        var mockQualityEvaluator = Substitute.For<IContentQualityEvaluator>();
+        mockQualityEvaluator.EvaluateAsync(Arg.Any<ExtractedContent>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new ContentQualityInfo { OverallScore = 0.8 });
+        _mockServiceFactory.TryCreateContentQualityEvaluator().Returns(mockQualityEvaluator);
 
         // Act
         var result = await _processor.ExtractContentAsync(url, options);
@@ -536,9 +536,9 @@ public class ExtractContentTests
 
     private void SetupSuccessfulCrawl(string url)
     {
-        var mockCrawler = new Mock<ICrawler>();
-        mockCrawler.Setup(c => c.CrawlAsync(It.Is<string>(u => u == url), It.IsAny<CrawlOptions>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new CrawlResult
+        var mockCrawler = Substitute.For<ICrawler>();
+        mockCrawler.CrawlAsync(Arg.Is<string>(u => u == url), Arg.Any<CrawlOptions>(), Arg.Any<CancellationToken>())
+            .Returns(new CrawlResult
             {
                 Url = url,
                 Content = "<html><head><title>Test</title></head><body>Test content</body></html>",
@@ -547,42 +547,42 @@ public class ExtractContentTests
                 IsSuccess = true
             });
 
-        _mockServiceFactory.Setup(f => f.CreateCrawler(It.IsAny<CrawlStrategy>())).Returns(mockCrawler.Object);
-        _mockServiceFactory.Setup(f => f.TryCreateCacheService()).Returns((ICacheService?)null);
-        _mockServiceFactory.Setup(f => f.TryCreateDomainRateLimiter()).Returns((IDomainRateLimiter?)null);
-        _mockServiceFactory.Setup(f => f.TryCreateContentQualityEvaluator()).Returns((IContentQualityEvaluator?)null);
+        _mockServiceFactory.CreateCrawler(Arg.Any<CrawlStrategy>()).Returns(mockCrawler);
+        _mockServiceFactory.TryCreateCacheService().Returns((ICacheService?)null);
+        _mockServiceFactory.TryCreateDomainRateLimiter().Returns((IDomainRateLimiter?)null);
+        _mockServiceFactory.TryCreateContentQualityEvaluator().Returns((IContentQualityEvaluator?)null);
 
         SetupExtractor();
     }
 
     private void SetupSuccessfulCrawlForAnyUrl()
     {
-        var mockCrawler = new Mock<ICrawler>();
-        mockCrawler.Setup(c => c.CrawlAsync(It.IsAny<string>(), It.IsAny<CrawlOptions>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((string url, CrawlOptions options, CancellationToken ct) => new CrawlResult
+        var mockCrawler = Substitute.For<ICrawler>();
+        mockCrawler.CrawlAsync(Arg.Any<string>(), Arg.Any<CrawlOptions>(), Arg.Any<CancellationToken>())
+            .Returns(callInfo => new CrawlResult
             {
-                Url = url,
+                Url = (string)callInfo[0],
                 Content = "<html><head><title>Test</title></head><body>Test content</body></html>",
                 ContentType = "text/html",
                 StatusCode = 200,
                 IsSuccess = true
             });
 
-        _mockServiceFactory.Setup(f => f.CreateCrawler(It.IsAny<CrawlStrategy>())).Returns(mockCrawler.Object);
-        _mockServiceFactory.Setup(f => f.TryCreateCacheService()).Returns((ICacheService?)null);
-        _mockServiceFactory.Setup(f => f.TryCreateDomainRateLimiter()).Returns((IDomainRateLimiter?)null);
-        _mockServiceFactory.Setup(f => f.TryCreateContentQualityEvaluator()).Returns((IContentQualityEvaluator?)null);
+        _mockServiceFactory.CreateCrawler(Arg.Any<CrawlStrategy>()).Returns(mockCrawler);
+        _mockServiceFactory.TryCreateCacheService().Returns((ICacheService?)null);
+        _mockServiceFactory.TryCreateDomainRateLimiter().Returns((IDomainRateLimiter?)null);
+        _mockServiceFactory.TryCreateContentQualityEvaluator().Returns((IContentQualityEvaluator?)null);
 
         SetupExtractor();
     }
 
     private void SetupMixedCrawl(string successUrl, string failUrl)
     {
-        var mockCrawler = new Mock<ICrawler>();
+        var mockCrawler = Substitute.For<ICrawler>();
 
         // Setup success URL
-        mockCrawler.Setup(c => c.CrawlAsync(It.Is<string>(u => u == successUrl), It.IsAny<CrawlOptions>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new CrawlResult
+        mockCrawler.CrawlAsync(Arg.Is<string>(u => u == successUrl), Arg.Any<CrawlOptions>(), Arg.Any<CancellationToken>())
+            .Returns(new CrawlResult
             {
                 Url = successUrl,
                 Content = "<html><head><title>Test</title></head><body>Test content</body></html>",
@@ -592,8 +592,8 @@ public class ExtractContentTests
             });
 
         // Setup fail URL
-        mockCrawler.Setup(c => c.CrawlAsync(It.Is<string>(u => u == failUrl), It.IsAny<CrawlOptions>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new CrawlResult
+        mockCrawler.CrawlAsync(Arg.Is<string>(u => u == failUrl), Arg.Any<CrawlOptions>(), Arg.Any<CancellationToken>())
+            .Returns(new CrawlResult
             {
                 Url = failUrl,
                 Content = null,
@@ -602,19 +602,19 @@ public class ExtractContentTests
                 ErrorMessage = "HTTP 500"
             });
 
-        _mockServiceFactory.Setup(f => f.CreateCrawler(It.IsAny<CrawlStrategy>())).Returns(mockCrawler.Object);
-        _mockServiceFactory.Setup(f => f.TryCreateCacheService()).Returns((ICacheService?)null);
-        _mockServiceFactory.Setup(f => f.TryCreateDomainRateLimiter()).Returns((IDomainRateLimiter?)null);
-        _mockServiceFactory.Setup(f => f.TryCreateContentQualityEvaluator()).Returns((IContentQualityEvaluator?)null);
+        _mockServiceFactory.CreateCrawler(Arg.Any<CrawlStrategy>()).Returns(mockCrawler);
+        _mockServiceFactory.TryCreateCacheService().Returns((ICacheService?)null);
+        _mockServiceFactory.TryCreateDomainRateLimiter().Returns((IDomainRateLimiter?)null);
+        _mockServiceFactory.TryCreateContentQualityEvaluator().Returns((IContentQualityEvaluator?)null);
 
         SetupExtractor();
     }
 
     private void SetupFailedCrawl(string url, int statusCode)
     {
-        var mockCrawler = new Mock<ICrawler>();
-        mockCrawler.Setup(c => c.CrawlAsync(It.Is<string>(u => u == url), It.IsAny<CrawlOptions>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new CrawlResult
+        var mockCrawler = Substitute.For<ICrawler>();
+        mockCrawler.CrawlAsync(Arg.Is<string>(u => u == url), Arg.Any<CrawlOptions>(), Arg.Any<CancellationToken>())
+            .Returns(new CrawlResult
             {
                 Url = url,
                 Content = null,
@@ -623,17 +623,17 @@ public class ExtractContentTests
                 ErrorMessage = $"HTTP {statusCode}"
             });
 
-        _mockServiceFactory.Setup(f => f.CreateCrawler(It.IsAny<CrawlStrategy>())).Returns(mockCrawler.Object);
-        _mockServiceFactory.Setup(f => f.TryCreateCacheService()).Returns((ICacheService?)null);
-        _mockServiceFactory.Setup(f => f.TryCreateDomainRateLimiter()).Returns((IDomainRateLimiter?)null);
-        _mockServiceFactory.Setup(f => f.TryCreateContentQualityEvaluator()).Returns((IContentQualityEvaluator?)null);
+        _mockServiceFactory.CreateCrawler(Arg.Any<CrawlStrategy>()).Returns(mockCrawler);
+        _mockServiceFactory.TryCreateCacheService().Returns((ICacheService?)null);
+        _mockServiceFactory.TryCreateDomainRateLimiter().Returns((IDomainRateLimiter?)null);
+        _mockServiceFactory.TryCreateContentQualityEvaluator().Returns((IContentQualityEvaluator?)null);
     }
 
     private void SetupEmptyContentCrawl(string url)
     {
-        var mockCrawler = new Mock<ICrawler>();
-        mockCrawler.Setup(c => c.CrawlAsync(It.Is<string>(u => u == url), It.IsAny<CrawlOptions>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new CrawlResult
+        var mockCrawler = Substitute.For<ICrawler>();
+        mockCrawler.CrawlAsync(Arg.Is<string>(u => u == url), Arg.Any<CrawlOptions>(), Arg.Any<CancellationToken>())
+            .Returns(new CrawlResult
             {
                 Url = url,
                 Content = "",
@@ -641,26 +641,32 @@ public class ExtractContentTests
                 IsSuccess = true
             });
 
-        _mockServiceFactory.Setup(f => f.CreateCrawler(It.IsAny<CrawlStrategy>())).Returns(mockCrawler.Object);
-        _mockServiceFactory.Setup(f => f.TryCreateCacheService()).Returns((ICacheService?)null);
-        _mockServiceFactory.Setup(f => f.TryCreateDomainRateLimiter()).Returns((IDomainRateLimiter?)null);
-        _mockServiceFactory.Setup(f => f.TryCreateContentQualityEvaluator()).Returns((IContentQualityEvaluator?)null);
+        _mockServiceFactory.CreateCrawler(Arg.Any<CrawlStrategy>()).Returns(mockCrawler);
+        _mockServiceFactory.TryCreateCacheService().Returns((ICacheService?)null);
+        _mockServiceFactory.TryCreateDomainRateLimiter().Returns((IDomainRateLimiter?)null);
+        _mockServiceFactory.TryCreateContentQualityEvaluator().Returns((IContentQualityEvaluator?)null);
     }
 
     private void SetupExtractor()
     {
-        var mockExtractor = new Mock<IContentExtractor>();
-        mockExtractor.Setup(e => e.ExtractAutoAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((string content, string url, string contentType, CancellationToken ct) => new ExtractedContent
+        var mockExtractor = Substitute.For<IContentExtractor>();
+        mockExtractor.ExtractAutoAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(callInfo => new ExtractedContent
             {
-                Url = url,
+                Url = (string)callInfo[1],
                 Text = "Test content",
                 MainContent = "Test content",
                 Title = "Test"
             });
 
-        _mockServiceFactory.Setup(f => f.CreateContentExtractor(It.IsAny<string>())).Returns(mockExtractor.Object);
+        _mockServiceFactory.CreateContentExtractor(Arg.Any<string>()).Returns(mockExtractor);
     }
 
     #endregion
+
+    public void Dispose()
+    {
+        _processor.Dispose();
+        GC.SuppressFinalize(this);
+    }
 }

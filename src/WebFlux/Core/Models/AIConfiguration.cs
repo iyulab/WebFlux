@@ -93,7 +93,7 @@ public class AIConfiguration
     /// <summary>
     /// 요청/응답 로깅 활성화
     /// </summary>
-    public bool EnableRequestResponseLogging { get; set; } = false;
+    public bool EnableRequestResponseLogging { get; set; }
 
     /// <summary>
     /// 비용 추적 활성화

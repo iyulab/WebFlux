@@ -41,7 +41,7 @@ public class MemoryOptimizedChunkingStrategy : BaseChunkingStrategy
     /// <summary>
     /// 스트리밍 방식의 메모리 효율적 청킹
     /// </summary>
-    private IReadOnlyList<WebContentChunk> StreamingChunk(string text, int chunkSize, string sourceUrl)
+    private List<WebContentChunk> StreamingChunk(string text, int chunkSize, string sourceUrl)
     {
         var chunks = new List<WebContentChunk>();
         var sequenceNumber = 0;
@@ -77,6 +77,6 @@ public class MemoryOptimizedChunkingStrategy : BaseChunkingStrategy
             }
         }
 
-        return chunks.AsReadOnly();
+        return chunks;
     }
 }

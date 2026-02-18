@@ -69,8 +69,8 @@ public class MemoryOptimizedChunkingStrategyTests
         // Arrange
         var content = new ExtractedContent
         {
-            Text = null,
-            MainContent = null,
+            Text = null!,
+            MainContent = null!,
             Url = "https://example.com"
         };
 
@@ -337,8 +337,8 @@ public class MemoryOptimizedChunkingStrategyTests
         var content = new ExtractedContent
         {
             MainContent = "Test content",
-            Url = null,
-            OriginalUrl = null
+            Url = null!,
+            OriginalUrl = null!
         };
 
         // Act

@@ -13,7 +13,7 @@ namespace WebFlux.Tests.Services;
 /// </summary>
 public class SiteConfigurationAnalyzerTests
 {
-    private readonly ISiteConfigurationAnalyzer _analyzer;
+    private readonly SiteConfigurationAnalyzer _analyzer;
 
     public SiteConfigurationAnalyzerTests()
     {
