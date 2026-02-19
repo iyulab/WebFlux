@@ -43,7 +43,16 @@ public class DomStructureChunkingStrategy : BaseChunkingStrategy
 
         var config = AngleSharp.Configuration.Default;
         var context = BrowsingContext.New(config);
-        var document = await context.OpenAsync(req => req.Content(content.OriginalHtml), cancellationToken);
+
+        IDocument document;
+        try
+        {
+            document = await context.OpenAsync(req => req.Content(content.OriginalHtml), cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            return Array.Empty<WebContentChunk>();
+        }
 
         // 주요 콘텐츠 영역 찾기
         var mainContent = FindMainContent(document, htmlOptions);
@@ -70,8 +79,7 @@ public class DomStructureChunkingStrategy : BaseChunkingStrategy
             sequenceCounter,
             cancellationToken);
 
-        // 작은 청크 병합
-        return MergeSmallChunks(chunks, htmlOptions);
+        return chunks;
     }
 
     private static HtmlChunkingOptions GetHtmlChunkingOptions(ChunkingOptions? options)
@@ -143,7 +151,7 @@ public class DomStructureChunkingStrategy : BaseChunkingStrategy
                 ? GetElementPath(element)
                 : $"{domPath} > {GetElementPath(element)}";
 
-            // 헤딩 처리
+            // 헤딩 처리 — headingPath 업데이트만 수행, 별도 청크 생성하지 않음
             if (options.HeadingTags.Contains(tagName))
             {
                 var headingText = element.TextContent.Trim();
@@ -152,35 +160,35 @@ public class DomStructureChunkingStrategy : BaseChunkingStrategy
                     var level = int.Parse(tagName[1].ToString(), System.Globalization.CultureInfo.InvariantCulture);
                     UpdateHeadingPath(headingPath, headingText, level);
                 }
+
+                return;
             }
 
-            // 섹션 분리 요소
+            // 섹션 분리 요소 — 자식을 재귀 처리하여 code/table/list 감지 유지
             if (IsSectionElement(element, options))
             {
-                var sectionContent = new StringBuilder();
-                CollectTextContent(element, sectionContent, options);
-
-                var text = sectionContent.ToString().Trim();
-                if (!string.IsNullOrEmpty(text))
+                var sectionChunks = new List<WebContentChunk>();
+                foreach (var child in element.ChildNodes)
                 {
-                    var chunk = CreateDomChunk(
-                        text,
-                        sequenceCounter.GetNext(),
-                        sourceUrl,
-                        newDomPath,
-                        headingPath.ToList());
+                    ProcessNode(child, sectionChunks, options, sourceUrl, headingPath, newDomPath, sequenceCounter, cancellationToken);
+                }
 
-                    // 큰 섹션은 분할
-                    if (text.Length > options.MaxChunkSize)
+                // 섹션 내 작은 청크 병합
+                var merged = MergeSmallChunks(sectionChunks, options);
+
+                // MaxChunkSize 초과 청크 분할
+                foreach (var chunk in merged)
+                {
+                    if (chunk.Content.Length > options.MaxChunkSize && chunk.Type == ChunkType.Text)
                     {
-                        var subChunks = SplitLargeSection(text, options, sourceUrl, newDomPath, headingPath, sequenceCounter);
-                        chunks.AddRange(subChunks);
+                        chunks.AddRange(SplitLargeText(chunk, options, sequenceCounter));
                     }
                     else
                     {
                         chunks.Add(chunk);
                     }
                 }
+
                 return;
             }
 
@@ -227,7 +235,7 @@ public class DomStructureChunkingStrategy : BaseChunkingStrategy
         else if (node is IText textNode)
         {
             var text = textNode.TextContent.Trim();
-            if (!string.IsNullOrEmpty(text) && text.Length >= options.MinChunkSize)
+            if (!string.IsNullOrEmpty(text))
             {
                 var chunk = CreateDomChunk(text, sequenceCounter.GetNext(), sourceUrl, domPath, headingPath.ToList());
                 chunks.Add(chunk);
@@ -298,14 +306,12 @@ public class DomStructureChunkingStrategy : BaseChunkingStrategy
         {
             if (sectionTag.Contains('.'))
             {
-                // div.section 형태
                 var parts = sectionTag.Split('.');
                 if (tagName == parts[0] && element.ClassList.Contains(parts[1]))
                     return true;
             }
             else if (sectionTag.Contains('['))
             {
-                // div[class*='section'] 형태
                 if (element.Matches(sectionTag))
                     return true;
             }
@@ -318,25 +324,47 @@ public class DomStructureChunkingStrategy : BaseChunkingStrategy
         return false;
     }
 
-    private static void CollectTextContent(IElement element, StringBuilder builder, HtmlChunkingOptions options)
+    private List<WebContentChunk> SplitLargeText(
+        WebContentChunk chunk,
+        HtmlChunkingOptions options,
+        SequenceCounter sequenceCounter)
     {
-        foreach (var child in element.ChildNodes)
+        var result = new List<WebContentChunk>();
+        var domPath = chunk.StrategyInfo?.Parameters?.TryGetValue("DomPath", out var dp) == true
+            ? dp as string ?? string.Empty
+            : string.Empty;
+        var sentences = chunk.Content.Split(SentenceSplitSeparators, StringSplitOptions.RemoveEmptyEntries);
+        var current = new StringBuilder();
+
+        foreach (var sentence in sentences)
         {
-            if (child is IText textNode)
+            if (current.Length + sentence.Length > options.MaxChunkSize && current.Length > 0)
             {
-                var text = textNode.TextContent.Trim();
-                if (!string.IsNullOrEmpty(text))
-                {
-                    if (builder.Length > 0)
-                        builder.Append(' ');
-                    builder.Append(text);
-                }
+                result.Add(CreateDomChunk(
+                    current.ToString().Trim(),
+                    sequenceCounter.GetNext(),
+                    chunk.SourceUrl,
+                    domPath,
+                    chunk.HeadingPath.ToList()));
+                current.Clear();
             }
-            else if (child is IElement childElement)
-            {
-                CollectTextContent(childElement, builder, options);
-            }
+
+            if (current.Length > 0)
+                current.Append(". ");
+            current.Append(sentence);
         }
+
+        if (current.Length > 0)
+        {
+            result.Add(CreateDomChunk(
+                current.ToString().Trim(),
+                sequenceCounter.GetNext(),
+                chunk.SourceUrl,
+                domPath,
+                chunk.HeadingPath.ToList()));
+        }
+
+        return result;
     }
 
     private static string ExtractTableText(IElement table)
@@ -363,49 +391,6 @@ public class DomStructureChunkingStrategy : BaseChunkingStrategy
             .ToList();
 
         return string.Join("\n", items);
-    }
-
-    private List<WebContentChunk> SplitLargeSection(
-        string text,
-        HtmlChunkingOptions options,
-        string sourceUrl,
-        string domPath,
-        List<string> headingPath,
-        SequenceCounter sequenceCounter)
-    {
-        var chunks = new List<WebContentChunk>();
-        var sentences = text.Split(SentenceSplitSeparators, StringSplitOptions.RemoveEmptyEntries);
-        var currentChunk = new StringBuilder();
-
-        foreach (var sentence in sentences)
-        {
-            if (currentChunk.Length + sentence.Length > options.MaxChunkSize && currentChunk.Length > 0)
-            {
-                chunks.Add(CreateDomChunk(
-                    currentChunk.ToString().Trim(),
-                    sequenceCounter.GetNext(),
-                    sourceUrl,
-                    domPath,
-                    headingPath.ToList()));
-                currentChunk.Clear();
-            }
-
-            if (currentChunk.Length > 0)
-                currentChunk.Append(". ");
-            currentChunk.Append(sentence);
-        }
-
-        if (currentChunk.Length > 0)
-        {
-            chunks.Add(CreateDomChunk(
-                currentChunk.ToString().Trim(),
-                sequenceCounter.GetNext(),
-                sourceUrl,
-                domPath,
-                headingPath.ToList()));
-        }
-
-        return chunks;
     }
 
     private static List<WebContentChunk> MergeSmallChunks(

@@ -61,7 +61,6 @@ public class HtmlChunkingOptions : IValidatable
     public List<string> SectionTags { get; set; } = new()
     {
         "section",
-        "article",
         "div.section",
         "div[class*='section']"
     };
