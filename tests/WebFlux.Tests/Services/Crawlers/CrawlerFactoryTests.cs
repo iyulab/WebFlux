@@ -1,5 +1,6 @@
 using NSubstitute;
 using WebFlux.Core.Interfaces;
+using WebFlux.Core.Models;
 using WebFlux.Core.Options;
 using WebFlux.Services.Crawlers;
 using Xunit;

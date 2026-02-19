@@ -6,8 +6,6 @@ using WebFlux.Core.Options;
 using WebFlux.Services;
 using Xunit;
 using FluentAssertions;
-using CrawlStrategy = WebFlux.Core.Options.CrawlStrategy;
-
 namespace WebFlux.Tests.Services;
 
 /// <summary>

@@ -125,9 +125,9 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
         [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
     {
         // 문자열을 CrawlStrategy enum으로 변환
-        var crawlStrategy = Enum.TryParse<WebFlux.Core.Options.CrawlStrategy>(configuration.Crawling.Strategy, true, out var strategy)
+        var crawlStrategy = Enum.TryParse<CrawlStrategy>(configuration.Crawling.Strategy, true, out var strategy)
             ? strategy
-            : WebFlux.Core.Options.CrawlStrategy.BreadthFirst;
+            : CrawlStrategy.BreadthFirst;
 
         var crawler = _serviceFactory.CreateCrawler(crawlStrategy);
 
@@ -731,7 +731,7 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
             {
                 StartUrls = new List<string> { startUrl },
                 // CrawlOptions가 제공되고 UseDynamicRendering이 true면 Dynamic 전략 사용
-                Strategy = (crawlOptions?.UseDynamicRendering == true || crawlOptions?.Strategy == WebFlux.Core.Options.CrawlStrategy.Dynamic)
+                Strategy = (crawlOptions?.UseDynamicRendering == true || crawlOptions?.Strategy == CrawlStrategy.Dynamic)
                     ? "Dynamic"
                     : "BreadthFirst",
                 DefaultDelayMs = crawlOptions?.DelayMs ?? 0
@@ -753,9 +753,9 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
         };
 
         // CrawlOptions를 직접 사용하여 크롤링
-        var crawlStrategy = (crawlOptions?.UseDynamicRendering == true || crawlOptions?.Strategy == WebFlux.Core.Options.CrawlStrategy.Dynamic)
-            ? WebFlux.Core.Options.CrawlStrategy.Dynamic
-            : WebFlux.Core.Options.CrawlStrategy.BreadthFirst;
+        var crawlStrategy = (crawlOptions?.UseDynamicRendering == true || crawlOptions?.Strategy == CrawlStrategy.Dynamic)
+            ? CrawlStrategy.Dynamic
+            : CrawlStrategy.BreadthFirst;
 
         var crawler = _serviceFactory.CreateCrawler(crawlStrategy);
 
@@ -928,8 +928,8 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
 
             // 크롤링 전략 선택
             var crawlStrategy = options.UseDynamicRendering
-                ? Core.Options.CrawlStrategy.Dynamic
-                : Core.Options.CrawlStrategy.BreadthFirst;
+                ? CrawlStrategy.Dynamic
+                : CrawlStrategy.BreadthFirst;
 
             var crawler = _serviceFactory.CreateCrawler(crawlStrategy);
 
@@ -1431,7 +1431,7 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
     private static partial void LogProcessingWebsite(ILogger logger, string Url, bool Dynamic);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Using crawler: {Strategy}, UseDynamicRendering: {Dynamic}")]
-    private static partial void LogUsingCrawler(ILogger logger, WebFlux.Core.Options.CrawlStrategy Strategy, bool Dynamic);
+    private static partial void LogUsingCrawler(ILogger logger, CrawlStrategy Strategy, bool Dynamic);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Empty content from {Url}")]
     private static partial void LogEmptyContentFromUrl(ILogger logger, string Url);

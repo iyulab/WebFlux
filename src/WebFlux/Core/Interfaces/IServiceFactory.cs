@@ -1,3 +1,4 @@
+using WebFlux.Core.Models;
 using WebFlux.Core.Options;
 
 namespace WebFlux.Core.Interfaces;

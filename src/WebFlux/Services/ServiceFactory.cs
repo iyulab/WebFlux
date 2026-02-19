@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using WebFlux.Core.Interfaces;
+using WebFlux.Core.Models;
 using WebFlux.Core.Options;
 
 namespace WebFlux.Services;

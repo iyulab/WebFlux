@@ -135,7 +135,7 @@ public class WebContentProcessorTests : IDisposable
         mockCrawler.CrawlWebsiteAsync(Arg.Any<string>(), Arg.Any<CrawlOptions>(), Arg.Any<CancellationToken>())
             .Returns(ToAsyncEnumerable(new List<CrawlResult>()));
 
-        _mockServiceFactory.CreateCrawler(Arg.Any<WebFlux.Core.Options.CrawlStrategy>())
+        _mockServiceFactory.CreateCrawler(Arg.Any<CrawlStrategy>())
             .Returns(mockCrawler);
 
         // Act
@@ -162,7 +162,7 @@ public class WebContentProcessorTests : IDisposable
         mockCrawler.CrawlWebsiteAsync(Arg.Any<string>(), Arg.Any<CrawlOptions>(), Arg.Any<CancellationToken>())
             .Returns(ToAsyncEnumerable(new List<CrawlResult>()));
 
-        _mockServiceFactory.CreateCrawler(Arg.Any<WebFlux.Core.Options.CrawlStrategy>())
+        _mockServiceFactory.CreateCrawler(Arg.Any<CrawlStrategy>())
             .Returns(mockCrawler);
 
         // Act
@@ -188,7 +188,7 @@ public class WebContentProcessorTests : IDisposable
         mockCrawler.CrawlWebsiteAsync(Arg.Any<string>(), Arg.Any<CrawlOptions>(), Arg.Any<CancellationToken>())
             .Returns(ToAsyncEnumerable(new List<CrawlResult>()));
 
-        _mockServiceFactory.CreateCrawler(Arg.Any<WebFlux.Core.Options.CrawlStrategy>())
+        _mockServiceFactory.CreateCrawler(Arg.Any<CrawlStrategy>())
             .Returns(mockCrawler);
 
         // Act
@@ -383,7 +383,7 @@ public class WebContentProcessorTests : IDisposable
             .Returns(chunks);
 
         // Setup service factory
-        _mockServiceFactory.CreateCrawler(Arg.Any<WebFlux.Core.Options.CrawlStrategy>()).Returns(mockCrawler);
+        _mockServiceFactory.CreateCrawler(Arg.Any<CrawlStrategy>()).Returns(mockCrawler);
         _mockServiceFactory.CreateContentExtractor(Arg.Any<string>()).Returns(mockExtractor);
         _mockServiceFactory.CreateChunkingStrategy(Arg.Any<string>()).Returns(mockChunkingStrategy);
         _mockServiceFactory.CreateAiEnhancementService().Returns((IAiEnhancementService)null!);
@@ -428,7 +428,7 @@ public class WebContentProcessorTests : IDisposable
                 }
             });
 
-        _mockServiceFactory.CreateCrawler(Arg.Any<WebFlux.Core.Options.CrawlStrategy>()).Returns(mockCrawler);
+        _mockServiceFactory.CreateCrawler(Arg.Any<CrawlStrategy>()).Returns(mockCrawler);
         _mockServiceFactory.CreateContentExtractor(Arg.Any<string>()).Returns(mockExtractor);
         _mockServiceFactory.CreateChunkingStrategy(Arg.Any<string>()).Returns(mockChunkingStrategy);
         _mockServiceFactory.CreateAiEnhancementService().Returns((IAiEnhancementService)null!);
@@ -452,7 +452,7 @@ public class WebContentProcessorTests : IDisposable
         mockCrawler.CrawlWebsiteAsync(Arg.Any<string>(), Arg.Any<CrawlOptions>(), Arg.Any<CancellationToken>())
             .Returns(ToAsyncEnumerable(new List<CrawlResult>()));
 
-        _mockServiceFactory.CreateCrawler(Arg.Any<WebFlux.Core.Options.CrawlStrategy>()).Returns(mockCrawler);
+        _mockServiceFactory.CreateCrawler(Arg.Any<CrawlStrategy>()).Returns(mockCrawler);
         _mockServiceFactory.CreateAiEnhancementService().Returns((IAiEnhancementService)null!);
 
         // Act & Assert
@@ -497,7 +497,7 @@ public class WebContentProcessorTests : IDisposable
                 }
             });
 
-        _mockServiceFactory.CreateCrawler(Arg.Any<WebFlux.Core.Options.CrawlStrategy>()).Returns(mockCrawler);
+        _mockServiceFactory.CreateCrawler(Arg.Any<CrawlStrategy>()).Returns(mockCrawler);
         _mockServiceFactory.CreateContentExtractor(Arg.Any<string>()).Returns(mockExtractor);
         _mockServiceFactory.CreateChunkingStrategy(Arg.Any<string>()).Returns(mockChunkingStrategy);
         _mockServiceFactory.CreateAiEnhancementService().Returns((IAiEnhancementService)null!);
@@ -542,7 +542,7 @@ public class WebContentProcessorTests : IDisposable
                 }
             });
 
-        _mockServiceFactory.CreateCrawler(Arg.Any<WebFlux.Core.Options.CrawlStrategy>()).Returns(mockCrawler);
+        _mockServiceFactory.CreateCrawler(Arg.Any<CrawlStrategy>()).Returns(mockCrawler);
         _mockServiceFactory.CreateContentExtractor(Arg.Any<string>()).Returns(mockExtractor);
         _mockServiceFactory.CreateChunkingStrategy(Arg.Any<string>()).Returns(mockChunkingStrategy);
         _mockServiceFactory.CreateAiEnhancementService().Returns((IAiEnhancementService)null!);
@@ -585,7 +585,7 @@ public class WebContentProcessorTests : IDisposable
                 }
             });
 
-        _mockServiceFactory.CreateCrawler(Arg.Any<WebFlux.Core.Options.CrawlStrategy>()).Returns(mockCrawler);
+        _mockServiceFactory.CreateCrawler(Arg.Any<CrawlStrategy>()).Returns(mockCrawler);
         _mockServiceFactory.CreateContentExtractor(Arg.Any<string>()).Returns(mockExtractor);
         _mockServiceFactory.CreateChunkingStrategy(Arg.Any<string>()).Returns(mockChunkingStrategy);
         _mockServiceFactory.CreateAiEnhancementService().Returns((IAiEnhancementService)null!);
@@ -723,7 +723,7 @@ public class WebContentProcessorTests : IDisposable
                 new WebContentChunk { Id = "1", Content = "Test", SourceUrl = "https://example.com", StrategyInfo = new ChunkingStrategyInfo { StrategyName = "Auto" } }
             });
 
-        _mockServiceFactory.CreateCrawler(Arg.Any<WebFlux.Core.Options.CrawlStrategy>()).Returns(mockCrawler);
+        _mockServiceFactory.CreateCrawler(Arg.Any<CrawlStrategy>()).Returns(mockCrawler);
         _mockServiceFactory.CreateContentExtractor(Arg.Any<string>()).Returns(mockExtractor);
         _mockServiceFactory.CreateChunkingStrategy(Arg.Any<string>()).Returns(mockChunkingStrategy);
         _mockServiceFactory.CreateAiEnhancementService().Returns((IAiEnhancementService)null!);
