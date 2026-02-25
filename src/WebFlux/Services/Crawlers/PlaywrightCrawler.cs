@@ -427,38 +427,15 @@ public partial class PlaywrightCrawler : BaseCrawler, IAsyncDisposable
     }
 
     /// <summary>
-    /// 동기 리소스 정리 (레거시 호환)
+    /// 동기 리소스 정리 (레거시 호환 — DisposeAsync 위임)
     /// </summary>
     public override void Dispose()
     {
         if (_disposed)
             return;
 
-        _disposed = true;
-
-        try
-        {
-            while (_pagePool.TryTake(out var page))
-            {
-                try
-                {
-                    page.CloseAsync().Wait();
-                }
-                catch
-                {
-                    // Ignore close errors during disposal
-                }
-            }
-
-            _browser?.DisposeAsync().AsTask().GetAwaiter().GetResult();
-            _playwright?.Dispose();
-            _browserLock?.Dispose();
-            _pageSemaphore?.Dispose();
-        }
-        finally
-        {
-            base.Dispose();
-        }
+        // DisposeAsync로 위임하여 sync-over-async 중복 제거
+        DisposeAsync().AsTask().GetAwaiter().GetResult();
     }
 
     // ===================================================================

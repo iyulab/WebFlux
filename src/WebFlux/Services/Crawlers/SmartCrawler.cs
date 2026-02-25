@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Microsoft.Playwright;
 using System.Text.RegularExpressions;
 using WebFlux.Core.Interfaces;
 using WebFlux.Core.Models;
@@ -83,11 +84,11 @@ public partial class SmartCrawler : BaseCrawler
                 Exception = httpResult.Exception
             };
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is HttpRequestException or IOException or TaskCanceledException or PlaywrightException)
         {
             LogSmartCrawlError(_logger, ex, url);
 
-            // 실패 시 Playwright로 대체 시도
+            // 네트워크/IO/타임아웃/Playwright 오류 시 Playwright로 대체 시도
             LogFallbackToPlaywright(_logger);
             return await _playwrightCrawler.CrawlAsync(url, options, cancellationToken);
         }

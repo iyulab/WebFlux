@@ -897,6 +897,15 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
 
         try
         {
+            // 조기 취소 확인
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return ProcessingResult.FromError<ExtractedContent>(
+                    "Operation cancelled",
+                    ExtractErrorCodes.Timeout,
+                    sw.ElapsedMilliseconds);
+            }
+
             LogExtractingContent(_logger, url);
 
             // URL 유효성 검사
@@ -959,7 +968,9 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
                         break;
                     }
                 }
-                catch (Exception ex) when (retryCount < options.MaxRetries)
+                catch (Exception ex) when (
+                    retryCount < options.MaxRetries &&
+                    ex is HttpRequestException or IOException or TaskCanceledException)
                 {
                     LogCrawlAttemptFailed(_logger, ex, retryCount + 1, url);
                 }

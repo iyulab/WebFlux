@@ -120,7 +120,7 @@ public partial class DomainRateLimiter : IDomainRateLimiter, IDisposable
                 LogCrawlDelayApplied(_logger, normalizedDomain, crawlDelay.Value);
             }
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is HttpRequestException or IOException or TaskCanceledException)
         {
             LogRobotsTxtFailed(_logger, ex, normalizedDomain);
         }
