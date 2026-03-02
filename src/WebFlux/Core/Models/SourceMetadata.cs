@@ -1,4 +1,4 @@
-using WebFlux.Core.Interfaces;
+using Flux.Abstractions;
 
 namespace WebFlux.Core.Models;
 
@@ -18,6 +18,9 @@ public class SourceMetadata : ISourceMetadata
     public required string Title { get; init; }
 
     /// <inheritdoc />
+    public string? FilePath { get; init; }
+
+    /// <inheritdoc />
     public string? Url { get; init; }
 
     /// <inheritdoc />
@@ -27,10 +30,16 @@ public class SourceMetadata : ISourceMetadata
     public required string Language { get; init; }
 
     /// <inheritdoc />
+    public double? LanguageConfidence { get; init; }
+
+    /// <inheritdoc />
     public int WordCount { get; init; }
 
     /// <inheritdoc />
     public int ChunkCount { get; init; }
+
+    /// <inheritdoc />
+    public int? PageCount { get; init; }
 
     /// <inheritdoc />
     public DateTime? PublishedAt { get; init; }
@@ -39,7 +48,7 @@ public class SourceMetadata : ISourceMetadata
     public string? Author { get; init; }
 
     /// <inheritdoc />
-    public IReadOnlyList<string> Keywords { get; init; } = Array.Empty<string>();
+    public IReadOnlyList<string>? Keywords { get; init; } = Array.Empty<string>();
 
     /// <summary>
     /// WebContentMetadata에서 SourceMetadata 생성

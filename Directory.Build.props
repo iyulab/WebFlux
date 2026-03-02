@@ -67,6 +67,11 @@
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
   </PropertyGroup>
 
+  <!-- Local development packages (auto-detected, ignored in CI) -->
+  <PropertyGroup Condition="Exists('$(MSBuildThisFileDirectory)../../local-packages')">
+    <RestoreAdditionalProjectSources>$(RestoreAdditionalProjectSources);$(MSBuildThisFileDirectory)../../local-packages</RestoreAdditionalProjectSources>
+  </PropertyGroup>
+
   <!-- ═══════════════════════════════════════════════════════════════════════ -->
   <!-- 🔧 빌드 설정 -->
   <!-- ═══════════════════════════════════════════════════════════════════════ -->

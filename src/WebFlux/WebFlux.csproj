@@ -9,6 +9,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Flux.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- HTTP 클라이언트 -->
     <PackageReference Include="Microsoft.Extensions.Http" />
 

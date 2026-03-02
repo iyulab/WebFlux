@@ -1,4 +1,4 @@
-using WebFlux.Core.Interfaces;
+using Flux.Abstractions;
 
 namespace WebFlux.Core.Models;
 
@@ -121,7 +121,16 @@ public class WebContentChunk : IEnrichedChunk
     int IEnrichedChunk.ChunkIndex => SequenceNumber;
 
     /// <inheritdoc />
+    int? IEnrichedChunk.StartPage => null;
+
+    /// <inheritdoc />
+    int? IEnrichedChunk.EndPage => null;
+
+    /// <inheritdoc />
     double IEnrichedChunk.Quality => QualityScore;
+
+    /// <inheritdoc />
+    int? IEnrichedChunk.TokenCount => null;
 
     /// <inheritdoc />
     ISourceMetadata IEnrichedChunk.Source => Source ?? throw new InvalidOperationException("Source metadata is not set");

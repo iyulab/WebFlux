@@ -34,8 +34,8 @@
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <!-- 📝 Document Processing -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <PackageVersion Include="Markdig" Version="0.45.0" />
-    <PackageVersion Include="ReverseMarkdown" Version="5.0.0" />
+    <PackageVersion Include="Markdig" Version="1.0.1" />
+    <PackageVersion Include="ReverseMarkdown" Version="5.2.0" />
     <PackageVersion Include="YamlDotNet" Version="16.3.0" />
 
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
@@ -43,6 +43,11 @@
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <PackageVersion Include="Polly" Version="8.6.5" />
     <PackageVersion Include="Polly.Extensions.Http" Version="3.0.0" />
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- 🧩 Flux Ecosystem -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <PackageVersion Include="Flux.Abstractions" Version="0.9.2" />
 
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <!-- 🤖 AI Services -->
@@ -57,7 +62,7 @@
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <!-- 🧪 Testing -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.3.0" />
     <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
     <PackageVersion Include="coverlet.collector" Version="8.0.0" />
