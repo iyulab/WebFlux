@@ -41,7 +41,7 @@ public partial class BasicAiEnhancementService : IAiEnhancementService
         var completionOptions = new TextCompletionOptions
         {
             MaxTokens = options.MaxLength * 2, // 안전 마진
-            Temperature = 0.3, // 일관성을 위해 낮은 temperature
+            Temperature = 0.3f, // 일관성을 위해 낮은 temperature
             SystemPrompt = "You are an expert at creating concise, informative summaries."
         };
 
@@ -69,7 +69,7 @@ public partial class BasicAiEnhancementService : IAiEnhancementService
         var completionOptions = new TextCompletionOptions
         {
             MaxTokens = Math.Max(content.Length * 2, 4000), // 충분한 토큰
-            Temperature = 0.5, // 창의성과 일관성의 균형
+            Temperature = 0.5f, // 창의성과 일관성의 균형
             SystemPrompt = "You improve text clarity and readability while preserving meaning and factual accuracy."
         };
 
@@ -97,7 +97,7 @@ public partial class BasicAiEnhancementService : IAiEnhancementService
         var completionOptions = new TextCompletionOptions
         {
             MaxTokens = 1500,
-            Temperature = 0.2, // 일관성 중요
+            Temperature = 0.2f, // 일관성 중요
             SystemPrompt = "You extract structured metadata from content. Output valid JSON only."
         };
 

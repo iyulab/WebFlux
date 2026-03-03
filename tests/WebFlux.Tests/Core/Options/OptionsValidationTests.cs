@@ -456,7 +456,7 @@ public class OptionsValidationTests
     [Fact]
     public void TextCompletionOptions_TemperatureOutOfRange_ShouldFail()
     {
-        var options = new TextCompletionOptions { Temperature = 2.5 };
+        var options = new TextCompletionOptions { Temperature = 2.5f };
         var result = options.Validate();
         result.IsValid.Should().BeFalse();
         result.Errors.Should().Contain(e => e.Contains("Temperature"));
@@ -465,7 +465,7 @@ public class OptionsValidationTests
     [Fact]
     public void TextCompletionOptions_TopPOutOfRange_ShouldFail()
     {
-        var options = new TextCompletionOptions { TopP = -0.1 };
+        var options = new TextCompletionOptions { TopP = -0.1f };
         var result = options.Validate();
         result.IsValid.Should().BeFalse();
         result.Errors.Should().Contain(e => e.Contains("TopP"));
@@ -474,7 +474,7 @@ public class OptionsValidationTests
     [Fact]
     public void TextCompletionOptions_FrequencyPenaltyOutOfRange_ShouldFail()
     {
-        var options = new TextCompletionOptions { FrequencyPenalty = 3.0 };
+        var options = new TextCompletionOptions { FrequencyPenalty = 3.0f };
         var result = options.Validate();
         result.IsValid.Should().BeFalse();
         result.Errors.Should().Contain(e => e.Contains("FrequencyPenalty"));
@@ -483,7 +483,7 @@ public class OptionsValidationTests
     [Fact]
     public void TextCompletionOptions_PresencePenaltyOutOfRange_ShouldFail()
     {
-        var options = new TextCompletionOptions { PresencePenalty = -3.0 };
+        var options = new TextCompletionOptions { PresencePenalty = -3.0f };
         var result = options.Validate();
         result.IsValid.Should().BeFalse();
         result.Errors.Should().Contain(e => e.Contains("PresencePenalty"));
