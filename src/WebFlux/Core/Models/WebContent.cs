@@ -120,6 +120,17 @@ public class ExtractedContent
     /// <summary>
     /// 캐시에서 로드되었는지 여부
     /// </summary>
+    /// <summary>
+    /// Returns the best available content by checking each field in order of richness.
+    /// Skips null and empty/whitespace-only values, unlike null-coalescing chains
+    /// which stop at empty strings from non-nullable properties.
+    /// </summary>
+    public string? GetBestContent() =>
+        !string.IsNullOrWhiteSpace(FitMarkdown) ? FitMarkdown :
+        !string.IsNullOrWhiteSpace(RawMarkdown) ? RawMarkdown :
+        !string.IsNullOrWhiteSpace(MainContent) ? MainContent :
+        !string.IsNullOrWhiteSpace(Text) ? Text : null;
+
     public bool FromCache { get; set; }
 }
 
