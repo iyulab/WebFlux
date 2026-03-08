@@ -34,20 +34,20 @@
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <!-- 📝 Document Processing -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <PackageVersion Include="Markdig" Version="1.1.0" />
+    <PackageVersion Include="Markdig" Version="1.1.1" />
     <PackageVersion Include="ReverseMarkdown" Version="5.2.0" />
     <PackageVersion Include="YamlDotNet" Version="16.3.0" />
 
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <!-- 🛡️ Resilience -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <PackageVersion Include="Polly" Version="8.6.5" />
+    <PackageVersion Include="Polly" Version="8.6.6" />
     <PackageVersion Include="Polly.Extensions.Http" Version="3.0.0" />
 
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <!-- 🧩 Flux Ecosystem -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <PackageVersion Include="Flux.Abstractions" Version="0.9.3" />
+    <PackageVersion Include="Flux.Abstractions" Version="0.10.3" />
 
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <!-- 🤖 AI Services -->
