@@ -15,7 +15,7 @@
   <!-- 📋 버전 관리 -->
   <!-- ═══════════════════════════════════════════════════════════════════════ -->
   <PropertyGroup>
-    <VersionPrefix>0.4.2</VersionPrefix>
+    <VersionPrefix>0.4.3</VersionPrefix>
     <VersionSuffix></VersionSuffix>
     <PackageVersion Condition="'$(VersionSuffix)' == ''">$(VersionPrefix)</PackageVersion>
     <PackageVersion Condition="'$(VersionSuffix)' != ''">$(VersionPrefix)-$(VersionSuffix)</PackageVersion>
