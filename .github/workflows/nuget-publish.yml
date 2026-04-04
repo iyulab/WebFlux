@@ -22,7 +22,6 @@ env:
   BUILD_CONFIGURATION: 'Release'
 
 jobs:
-  # Version 추출 및 변경 감지
   detect-version:
     name: 🔍 Detect Version Changes
     runs-on: ubuntu-latest
@@ -51,12 +50,6 @@ jobs:
           echo "Full version: $FULL_VERSION"
           echo "version=$FULL_VERSION" >> $GITHUB_OUTPUT
 
-      - name: ℹ️ Version Info
-        run: |
-          echo "Detected version: ${{ steps.extract-version.outputs.version }}"
-          echo "This workflow will proceed to build and publish the WebFlux NuGet package."
-
-  # 빌드 및 테스트
   build:
     name: 🔨 Build & Test Solution
     runs-on: ubuntu-latest
@@ -85,11 +78,11 @@ jobs:
           echo "⏭️ Performance and LongRunning tests are excluded from CI for efficiency"
           echo "💡 To run all tests locally: ./scripts/full-test.ps1 -IncludePerformance -IncludeLongRunning"
 
-  # NuGet 패키지 빌드
-  build-package:
-    name: 📦 Build NuGet Package
+  publish:
+    name: 🚀 Build & Publish to NuGet.org
     runs-on: ubuntu-latest
     needs: [detect-version, build]
+    if: github.ref == 'refs/heads/main' || github.event.inputs.force_publish == 'true'
     steps:
       - name: 📥 Checkout Code
         uses: actions/checkout@v4
@@ -109,51 +102,7 @@ jobs:
             --output nupkg/ \
             --no-restore
 
-      - name: 📋 List Generated Packages
-        run: ls -la nupkg/
-
-      - name: 📤 Upload Package Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: nuget-packages
-          path: nupkg/*.nupkg
-
-      - name: 📤 Upload Symbol Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: nuget-symbols
-          path: nupkg/*.snupkg
-        if: always()
-
-  # NuGet.org에 게시
-  publish-nuget:
-    name: 🚀 Publish to NuGet.org
-    runs-on: ubuntu-latest
-    needs: [detect-version, build-package]
-    if: github.ref == 'refs/heads/main' || github.event.inputs.force_publish == 'true'
-    steps:
-      - name: 📥 Checkout Code
-        uses: actions/checkout@v4
-
-      - name: ⚙️ Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: ${{ env.DOTNET_VERSION }}
-
-      - name: 📦 Download Package Artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: nuget-packages
-          path: nupkg/
-
-      - name: 📦 Download Symbol Artifacts (if exists)
-        uses: actions/download-artifact@v4
-        with:
-          name: nuget-symbols
-          path: nupkg/
-        continue-on-error: true
-
-      - name: 📋 Verify Downloaded Packages
+      - name: 📋 Verify Packages
         run: ls -la nupkg/
 
       - name: 🚀 Publish to NuGet.org
@@ -176,7 +125,6 @@ jobs:
 
           TAG_NAME="v${{ needs.detect-version.outputs.version }}"
 
-          # 로컬 태그가 없으면 생성
           if ! git tag -l "$TAG_NAME" | grep -q "$TAG_NAME"; then
             git tag "$TAG_NAME"
             echo "Created local tag $TAG_NAME"
@@ -184,7 +132,6 @@ jobs:
             echo "Tag $TAG_NAME already exists locally"
           fi
 
-          # 원격에 태그 push (이미 존재하면 무시)
           if git push origin "$TAG_NAME" 2>&1 | grep -q "already exists"; then
             echo "Tag $TAG_NAME already exists on remote, skipping"
             exit 0
@@ -194,21 +141,20 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # 알림
   notify-completion:
     name: 📢 Notify Completion
     runs-on: ubuntu-latest
-    needs: [detect-version, publish-nuget]
+    needs: [detect-version, publish]
     if: always()
     steps:
       - name: 🎉 Success Notification
-        if: needs.publish-nuget.result == 'success'
+        if: needs.publish.result == 'success'
         run: |
           echo "🎉 Successfully published WebFlux v${{ needs.detect-version.outputs.version }} to NuGet.org!"
           echo "📦 Package URL: https://www.nuget.org/packages/WebFlux/${{ needs.detect-version.outputs.version }}"
 
       - name: ❌ Failure Notification
-        if: needs.publish-nuget.result != 'success'
+        if: needs.publish.result != 'success'
         run: |
           echo "❌ Failed to publish WebFlux v${{ needs.detect-version.outputs.version }}"
           echo "Check the workflow logs for detailed error information"
