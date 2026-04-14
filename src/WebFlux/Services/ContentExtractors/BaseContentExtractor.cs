@@ -1,5 +1,6 @@
 using WebFlux.Core.Interfaces;
 using WebFlux.Core.Models;
+using WebFlux.Core.Models.Events;
 using System.Text.RegularExpressions;
 
 namespace WebFlux.Services.ContentExtractors;
@@ -480,35 +481,3 @@ public abstract class BaseContentExtractor : IContentExtractor
     }
 }
 
-/// <summary>
-/// 콘텐츠 추출 시작 이벤트
-/// </summary>
-public class ContentExtractionStartedEvent : ProcessingEvent
-{
-    public override string EventType => "ContentExtractionStarted";
-    public string Url { get; set; } = string.Empty;
-    public string ContentType { get; set; } = string.Empty;
-    public int ContentLength { get; set; }
-}
-
-/// <summary>
-/// 콘텐츠 추출 완료 이벤트
-/// </summary>
-public class ContentExtractionCompletedEvent : ProcessingEvent
-{
-    public override string EventType => "ContentExtractionCompleted";
-    public string Url { get; set; } = string.Empty;
-    public int ExtractedTextLength { get; set; }
-    public int ProcessingTimeMs { get; set; }
-    public string ExtractionMethod { get; set; } = string.Empty;
-}
-
-/// <summary>
-/// 콘텐츠 추출 실패 이벤트
-/// </summary>
-public class ContentExtractionFailedEvent : ProcessingEvent
-{
-    public override string EventType => "ContentExtractionFailed";
-    public string Url { get; set; } = string.Empty;
-    public string Error { get; set; } = string.Empty;
-}

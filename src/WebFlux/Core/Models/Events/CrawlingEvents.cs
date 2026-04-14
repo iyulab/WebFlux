@@ -1,30 +1,26 @@
 namespace WebFlux.Core.Models.Events;
 
 /// <summary>
-/// 크롤링 관련 이벤트 통합
+/// 크롤링 시작 이벤트
 /// </summary>
-
-/// <summary>
-/// 크롤링 시작 이벤트 (통합)
-/// </summary>
-public class CrawlingStartedEventV2 : ProcessingEvent
+public class CrawlingStartedEvent : ProcessingEvent
 {
     public override string EventType => "CrawlingStarted";
 
     /// <summary>시작 URL</summary>
-    public string StartUrl { get; init; } = string.Empty;
+    public required string StartUrl { get; init; }
 
     /// <summary>크롤링 옵션</summary>
-    public object CrawlOptions { get; init; } = new object();
+    public required object CrawlOptions { get; init; }
 
     /// <summary>예상 페이지 수</summary>
     public int? EstimatedPageCount { get; init; }
 }
 
 /// <summary>
-/// 크롤링 완료 이벤트 (통합)
+/// 크롤링 완료 이벤트
 /// </summary>
-public class CrawlingCompletedEventV2 : ProcessingEvent
+public class CrawlingCompletedEvent : ProcessingEvent
 {
     public override string EventType => "CrawlingCompleted";
 
@@ -45,14 +41,14 @@ public class CrawlingCompletedEventV2 : ProcessingEvent
 }
 
 /// <summary>
-/// 페이지 크롤링 완료 이벤트 (통합)
+/// 페이지 크롤링 완료 이벤트
 /// </summary>
-public class PageCrawledEventV2 : ProcessingEvent
+public class PageCrawledEvent : ProcessingEvent
 {
     public override string EventType => "PageCrawled";
 
     /// <summary>크롤링된 URL</summary>
-    public string Url { get; init; } = string.Empty;
+    public required string Url { get; init; }
 
     /// <summary>HTTP 상태 코드</summary>
     public int StatusCode { get; init; }
@@ -71,49 +67,49 @@ public class PageCrawledEventV2 : ProcessingEvent
 }
 
 /// <summary>
-/// URL 처리 시작 이벤트 (통합)
+/// URL 처리 시작 이벤트
 /// </summary>
-public class UrlProcessingStartedEventV2 : ProcessingEvent
+public class UrlProcessingStartedEvent : ProcessingEvent
 {
     public override string EventType => "UrlProcessingStarted";
 
     /// <summary>처리 대상 URL</summary>
-    public string Url { get; set; } = string.Empty;
+    public required string Url { get; init; }
 }
 
 /// <summary>
-/// URL 처리 완료 이벤트 (통합)
+/// URL 처리 완료 이벤트
 /// </summary>
-public class UrlProcessedEventV2 : ProcessingEvent
+public class UrlProcessedEvent : ProcessingEvent
 {
     public override string EventType => "UrlProcessed";
 
     /// <summary>처리된 URL</summary>
-    public string Url { get; set; } = string.Empty;
+    public required string Url { get; init; }
 
     /// <summary>콘텐츠 길이</summary>
-    public int ContentLength { get; set; }
+    public int ContentLength { get; init; }
 
     /// <summary>콘텐츠 타입</summary>
-    public string ContentType { get; set; } = string.Empty;
+    public string ContentType { get; init; } = string.Empty;
 
     /// <summary>발견된 URL 수</summary>
-    public int DiscoveredUrlCount { get; set; }
+    public int DiscoveredUrlCount { get; init; }
 
     /// <summary>처리 시간 (밀리초)</summary>
-    public int ProcessingTimeMs { get; set; }
+    public int ProcessingTimeMs { get; init; }
 }
 
 /// <summary>
-/// URL 처리 실패 이벤트 (통합)
+/// URL 처리 실패 이벤트
 /// </summary>
-public class UrlProcessingFailedEventV2 : ProcessingEvent
+public class UrlProcessingFailedEvent : ProcessingEvent
 {
     public override string EventType => "UrlProcessingFailed";
 
     /// <summary>실패한 URL</summary>
-    public string Url { get; set; } = string.Empty;
+    public required string Url { get; init; }
 
     /// <summary>오류 메시지</summary>
-    public string Error { get; set; } = string.Empty;
+    public required string Error { get; init; }
 }

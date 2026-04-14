@@ -3,6 +3,7 @@ using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using WebFlux.Core.Interfaces;
 using WebFlux.Core.Models;
+using WebFlux.Core.Models.Events;
 using WebFlux.Core.Options;
 using WebFlux.Services.Crawlers;
 using WebFlux.Services;

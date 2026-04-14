@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using NSubstitute;
 using WebFlux.Core.Interfaces;
 using WebFlux.Core.Models;
+using WebFlux.Core.Models.Events;
 using WebFlux.Core.Options;
 using WebFlux.Services;
 using Xunit;

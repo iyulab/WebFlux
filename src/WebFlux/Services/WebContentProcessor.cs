@@ -2,6 +2,7 @@ using System.Threading.Channels;
 using Microsoft.Extensions.Logging;
 using WebFlux.Core.Interfaces;
 using WebFlux.Core.Models;
+using WebFlux.Core.Models.Events;
 using WebFlux.Core.Options;
 using System.Collections.Concurrent;
 
@@ -1487,45 +1488,3 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
     private static partial void LogStartingStreamingBatchExtraction(ILogger logger, int UrlCount);
 }
 
-/// <summary>
-/// 처리 시작 이벤트
-/// </summary>
-public class ProcessingStartedEvent : ProcessingEvent
-{
-    public override string EventType => "ProcessingStarted";
-    public WebFluxConfiguration Configuration { get; set; } = new();
-    public List<string> StartUrls { get; set; } = new();
-}
-
-/// <summary>
-/// 처리 진행률 이벤트
-/// </summary>
-public class ProcessingProgressEvent : ProcessingEvent
-{
-    public override string EventType => "ProcessingProgress";
-    public int ProcessedCount { get; set; }
-    public TimeSpan ElapsedTime { get; set; }
-    public TimeSpan EstimatedRemaining { get; set; }
-    public string CurrentStage { get; set; } = string.Empty;
-}
-
-/// <summary>
-/// 처리 완료 이벤트
-/// </summary>
-public class ProcessingCompletedEvent : ProcessingEvent
-{
-    public override string EventType => "ProcessingCompleted";
-    public int ProcessedChunkCount { get; set; }
-    public TimeSpan TotalProcessingTime { get; set; }
-    public double AverageProcessingRate { get; set; }
-}
-
-/// <summary>
-/// 처리 실패 이벤트
-/// </summary>
-public class ProcessingFailedEvent : ProcessingEvent
-{
-    public override string EventType => "ProcessingFailed";
-    public string Error { get; set; } = string.Empty;
-    public int ProcessedCount { get; set; }
-}

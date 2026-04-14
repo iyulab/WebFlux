@@ -1,18 +1,14 @@
 namespace WebFlux.Core.Models.Events;
 
 /// <summary>
-/// 모니터링/성능 관련 이벤트 통합
+/// 오류 발생 이벤트
 /// </summary>
-
-/// <summary>
-/// 오류 발생 이벤트 (통합)
-/// </summary>
-public class ErrorOccurredEventV2 : ProcessingEvent
+public class ErrorOccurredEvent : ProcessingEvent
 {
     public override string EventType => "ErrorOccurred";
 
     /// <summary>오류 코드</summary>
-    public string ErrorCode { get; init; } = string.Empty;
+    public required string ErrorCode { get; init; }
 
     /// <summary>오류 카테고리</summary>
     public string ErrorCategory { get; init; } = "General";
@@ -26,21 +22,21 @@ public class ErrorOccurredEventV2 : ProcessingEvent
     /// <summary>영향을 받은 리소스</summary>
     public string? AffectedResource { get; init; }
 
-    public ErrorOccurredEventV2()
+    public ErrorOccurredEvent()
     {
         Severity = EventSeverity.Error;
     }
 }
 
 /// <summary>
-/// 성능 메트릭 이벤트 (통합)
+/// 성능 메트릭 이벤트
 /// </summary>
-public class PerformanceMetricsEventV2 : ProcessingEvent
+public class PerformanceMetricsEvent : ProcessingEvent
 {
     public override string EventType => "PerformanceMetrics";
 
     /// <summary>메트릭 이름</summary>
-    public string MetricName { get; init; } = string.Empty;
+    public required string MetricName { get; init; }
 
     /// <summary>메트릭 값</summary>
     public double Value { get; init; }
@@ -54,32 +50,4 @@ public class PerformanceMetricsEventV2 : ProcessingEvent
     /// <summary>추가 태그</summary>
     public IReadOnlyDictionary<string, string> Tags { get; init; } =
         new Dictionary<string, string>();
-}
-
-/// <summary>
-/// 크롤링 오류 이벤트 (통합)
-/// </summary>
-public class CrawlErrorEventV2 : ProcessingEvent
-{
-    public override string EventType => "CrawlError";
-
-    /// <summary>오류 발생 URL</summary>
-    public string Url { get; set; } = string.Empty;
-
-    /// <summary>오류 메시지</summary>
-    public string Error { get; set; } = string.Empty;
-}
-
-/// <summary>
-/// 크롤링 경고 이벤트 (통합)
-/// </summary>
-public class CrawlWarningEventV2 : ProcessingEvent
-{
-    public override string EventType => "CrawlWarning";
-
-    /// <summary>경고 대상 URL</summary>
-    public string? Url { get; set; }
-
-    /// <summary>경고 세부 내용</summary>
-    public string? Detail { get; set; }
 }

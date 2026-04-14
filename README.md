@@ -163,19 +163,51 @@ public interface IChunkingStrategy
 }
 ```
 
-#### IProgressReporter & IEventPublisher
-Monitor processing progress and subscribe to system events:
+#### IEventPublisher
+Subscribe to pipeline events for monitoring, metrics collection, and observability.
+`IEventPublisher` is automatically registered as a singleton when you call `AddWebFlux()`.
 
 ```csharp
-// Progress monitoring
-await foreach (var progress in progressReporter.MonitorProgressAsync(jobId))
-{
-    Console.WriteLine($"Progress: {progress.Progress:P0}");
-}
+using WebFlux.Core.Interfaces;
+using WebFlux.Core.Models.Events;
 
-// Event subscription
-eventPublisher.Subscribe<PageProcessedEvent>(async evt => await LogEvent(evt));
+var publisher = provider.GetRequiredService<IEventPublisher>();
+
+// Subscribe to specific event types
+using var s1 = publisher.Subscribe<PageCrawledEvent>(async e =>
+{
+    Console.WriteLine($"Crawled {e.Url} [{e.StatusCode}] in {e.ProcessingTimeMs}ms");
+    await metrics.RecordPageCrawl(e);
+});
+
+using var s2 = publisher.Subscribe<ChunkGeneratedEvent>(e =>
+{
+    Console.WriteLine($"Chunk #{e.SequenceNumber} ({e.ChunkSize} tokens) from {e.SourceUrl}");
+});
+
+using var s3 = publisher.Subscribe<ErrorOccurredEvent>(e =>
+{
+    Console.WriteLine($"[{e.ErrorCategory}] {e.ErrorCode}: {e.Message}");
+});
+
+// Or subscribe to ALL events
+using var sAll = publisher.SubscribeAll(async e =>
+{
+    await logger.LogEventAsync(e.EventType, e);
+});
 ```
+
+**Available event types** (`WebFlux.Core.Models.Events` namespace):
+
+| Category | Events |
+|----------|--------|
+| Pipeline | `ProcessingStartedEvent`, `ProcessingProgressEvent`, `ProcessingCompletedEvent`, `ProcessingFailedEvent` |
+| Crawling | `CrawlingStartedEvent`, `CrawlingCompletedEvent`, `PageCrawledEvent`, `UrlProcessingStartedEvent`, `UrlProcessedEvent`, `UrlProcessingFailedEvent` |
+| Extraction | `ContentExtractionStartedEvent`, `ContentExtractionCompletedEvent`, `ContentExtractionFailedEvent`, `ImageProcessedEvent` |
+| Chunking | `ChunkingStartedEvent`, `ChunkingCompletedEvent`, `ChunkGeneratedEvent` |
+| Monitoring | `ErrorOccurredEvent`, `PerformanceMetricsEvent` |
+
+All events derive from `ProcessingEvent` (base class with `EventId`, `EventType`, `Timestamp`, `Severity`, `CorrelationId`).
 
 For detailed implementation examples, see the [Tutorial](docs/TUTORIAL.md#핵심-인터페이스).
 

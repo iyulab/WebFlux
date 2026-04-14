@@ -1,4 +1,5 @@
 using FluentAssertions;
+using WebFlux.Core.Models.Events;
 using WebFlux.Services;
 
 namespace WebFlux.Tests.Services;

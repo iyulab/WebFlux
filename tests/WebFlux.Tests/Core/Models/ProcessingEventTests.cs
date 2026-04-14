@@ -1,4 +1,5 @@
 using WebFlux.Core.Models;
+using WebFlux.Core.Models.Events;
 using Xunit;
 using FluentAssertions;
 

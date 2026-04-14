@@ -6,6 +6,7 @@ using System.Threading.Channels;
 using System.Xml.Linq;
 using WebFlux.Core.Interfaces;
 using WebFlux.Core.Models;
+using WebFlux.Core.Models.Events;
 using WebFlux.Core.Options;
 using WebFlux.Core.Utilities;
 

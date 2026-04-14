@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.0] - 2026-04-14
+
+### Changed (Breaking)
+
+#### 이벤트 시스템 정리
+- 모든 `*EventV2` 클래스 제거 (v0.x 단계에서 V2 명명은 부적절)
+- 정식 이벤트 클래스를 `Core/Models/Events/` 네임스페이스로 통합
+  - `CrawlingEvents.cs`: `CrawlingStartedEvent`, `CrawlingCompletedEvent`, `PageCrawledEvent`, `UrlProcessingStartedEvent`, `UrlProcessedEvent`, `UrlProcessingFailedEvent`
+  - `ChunkingEvents.cs`: `ChunkingStartedEvent`, `ChunkingCompletedEvent`, `ChunkGeneratedEvent`
+  - `ExtractionEvents.cs`: `ContentExtractionStartedEvent`, `ContentExtractionCompletedEvent`, `ContentExtractionFailedEvent`, `ImageProcessedEvent`
+  - `ProcessorEvents.cs`: `ProcessingStartedEvent`, `ProcessingProgressEvent`, `ProcessingCompletedEvent`, `ProcessingFailedEvent`
+  - `MonitoringEvents.cs`: `ErrorOccurredEvent`, `PerformanceMetricsEvent`
+- Services 계층(`EventPublisher.cs`, `WebContentProcessor.cs`, `BaseContentExtractor.cs`)에 흩어져 있던 이벤트 정의를 모두 Core 계층으로 이동
+- `ProcessingEvent.cs`는 base class와 `EventSeverity`만 보존
+- 이벤트 속성을 `set` → `init`으로 전환, invariant 필드는 `required` 강제
+- `#if NET8_0_OR_GREATER` 가드 제거 (.NET 10 단일 타깃)
+- 사용처 호환성: 소비자는 `using WebFlux.Core.Models.Events;` 추가 필요
+
+### Documentation
+- README의 `IEventPublisher` 사용 가이드를 정확한 이벤트명/카테고리 표로 보강
+- CLAUDE.md 주요 인터페이스에 `IEventPublisher` 항목 추가
+
 ## [0.3.0] - 2026-02-07
 
 ### Added

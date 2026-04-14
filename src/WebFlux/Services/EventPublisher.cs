@@ -282,25 +282,3 @@ public class CompositeEventSubscription : IDisposable
     }
 }
 
-public class UrlProcessingStartedEvent : ProcessingEvent
-{
-    public override string EventType => "UrlProcessingStarted";
-    public string Url { get; set; } = string.Empty;
-}
-
-public class UrlProcessedEvent : ProcessingEvent
-{
-    public override string EventType => "UrlProcessed";
-    public string Url { get; set; } = string.Empty;
-    public int ContentLength { get; set; }
-    public string ContentType { get; set; } = string.Empty;
-    public int DiscoveredUrlCount { get; set; }
-    public int ProcessingTimeMs { get; set; }
-}
-
-public class UrlProcessingFailedEvent : ProcessingEvent
-{
-    public override string EventType => "UrlProcessingFailed";
-    public string Url { get; set; } = string.Empty;
-    public string Error { get; set; } = string.Empty;
-}
