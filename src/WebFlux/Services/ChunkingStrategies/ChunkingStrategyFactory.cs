@@ -288,18 +288,18 @@ public partial class ChunkingStrategyFactory : IChunkingStrategyFactory
     // LoggerMessage Definitions
     // ===================================================================
 
-    [LoggerMessage(Level = LogLevel.Warning, Message = "알 수 없는 청킹 전략: {StrategyName}, Paragraph 전략으로 대체")]
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Unknown chunking strategy: {StrategyName}, falling back to Paragraph")]
     private static partial void LogUnknownStrategy(ILogger logger, string StrategyName);
 
-    [LoggerMessage(Level = LogLevel.Debug, Message = "청킹 전략 생성 완료: {StrategyName}")]
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Chunking strategy created: {StrategyName}")]
     private static partial void LogStrategyCreated(ILogger logger, string StrategyName);
 
-    [LoggerMessage(Level = LogLevel.Error, Message = "청킹 전략 생성 실패: {StrategyName}")]
+    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to create chunking strategy: {StrategyName}")]
     private static partial void LogStrategyCreationFailed(ILogger logger, Exception ex, string StrategyName);
 
-    [LoggerMessage(Level = LogLevel.Warning, Message = "전략 추천 중 오류 발생, 기본 전략 반환")]
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Strategy recommendation failed, returning default strategy")]
     private static partial void LogStrategyRecommendationFailed(ILogger logger, Exception ex);
 
-    [LoggerMessage(Level = LogLevel.Information, Message = "청킹 전략 팩토리 초기화 완료: {StrategyCount}개 전략")]
+    [LoggerMessage(Level = LogLevel.Information, Message = "Chunking strategy factory initialized: {StrategyCount} strategies")]
     private static partial void LogFactoryInitialized(ILogger logger, int StrategyCount);
 }
