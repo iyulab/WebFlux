@@ -242,6 +242,77 @@ public interface IChunkingStrategy
 }
 ```
 
+### IEventPublisher (v0.5.0)
+
+파이프라인 이벤트 구독 인터페이스입니다. `AddWebFlux()` 호출 시 Singleton으로 자동 등록됩니다.
+
+```csharp
+public interface IEventPublisher
+{
+    // 이벤트 발행 (비동기)
+    Task PublishAsync(ProcessingEvent processingEvent, CancellationToken cancellationToken = default);
+
+    // 이벤트 발행 (동기)
+    void Publish(ProcessingEvent processingEvent);
+
+    // 특정 이벤트 타입 구독 (비동기 핸들러)
+    IDisposable Subscribe<T>(Func<T, Task> handler) where T : ProcessingEvent;
+
+    // 특정 이벤트 타입 구독 (동기 핸들러)
+    IDisposable Subscribe<T>(Action<T> handler) where T : ProcessingEvent;
+
+    // 모든 이벤트 구독
+    IDisposable SubscribeAll(Func<ProcessingEvent, Task> handler);
+
+    // 발행 통계 조회
+    EventPublishingStatistics GetStatistics();
+}
+```
+
+이벤트 타입은 `WebFlux.Core.Models.Events` 네임스페이스에 위치합니다.
+
+| 카테고리 | 이벤트 |
+|---------|--------|
+| Pipeline | `ProcessingStartedEvent`, `ProcessingProgressEvent`, `ProcessingCompletedEvent`, `ProcessingFailedEvent` |
+| Crawling | `CrawlingStartedEvent`, `CrawlingCompletedEvent`, `PageCrawledEvent`, `UrlProcessingStartedEvent`, `UrlProcessedEvent`, `UrlProcessingFailedEvent` |
+| Extraction | `ContentExtractionStartedEvent`, `ContentExtractionCompletedEvent`, `ContentExtractionFailedEvent`, `ImageProcessedEvent` |
+| Chunking | `ChunkingStartedEvent`, `ChunkingCompletedEvent`, `ChunkGeneratedEvent` |
+| Monitoring | `ErrorOccurredEvent`, `PerformanceMetricsEvent` |
+
+모든 이벤트는 `ProcessingEvent` (기본 클래스, `EventId`, `EventType`, `Timestamp`, `Severity`, `CorrelationId` 포함)를 상속합니다.
+
+**사용 예시**:
+
+```csharp
+using WebFlux.Core.Interfaces;
+using WebFlux.Core.Models.Events;
+
+var publisher = provider.GetRequiredService<IEventPublisher>();
+
+// 특정 이벤트 구독
+using var s1 = publisher.Subscribe<PageCrawledEvent>(async e =>
+{
+    Console.WriteLine($"Crawled {e.Url} [{e.StatusCode}] in {e.ProcessingTimeMs}ms");
+});
+
+using var s2 = publisher.Subscribe<ChunkGeneratedEvent>(e =>
+{
+    Console.WriteLine($"Chunk #{e.SequenceNumber} ({e.ChunkSize} tokens) from {e.SourceUrl}");
+});
+
+// 모든 이벤트 구독
+using var sAll = publisher.SubscribeAll(async e =>
+{
+    await logger.LogEventAsync(e.EventType, e);
+});
+```
+
+> **v0.5.0 Breaking Change**: 이전 버전의 `*EventV2` 클래스와 `Services` 계층 내부 이벤트 정의가 제거되었습니다.
+> 모든 이벤트 클래스는 `WebFlux.Core.Models.Events` 네임스페이스로 일원화되었습니다.
+> 소비자는 `using WebFlux.Core.Models.Events;`를 추가해야 합니다.
+
+---
+
 ## Data Models
 
 ### WebContentChunk

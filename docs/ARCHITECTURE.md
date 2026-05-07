@@ -215,6 +215,33 @@ WebFlux가 분석하는 웹 표준:
 - 청킹 병렬화
 - CPU 코어 수에 따른 동적 조절
 
+## Event System (v0.5.0)
+
+`IEventPublisher`는 파이프라인 전 단계에서 발생하는 이벤트를 구독하기 위한 옵저버빌리티 인터페이스입니다.
+`AddWebFlux()` 호출 시 Singleton으로 자동 등록됩니다.
+
+### 이벤트 위치
+
+모든 이벤트 클래스는 `WebFlux.Core.Models.Events` 네임스페이스에 위치합니다.
+`ProcessingEvent` 기본 클래스(`WebFlux.Core.Models`)를 상속합니다.
+
+```
+WebFlux.Core.Models
+  └── ProcessingEvent          (기본 클래스 + EventSeverity)
+
+WebFlux.Core.Models.Events
+  ├── ProcessorEvents.cs       (ProcessingStarted/Progress/Completed/Failed)
+  ├── CrawlingEvents.cs        (CrawlingStarted/Completed, PageCrawled, UrlProcessing*)
+  ├── ExtractionEvents.cs      (ContentExtraction*, ImageProcessed)
+  ├── ChunkingEvents.cs        (ChunkingStarted/Completed, ChunkGenerated)
+  └── MonitoringEvents.cs      (ErrorOccurred, PerformanceMetrics)
+```
+
+> **v0.5.0 Breaking Change**: 이전의 `*EventV2` 클래스 및 `Services` 계층 내부 이벤트 정의가 제거됨.
+> `using WebFlux.Core.Models.Events;` 추가 필요.
+
+---
+
 ## Error Handling
 
 ```csharp
