@@ -1,3 +1,4 @@
+using ITextCompletionService = Flux.Abstractions.ITextCompletionService;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using WebFlux.Core.Interfaces;

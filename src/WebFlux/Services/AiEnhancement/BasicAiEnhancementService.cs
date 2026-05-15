@@ -1,3 +1,4 @@
+using ITextCompletionService = Flux.Abstractions.ITextCompletionService;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;

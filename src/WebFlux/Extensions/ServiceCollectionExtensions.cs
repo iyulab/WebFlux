@@ -1,3 +1,4 @@
+using Flux.Abstractions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -254,11 +255,12 @@ public static class ServiceCollectionExtensions
     /// <returns>서비스 컬렉션</returns>
     public static IServiceCollection AddWebFluxAIServices<TTextCompletion, TImageToText, TTextEmbedding>(
         this IServiceCollection services)
-        where TTextCompletion : class, ITextCompletionService
+        where TTextCompletion : class, IWebLlmService
         where TImageToText : class, IImageToTextService
         where TTextEmbedding : class, ITextEmbeddingService
     {
-        services.TryAddScoped<ITextCompletionService, TTextCompletion>();
+        services.TryAddScoped<IWebLlmService, TTextCompletion>();
+        services.TryAddScoped<ITextCompletionService>(sp => sp.GetRequiredService<IWebLlmService>());
         services.TryAddScoped<IImageToTextService, TImageToText>();
         services.TryAddScoped<ITextEmbeddingService, TTextEmbedding>();
 
@@ -277,10 +279,11 @@ public static class ServiceCollectionExtensions
     /// <returns>서비스 컬렉션</returns>
     public static IServiceCollection AddWebFluxAIServices<TTextCompletion, TImageToText>(
         this IServiceCollection services)
-        where TTextCompletion : class, ITextCompletionService
+        where TTextCompletion : class, IWebLlmService
         where TImageToText : class, IImageToTextService
     {
-        services.TryAddScoped<ITextCompletionService, TTextCompletion>();
+        services.TryAddScoped<IWebLlmService, TTextCompletion>();
+        services.TryAddScoped<ITextCompletionService>(sp => sp.GetRequiredService<IWebLlmService>());
         services.TryAddScoped<IImageToTextService, TImageToText>();
 
         // Phase 1: AI 증강 서비스 자동 등록
