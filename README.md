@@ -35,16 +35,17 @@ services.AddWebFlux();
 var provider = services.BuildServiceProvider();
 var processor = provider.GetRequiredService<IWebContentProcessor>();
 
-// Process a website
-await foreach (var result in processor.ProcessWithProgressAsync("https://example.com"))
+// Process a single URL
+var chunks = await processor.ProcessUrlAsync("https://example.com");
+foreach (var chunk in chunks)
 {
-    if (result.IsSuccess && result.Result != null)
-    {
-        foreach (var chunk in result.Result)
-        {
-            Console.WriteLine($"Chunk {chunk.ChunkIndex}: {chunk.Content}");
-        }
-    }
+    Console.WriteLine($"Chunk {chunk.ChunkIndex}: {chunk.Content}");
+}
+
+// Or stream a whole website
+await foreach (var chunk in processor.ProcessWebsiteAsync("https://example.com"))
+{
+    Console.WriteLine($"Chunk {chunk.ChunkIndex}: {chunk.Content}");
 }
 ```
 
@@ -229,9 +230,9 @@ var chunkOptions = new ChunkingOptions
     OverlapSize = 64
 };
 
-await foreach (var result in processor.ProcessWithProgressAsync(url, options, chunkOptions))
+await foreach (var chunk in processor.ProcessWebsiteAsync(url, options, chunkOptions))
 {
-    // Handle results
+    // Handle chunk
 }
 ```
 

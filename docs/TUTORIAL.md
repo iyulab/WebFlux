@@ -76,12 +76,12 @@ public class OpenAIEmbeddingService : ITextEmbeddingService
         _client = new EmbeddingClient("text-embedding-3-small", apiKey);
     }
 
-    public async Task<double[]> GetEmbeddingAsync(
+    public async Task<float[]> GetEmbeddingAsync(
         string text,
         CancellationToken cancellationToken = default)
     {
         var response = await _client.GenerateEmbeddingAsync(text, cancellationToken);
-        return response.Value.ToFloats().Select(f => (double)f).ToArray();
+        return response.Value.ToFloats().ToArray();
     }
 }
 ```
@@ -198,8 +198,8 @@ WebFlux는 **Interface Provider** 패턴을 사용합니다. 라이브러리는 
 ```csharp
 public interface ITextEmbeddingService
 {
-    Task<double[]> GetEmbeddingAsync(string text, CancellationToken cancellationToken = default);
-    Task<IReadOnlyList<double[]>> GetEmbeddingsAsync(IReadOnlyList<string> texts, CancellationToken cancellationToken = default);
+    Task<float[]> GetEmbeddingAsync(string text, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<float[]>> GetEmbeddingsAsync(IReadOnlyList<string> texts, CancellationToken cancellationToken = default);
     int MaxTokens { get; }
     int EmbeddingDimension { get; }
 }
@@ -219,13 +219,13 @@ public class OpenAIEmbeddingService : ITextEmbeddingService
         _client = new EmbeddingClient("text-embedding-3-small", apiKey);
     }
 
-    public async Task<double[]> GetEmbeddingAsync(string text, CancellationToken cancellationToken = default)
+    public async Task<float[]> GetEmbeddingAsync(string text, CancellationToken cancellationToken = default)
     {
         var response = await _client.GenerateEmbeddingAsync(text, cancellationToken);
-        return response.Value.ToFloats().Select(f => (double)f).ToArray();
+        return response.Value.ToFloats().ToArray();
     }
 
-    public async Task<IReadOnlyList<double[]>> GetEmbeddingsAsync(
+    public async Task<IReadOnlyList<float[]>> GetEmbeddingsAsync(
         IReadOnlyList<string> texts,
         CancellationToken cancellationToken = default)
     {
@@ -470,7 +470,14 @@ Console.WriteLine($"태그: {string.Join(", ", articleMetadata.SchemaSpecificDat
 
 **주요 메서드:**
 ```csharp
-public interface IWebContentProcessor
+// IWebContentProcessor는 IContentExtractService + IContentChunkService 파사드
+public interface IWebContentProcessor : IContentExtractService, IContentChunkService
+{
+    IReadOnlyList<string> GetAvailableChunkingStrategies();
+}
+
+// IContentChunkService — 청킹까지 처리
+public interface IContentChunkService
 {
     // 단일 URL 처리
     Task<IReadOnlyList<WebContentChunk>> ProcessUrlAsync(
@@ -497,18 +504,6 @@ public interface IWebContentProcessor
         string sourceUrl,
         ChunkingOptions? chunkingOptions = null,
         CancellationToken cancellationToken = default);
-
-    // 진행률 모니터링
-    IAsyncEnumerable<ProcessingProgress> MonitorProgressAsync(string jobId);
-
-    // 작업 취소
-    Task<bool> CancelJobAsync(string jobId);
-
-    // 처리 통계
-    Task<ProcessingStatistics> GetStatisticsAsync();
-
-    // 사용 가능한 청킹 전략 목록
-    IReadOnlyList<string> GetAvailableChunkingStrategies();
 }
 ```
 
@@ -536,10 +531,9 @@ await foreach (var chunk in processor.ProcessWebsiteAsync(
 string html = await File.ReadAllTextAsync("page.html");
 var htmlChunks = await processor.ProcessHtmlAsync(html, "https://example.com");
 
-// 5. 처리 통계 확인
-var stats = await processor.GetStatisticsAsync();
-Console.WriteLine($"처리된 페이지: {stats.TotalPagesProcessed}");
-Console.WriteLine($"생성된 청크: {stats.TotalChunksGenerated}");
+// 5. 사용 가능한 청킹 전략 목록 확인
+var strategies = processor.GetAvailableChunkingStrategies();
+Console.WriteLine($"사용 가능한 전략: {string.Join(", ", strategies)}");
 ```
 
 ---
@@ -718,33 +712,29 @@ public interface IEventPublisher
 
 **사용 예제:**
 ```csharp
+using WebFlux.Core.Interfaces;
+using WebFlux.Core.Models.Events;
+
 var eventPublisher = serviceProvider.GetRequiredService<IEventPublisher>();
 
-// 이벤트 구독
-var subscription = eventPublisher.Subscribe<PageProcessedEvent>(async evt =>
+// 페이지 크롤링 완료 이벤트 구독
+using var s1 = eventPublisher.Subscribe<PageCrawledEvent>(async evt =>
 {
-    Console.WriteLine($"페이지 처리 완료: {evt.Url}");
+    Console.WriteLine($"페이지 크롤링 완료: {evt.Url} [{evt.StatusCode}] {evt.ProcessingTimeMs}ms");
     await LogToDatabase(evt);
 });
 
-// 이벤트 발행
-await eventPublisher.PublishAsync(new PageProcessedEvent
+// 청크 생성 이벤트 구독
+using var s2 = eventPublisher.Subscribe<ChunkGeneratedEvent>(evt =>
 {
-    Url = "https://example.com",
-    ChunkCount = 10,
-    ProcessingTimeMs = 250,
-    Timestamp = DateTimeOffset.UtcNow
+    Console.WriteLine($"청크 생성: #{evt.SequenceNumber} ({evt.ChunkSize} tokens) from {evt.SourceUrl}");
 });
 
 // 모든 이벤트 구독
-var allEventsSubscription = eventPublisher.SubscribeAll(async evt =>
+using var sAll = eventPublisher.SubscribeAll(async evt =>
 {
-    Console.WriteLine($"[{evt.GetType().Name}] {evt.Timestamp}");
+    Console.WriteLine($"[{evt.EventType}] {evt.Timestamp}");
 });
-
-// 구독 해제
-subscription.Dispose();
-allEventsSubscription.Dispose();
 
 // 통계 확인
 var stats = eventPublisher.GetStatistics();
@@ -807,8 +797,7 @@ await foreach (var result in processor.ProcessWithProgressAsync(
 ```csharp
 services.AddWebFlux(config =>
 {
-    config.MaxDegreeOfParallelism = 4;  // 동시 4개 페이지 처리
-    config.EnableCaching = true;         // 캐싱 활성화
+    config.Performance.MaxDegreeOfParallelism = 4;  // 동시 4개 페이지 처리
 });
 ```
 
@@ -1046,12 +1035,11 @@ public class MultilingualContentProcessor
 // MemoryOptimized 전략 사용
 var options = new ChunkingOptions
 {
-    Strategy = "MemoryOptimized",
-    BufferSizeBytes = 512 * 1024  // 512KB로 제한
+    Strategy = "MemoryOptimized"
 };
 
 // 스트리밍 방식으로 처리
-await foreach (var chunk in processor.ProcessWebsiteAsync(url, options))
+await foreach (var chunk in processor.ProcessWebsiteAsync(url, chunkingOptions: options))
 {
     await ProcessChunkImmediately(chunk);
 }
@@ -1066,10 +1054,7 @@ await foreach (var chunk in processor.ProcessWebsiteAsync(url, options))
 services.AddWebFlux(config =>
 {
     // 병렬 처리 증가
-    config.MaxDegreeOfParallelism = 8;
-
-    // 캐싱 활성화
-    config.EnableCaching = true;
+    config.Performance.MaxDegreeOfParallelism = 8;
 
     // 빠른 전략 사용
     config.Chunking.DefaultStrategy = "FixedSize";
@@ -1113,7 +1098,7 @@ var crawlOptions = new CrawlOptions
 ```csharp
 public class ResilientEmbeddingService : ITextEmbeddingService
 {
-    public async Task<double[]> GetEmbeddingAsync(string text, CancellationToken ct)
+    public async Task<float[]> GetEmbeddingAsync(string text, CancellationToken ct)
     {
         int retries = 3;
         while (retries > 0)

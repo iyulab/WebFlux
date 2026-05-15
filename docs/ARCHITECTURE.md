@@ -80,43 +80,51 @@ CrawlResult   ExtractedContent  Metadata    WebContentChunk
 // 필수: 임베딩 생성
 public interface ITextEmbeddingService
 {
-    Task<double[]> GetEmbeddingAsync(string text, CancellationToken ct = default);
+    Task<float[]> GetEmbeddingAsync(string text, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<float[]>> GetEmbeddingsAsync(IReadOnlyList<string> texts, CancellationToken cancellationToken = default);
+    int MaxTokens { get; }
+    int EmbeddingDimension { get; }
 }
 
 // 선택: LLM 텍스트 생성 (콘텐츠 재구성용)
-public interface ITextCompletionService
+// WebFlux.Core.Interfaces.ITextCompletionService extends Flux.Abstractions.ITextCompletionService
+public interface ITextCompletionService : Flux.Abstractions.ITextCompletionService
 {
-    Task<string> CompleteAsync(string prompt, CancellationToken ct = default);
+    Task<bool> IsAvailableAsync(CancellationToken cancellationToken = default);
+    ServiceHealthInfo GetHealthInfo();
 }
 
 // 선택: 이미지-텍스트 변환 (멀티모달 처리용)
 public interface IImageToTextService
 {
-    Task<string> ConvertAsync(byte[] imageData, CancellationToken ct = default);
+    Task<string> ConvertImageToTextAsync(string imageUrl, ImageToTextOptions? options = null, CancellationToken cancellationToken = default);
+    Task<string> ExtractTextFromImageAsync(string imageUrl, CancellationToken cancellationToken = default);
+    Task<bool> IsAvailableAsync(CancellationToken cancellationToken = default);
 }
 ```
 
 ### SDK-Provided (WebFlux Core)
 
 ```csharp
-// 메인 처리 인터페이스
-public interface IWebContentProcessor
+// 메인 처리 인터페이스 (IContentExtractService + IContentChunkService 파사드)
+public interface IWebContentProcessor : IContentExtractService, IContentChunkService
 {
-    Task<IReadOnlyList<WebContentChunk>> ProcessUrlAsync(string url);
-    IAsyncEnumerable<WebContentChunk> ProcessWebsiteAsync(string startUrl);
+    IReadOnlyList<string> GetAvailableChunkingStrategies();
 }
 
 // 크롤러
 public interface ICrawler
 {
-    Task<CrawlResult> CrawlAsync(string url);
-    IAsyncEnumerable<CrawlResult> CrawlWebsiteAsync(string baseUrl);
+    Task<CrawlResult> CrawlAsync(string url, CrawlOptions? options = null, CancellationToken cancellationToken = default);
+    IAsyncEnumerable<CrawlResult> CrawlWebsiteAsync(string startUrl, CrawlOptions? options = null, CancellationToken cancellationToken = default);
 }
 
 // 청킹 전략
 public interface IChunkingStrategy
 {
-    Task<IReadOnlyList<WebContentChunk>> ChunkAsync(ExtractedContent content);
+    string Name { get; }
+    string Description { get; }
+    Task<IReadOnlyList<WebContentChunk>> ChunkAsync(ExtractedContent content, ChunkingOptions? options = null, CancellationToken cancellationToken = default);
 }
 ```
 
@@ -164,22 +172,23 @@ await foreach (var result in channel.Reader.ReadAllAsync())
 
 ## Configuration
 
+`AddWebFlux` accepts a `WebFluxConfiguration` action. Configuration is split into sub-sections:
+
 ```csharp
 services.AddWebFlux(config =>
 {
-    // Crawling
-    config.MaxDepth = 3;
-    config.MaxPages = 100;
-    config.RespectRobotsTxt = true;
+    // Crawling defaults
+    config.Crawling.RespectRobotsTxt = true;
+    config.Crawling.DefaultDelayMs = 1000;
+    config.Crawling.MaxConcurrentRequests = 5;
 
-    // Chunking
-    config.DefaultStrategy = ChunkingStrategy.Auto;
-    config.MaxChunkSize = 512;
-    config.OverlapSize = 64;
+    // Chunking defaults (override per-call via ChunkingOptions)
+    config.Chunking.DefaultStrategy = "Auto";
+    config.Chunking.MaxChunkSize = 512;
+    config.Chunking.OverlapSize = 64;
 
     // Performance
-    config.MaxDegreeOfParallelism = 4;
-    config.EnableCaching = true;
+    config.Performance.MaxDegreeOfParallelism = 4;
 });
 ```
 

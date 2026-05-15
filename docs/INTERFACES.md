@@ -18,9 +18,16 @@ WebFlux는 **Interface Provider 패턴**을 사용합니다:
 ```csharp
 public interface ITextEmbeddingService
 {
-    Task<double[]> GetEmbeddingAsync(
+    Task<float[]> GetEmbeddingAsync(
         string text,
         CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<float[]>> GetEmbeddingsAsync(
+        IReadOnlyList<string> texts,
+        CancellationToken cancellationToken = default);
+
+    int MaxTokens { get; }
+    int EmbeddingDimension { get; }
 }
 ```
 
@@ -31,12 +38,23 @@ public class OpenAiEmbeddingService : ITextEmbeddingService
     private readonly HttpClient _httpClient;
     private readonly string _apiKey;
 
-    public async Task<double[]> GetEmbeddingAsync(string text, CancellationToken ct = default)
+    public async Task<float[]> GetEmbeddingAsync(string text, CancellationToken ct = default)
     {
         // OpenAI API 호출
         var response = await _httpClient.PostAsync(...);
         return ParseEmbedding(response);
     }
+
+    public async Task<IReadOnlyList<float[]>> GetEmbeddingsAsync(
+        IReadOnlyList<string> texts,
+        CancellationToken ct = default)
+    {
+        var tasks = texts.Select(t => GetEmbeddingAsync(t, ct));
+        return await Task.WhenAll(tasks);
+    }
+
+    public int MaxTokens => 8191;
+    public int EmbeddingDimension => 1536;
 }
 ```
 
@@ -66,10 +84,29 @@ public interface ITextCompletionService
 ```csharp
 public interface IImageToTextService
 {
-    Task<string> ConvertAsync(
-        byte[] imageData,
+    Task<string> ConvertImageToTextAsync(
+        string imageUrl,
         ImageToTextOptions? options = null,
         CancellationToken cancellationToken = default);
+
+    Task<string> ConvertImageToTextAsync(
+        byte[] imageBytes,
+        string mimeType,
+        ImageToTextOptions? options = null,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<string>> ConvertImagesBatchAsync(
+        IEnumerable<string> imageUrls,
+        ImageToTextOptions? options = null,
+        CancellationToken cancellationToken = default);
+
+    Task<string> ExtractTextFromImageAsync(
+        string imageUrl,
+        CancellationToken cancellationToken = default);
+
+    IReadOnlyList<string> GetSupportedImageFormats();
+
+    Task<bool> IsAvailableAsync(CancellationToken cancellationToken = default);
 }
 ```
 
@@ -169,29 +206,58 @@ WebFlux가 제공하는 핵심 인터페이스입니다.
 
 ### IWebContentProcessor
 
-웹 콘텐츠 처리 파이프라인의 메인 인터페이스입니다.
+웹 콘텐츠 처리 파이프라인의 메인 인터페이스입니다. `IContentExtractService`와 `IContentChunkService`를 모두 상속하는 파사드입니다.
 
 ```csharp
-public interface IWebContentProcessor
+// IContentChunkService에서 상속
+public interface IWebContentProcessor : IContentExtractService, IContentChunkService
 {
-    // 단일 URL 처리
+    // 사용 가능한 청킹 전략 목록
+    IReadOnlyList<string> GetAvailableChunkingStrategies();
+}
+
+// IContentChunkService — 청킹까지 처리
+public interface IContentChunkService
+{
     Task<IReadOnlyList<WebContentChunk>> ProcessUrlAsync(
         string url,
         ChunkingOptions? chunkingOptions = null,
         CancellationToken cancellationToken = default);
 
-    // 웹사이트 크롤링 및 처리 (스트리밍)
+    Task<IReadOnlyDictionary<string, IReadOnlyList<WebContentChunk>>> ProcessUrlsBatchAsync(
+        IEnumerable<string> urls,
+        ChunkingOptions? chunkingOptions = null,
+        CancellationToken cancellationToken = default);
+
     IAsyncEnumerable<WebContentChunk> ProcessWebsiteAsync(
         string startUrl,
         CrawlOptions? crawlOptions = null,
         ChunkingOptions? chunkingOptions = null,
         CancellationToken cancellationToken = default);
 
-    // 진행 상황 추적
-    IAsyncEnumerable<ProcessingResult<IReadOnlyList<WebContentChunk>>> ProcessWithProgressAsync(
-        string startUrl,
-        CrawlOptions? crawlOptions = null,
+    Task<IReadOnlyList<WebContentChunk>> ProcessHtmlAsync(
+        string htmlContent,
+        string sourceUrl,
         ChunkingOptions? chunkingOptions = null,
+        CancellationToken cancellationToken = default);
+}
+
+// IContentExtractService — 청킹 없는 경량 추출
+public interface IContentExtractService
+{
+    Task<ProcessingResult<ExtractedContent>> ExtractContentAsync(
+        string url,
+        ExtractOptions? options = null,
+        CancellationToken cancellationToken = default);
+
+    Task<BatchExtractResult> ExtractBatchAsync(
+        IEnumerable<string> urls,
+        ExtractOptions? options = null,
+        CancellationToken cancellationToken = default);
+
+    IAsyncEnumerable<ProcessingResult<ExtractedContent>> ExtractBatchStreamAsync(
+        IEnumerable<string> urls,
+        ExtractOptions? options = null,
         CancellationToken cancellationToken = default);
 }
 ```
@@ -201,7 +267,7 @@ public interface IWebContentProcessor
 웹 크롤링 인터페이스입니다.
 
 ```csharp
-public interface ICrawler : IDisposable
+public interface ICrawler
 {
     Task<CrawlResult> CrawlAsync(
         string url,
@@ -209,7 +275,12 @@ public interface ICrawler : IDisposable
         CancellationToken cancellationToken = default);
 
     IAsyncEnumerable<CrawlResult> CrawlWebsiteAsync(
-        string baseUrl,
+        string startUrl,
+        CrawlOptions? options = null,
+        CancellationToken cancellationToken = default);
+
+    IAsyncEnumerable<CrawlResult> CrawlSitemapAsync(
+        string sitemapUrl,
         CrawlOptions? options = null,
         CancellationToken cancellationToken = default);
 
@@ -218,10 +289,11 @@ public interface ICrawler : IDisposable
         string userAgent,
         CancellationToken cancellationToken = default);
 
-    Task<bool> IsUrlAllowedAsync(
-        string url,
-        string userAgent,
-        CancellationToken cancellationToken = default);
+    Task<bool> IsUrlAllowedAsync(string url, string userAgent);
+
+    IReadOnlyList<string> ExtractLinks(string htmlContent, string baseUrl);
+
+    CrawlStatistics GetStatistics();
 }
 ```
 
