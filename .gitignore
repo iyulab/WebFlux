@@ -378,3 +378,6 @@ samples/*/obj/
 samples/*/output/
 samples/**/appsettings.Development.json
 samples/**/launchSettings.json
+
+# IDE language server cache
+*.lscache
