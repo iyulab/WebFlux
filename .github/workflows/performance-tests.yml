@@ -17,6 +17,10 @@ env:
   DOTNET_VERSION: '10.0.x'
   BUILD_CONFIGURATION: 'Release'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   performance-tests:
     name: 🔬 Performance Tests

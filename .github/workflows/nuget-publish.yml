@@ -21,10 +21,15 @@ env:
   DOTNET_VERSION: '10.0.x'
   BUILD_CONFIGURATION: 'Release'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   detect-version:
     name: 🔍 Detect Version Changes
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     outputs:
       version: ${{ steps.extract-version.outputs.version }}
     steps:
@@ -53,6 +58,7 @@ jobs:
   build:
     name: 🔨 Build & Test Solution
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     needs: detect-version
     steps:
       - name: 📥 Checkout Code
@@ -81,6 +87,7 @@ jobs:
   publish:
     name: 🚀 Build & Publish to NuGet.org
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     needs: [detect-version, build]
     if: github.ref == 'refs/heads/main' || github.event.inputs.force_publish == 'true'
     steps:
@@ -144,6 +151,7 @@ jobs:
   notify-completion:
     name: 📢 Notify Completion
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     needs: [detect-version, publish]
     if: always()
     steps:
