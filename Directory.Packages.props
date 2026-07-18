@@ -25,7 +25,9 @@
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <PackageVersion Include="Microsoft.Playwright" Version="1.59.0" />
     <PackageVersion Include="HtmlAgilityPack" Version="1.12.4" />
-    <PackageVersion Include="AngleSharp" Version="1.4.0" />
+    <!-- 1.5.0 fixes GHSA-pgww-w46g-26qg (mXSS via annotation-xml HTML integration point,
+         vulnerable < 1.5.0). NU1902 promotes this to a build error under TreatWarningsAsErrors. -->
+    <PackageVersion Include="AngleSharp" Version="1.5.2" />
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <!-- 📝 Document Processing -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
