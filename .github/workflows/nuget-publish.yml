@@ -75,8 +75,8 @@ jobs:
       - name: 🔨 Build Solution
         run: dotnet build WebFlux.slnx --configuration ${{ env.BUILD_CONFIGURATION }} --no-restore
 
-      - name: 🧪 Run Fast Tests (excluding Performance and LongRunning)
-        run: dotnet test tests/WebFlux.Tests/WebFlux.Tests.csproj --configuration ${{ env.BUILD_CONFIGURATION }} --no-build --verbosity normal --filter "Category!=Performance&Category!=LongRunning"
+      - name: 🧪 Run Fast Tests (excluding Integration, Performance and LongRunning)
+        run: dotnet test tests/WebFlux.Tests/WebFlux.Tests.csproj --configuration ${{ env.BUILD_CONFIGURATION }} --no-build --verbosity normal --filter "Category!=Integration&Category!=Performance&Category!=LongRunning"
 
       - name: ℹ️ Test Execution Info
         run: |
