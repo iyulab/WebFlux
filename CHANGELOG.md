@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.4] - 2026-08-02
+
+### Changed
+- `Flux.Abstractions` 핀을 `0.24.0`으로 갱신. 계약 패키지가 독립 리포·독립 버전 라인으로 분리됐다.
+  이전에는 이 패키지를 소비하는 패키지 안에서 생산돼 의존 그래프에 순환이 있었고, 그 때문에 이 핀이
+  여러 릴리스 뒤에 묶여 있었다. API 변경 없음 — 기존 핀(`0.13.12`)과 타입이 동일하다.
+
 ## [0.5.0] - 2026-04-14
 
 ### Changed (Breaking)

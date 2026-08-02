@@ -1,4 +1,4 @@
-<Project>
+﻿<Project>
 
   <!-- ═══════════════════════════════════════════════════════════════════════ -->
   <!-- 📦 공통 빌드 속성 -->
@@ -15,7 +15,7 @@
   <!-- 📋 버전 관리 -->
   <!-- ═══════════════════════════════════════════════════════════════════════ -->
   <PropertyGroup>
-    <VersionPrefix>0.5.3</VersionPrefix>
+    <VersionPrefix>0.5.4</VersionPrefix>
     <VersionSuffix></VersionSuffix>
     <PackageVersion Condition="'$(VersionSuffix)' == ''">$(VersionPrefix)</PackageVersion>
     <PackageVersion Condition="'$(VersionSuffix)' != ''">$(VersionPrefix)-$(VersionSuffix)</PackageVersion>
