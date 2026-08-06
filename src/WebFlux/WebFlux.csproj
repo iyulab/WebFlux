@@ -35,8 +35,6 @@
     <PackageReference Include="Microsoft.Extensions.Caching.Memory" />
     <PackageReference Include="Microsoft.Extensions.Caching.Abstractions" />
 
-    <!-- 웹 브라우저 자동화 (동적 콘텐츠 크롤링) -->
-    <PackageReference Include="Microsoft.Playwright" />
 
     <!-- HTML DOM 분석 -->
     <PackageReference Include="HtmlAgilityPack" />

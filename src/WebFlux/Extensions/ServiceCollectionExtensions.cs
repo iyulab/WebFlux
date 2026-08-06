@@ -3,7 +3,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
-using Microsoft.Playwright;
 using WebFlux.Configuration;
 using WebFlux.Core.Interfaces;
 using WebFlux.Core.Models;
@@ -68,9 +67,6 @@ public static class ServiceCollectionExtensions
 
         // 청킹 서비스 등록
         services.AddWebFluxChunking();
-
-        // Playwright 서비스 등록
-        services.AddWebFluxPlaywright();
 
         // 진행률 리포팅 서비스 등록
         services.AddWebFluxProgressReporting();
@@ -150,15 +146,14 @@ public static class ServiceCollectionExtensions
         services.TryAddTransient<SitemapCrawler>();
         services.TryAddTransient<IntelligentCrawler>();
 
-        // PlaywrightCrawler 등록 추가 (Phase 1)
-        services.TryAddTransient<PlaywrightCrawler>();
-
-        // 키드 서비스로 크롤러 등록
-        services.AddKeyedTransient<ICrawler, BreadthFirstCrawler>("BreadthFirst");
-        services.AddKeyedTransient<ICrawler, DepthFirstCrawler>("DepthFirst");
-        services.AddKeyedTransient<ICrawler, SitemapCrawler>("Sitemap");
-        services.AddKeyedTransient<ICrawler, IntelligentCrawler>("Intelligent");
-        services.AddKeyedTransient<ICrawler, PlaywrightCrawler>("Dynamic"); // Phase 1
+        // 키드 서비스로 크롤러 등록.
+        // CrawlerKeys.Dynamic 은 의도적으로 비어 있다 — 동적 렌더링은 브라우저 런타임을 끌어오므로
+        // 그것을 필요로 하는 소비자만 WebFlux.Playwright 를 추가해 채운다. 미등록 상태의 실패는
+        // DynamicCrawlerResolver 가 어느 패키지가 빠졌는지 알려주는 형태로 통일한다.
+        services.AddKeyedTransient<ICrawler, BreadthFirstCrawler>(CrawlerKeys.BreadthFirst);
+        services.AddKeyedTransient<ICrawler, DepthFirstCrawler>(CrawlerKeys.DepthFirst);
+        services.AddKeyedTransient<ICrawler, SitemapCrawler>(CrawlerKeys.Sitemap);
+        services.AddKeyedTransient<ICrawler, IntelligentCrawler>(CrawlerKeys.Intelligent);
 
         // 크롤러 팩토리 등록
         services.TryAddSingleton<ICrawlerFactory, CrawlerFactory>();
@@ -359,23 +354,6 @@ public static class ServiceCollectionExtensions
     {
         // Interface Provider 패턴: 인터페이스만 제공, 구현은 소비자가 선택
         // services.TryAddSingleton<IPerformanceMonitor>(구현체는_소비자가_제공);
-
-        return services;
-    }
-
-    /// <summary>
-    /// Playwright 관련 서비스를 등록합니다.
-    /// </summary>
-    /// <param name="services">서비스 컬렉션</param>
-    /// <returns>서비스 컬렉션</returns>
-    public static IServiceCollection AddWebFluxPlaywright(this IServiceCollection services)
-    {
-        // Playwright 인스턴스를 Singleton으로 등록 (애플리케이션당 하나)
-        services.TryAddSingleton<IPlaywright>(serviceProvider =>
-        {
-            // Playwright.CreateAsync()를 동기적으로 호출하기 위한 헬퍼
-            return Microsoft.Playwright.Playwright.CreateAsync().GetAwaiter().GetResult();
-        });
 
         return services;
     }

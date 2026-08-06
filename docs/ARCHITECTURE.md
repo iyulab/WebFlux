@@ -55,7 +55,7 @@ CrawlResult   ExtractedContent  Metadata    WebContentChunk
 ### 1. Crawl
 - HTML 콘텐츠 수집
 - robots.txt, sitemap.xml 준수
-- 동적 콘텐츠 렌더링 (Playwright)
+- 동적 콘텐츠 렌더링 — 별도 패키지 `WebFlux.Playwright` (본체는 브라우저 런타임을 끌어오지 않는다)
 
 ### 2. Extract
 - HTML, Markdown, JSON, XML 파싱

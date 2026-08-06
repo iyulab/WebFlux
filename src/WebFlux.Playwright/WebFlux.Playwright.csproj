@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- 📦 Package Configuration -->
+    <PackageId>WebFlux.Playwright</PackageId>
+    <Description>Playwright-backed dynamic rendering for WebFlux. Add this package only when JavaScript-rendered pages must be crawled; WebFlux itself stays browser-free.</Description>
+    <IsPackable>true</IsPackable>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../WebFlux/WebFlux.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- 웹 브라우저 자동화 (동적 콘텐츠 크롤링) -->
+    <PackageReference Include="Microsoft.Playwright" />
+
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+  </ItemGroup>
+
+</Project>

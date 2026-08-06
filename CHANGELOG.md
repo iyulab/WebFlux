@@ -2,6 +2,41 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.0] - 2026-08-07
+
+### Changed (Breaking) — 동적 렌더링이 별도 패키지 `WebFlux.Playwright` 로 분리됐다
+
+**동적 렌더링을 쓰는 소비자는 `WebFlux.Playwright` 를 추가해야 한다.** 쓰지 않는 소비자는
+아무것도 하지 않아도 되며, 그쪽이 이 변경의 목적이다.
+
+`Microsoft.Playwright` 는 WebFlux 의 무조건 의존이었다. 브라우저 자동화를 전혀 쓰지 않는
+소비자도 그것을 통해 플랫폼별 Node 런타임을 배포 산출물에 실었다 — self-contained 단일 RID
+publish 에서 **460 MB 규모의, 대상 플랫폼도 아닌 런타임 4종**이 실린 사례가 실측됐다. 정적
+크롤링만 쓰는 소비자에게 이것은 전부 낭비이며, 그들이 선택한 적 없는 비용이다.
+
+- `Microsoft.Playwright` 가 `WebFlux` 의 의존성 목록에서 빠졌다.
+- `PlaywrightCrawler` 와 `AddWebFluxPlaywright()` 가 `WebFlux.Playwright` 로 이동했다.
+  **네임스페이스와 메서드 이름은 그대로**이므로 `using` 과 호출부는 바뀌지 않는다 —
+  패키지 참조만 추가하면 된다.
+- `CrawlStrategy.Dynamic` 은 계약값이므로 **enum 에 그대로 남는다.** 구현이 없을 뿐이다.
+
+**등록 없이 동적 렌더링을 요청하면** — `CrawlStrategy.Dynamic` 이든 `UseDynamicRendering = true`
+든 — 어느 패키지가 빠졌는지와 대안을 함께 알려주는 `InvalidOperationException` 으로 실패한다.
+세 경로(크롤러 팩토리 둘, 옵션 하나)가 서로 다르게 실패하던 것을 하나로 통일했다. 이전에는
+경로에 따라 널 참조가 되거나 서비스 키를 언급하는 DI 예외가 났고, 어느 쪽도 렌더링이나 패키지를
+언급하지 않았다.
+
+### Removed — `SmartCrawler`
+
+정적/동적 자동 감지 크롤러였으나 **어디에도 배선돼 있지 않았다** — DI 등록도, 팩토리 분기도,
+대응하는 `CrawlStrategy` 값도 없었고 문서·예제·테스트의 참조도 0건이었다. 손으로 직접 생성하지
+않는 한 도달할 수 없는 public 타입이었다. 공개 표면 제거이므로 기록해 둔다.
+
+### Added — `CrawlerKeys`
+
+크롤러 등록 키를 상수로 노출한다. 구현을 제공하지 않는 크롤러를 외부 패키지가 채우는 구조가
+되면서 키가 패키지 간 계약이 됐고, 계약을 문자열 리터럴로 양쪽에 흩어 두지 않기 위한 것이다.
+
 ## [0.6.0] - 2026-08-06
 
 ### Changed (Breaking) — 청킹을 FluxCurator 에 위임

@@ -14,7 +14,10 @@
 ### 필수 조건
 - .NET 8.0 이상
 - WebFlux NuGet 패키지
-- Microsoft.Playwright NuGet 패키지
+- **WebFlux.Playwright NuGet 패키지** — 0.7.0부터 동적 렌더링은 별도 패키지다.
+  WebFlux 본체는 브라우저 런타임을 끌어오지 않으므로, 이 패키지를 추가하지 않고
+  `CrawlStrategy.Dynamic`이나 `UseDynamicRendering = true`를 쓰면 어느 패키지가 빠졌는지
+  알려주는 예외로 실패한다. (`Microsoft.Playwright`는 이 패키지가 가져온다)
 
 ### 초기 설정
 ```bash

@@ -163,9 +163,14 @@ public class CrawlOptions : IValidatable
     public IDictionary<string, string> CustomHeaders { get; set; } = new Dictionary<string, string>();
 
     /// <summary>
-    /// 동적 렌더링 사용 여부 (Playwright 사용, 기본값: false)
+    /// 동적 렌더링 사용 여부 (기본값: false)
     /// JavaScript로 렌더링되는 SPA (React, Vue, Angular) 처리
     /// </summary>
+    /// <remarks>
+    /// <c>true</c>로 두면 <see cref="CrawlStrategy.Dynamic"/>으로 라우팅되므로
+    /// <b>WebFlux.Playwright 패키지가 필요하다.</b> 없으면 어느 패키지가 빠졌는지 알려주는
+    /// <see cref="InvalidOperationException"/>으로 실패한다.
+    /// </remarks>
     public bool UseDynamicRendering { get; set; }
 
     /// <summary>

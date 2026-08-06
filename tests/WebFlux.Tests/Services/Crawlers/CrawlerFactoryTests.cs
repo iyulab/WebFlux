@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using WebFlux.Core.Interfaces;
 using WebFlux.Core.Models;
@@ -102,19 +103,20 @@ public class CrawlerFactoryTests
     }
 
     [Fact]
-    public void CreateCrawler_WithDynamicStrategy_ShouldReturnPlaywrightCrawler()
+    public void CreateCrawler_WithDynamicStrategy_ShouldReturnTheRegisteredDynamicCrawler()
     {
-        // Arrange
+        // Arrange - the dynamic renderer arrives from a separate package under a known key, so the
+        // factory resolves it by key rather than by a concrete type it can no longer name.
         var mockCrawler = Substitute.For<ICrawler>();
-        _mockServiceProvider.GetService(typeof(PlaywrightCrawler))
-            .Returns(mockCrawler);
+        var provider = new ServiceCollection()
+            .AddKeyedTransient(CrawlerKeys.Dynamic, (_, _) => mockCrawler)
+            .BuildServiceProvider();
 
         // Act
-        var crawler = _factory.CreateCrawler(CrawlStrategy.Dynamic);
+        var crawler = new CrawlerFactory(provider).CreateCrawler(CrawlStrategy.Dynamic);
 
         // Assert
-        crawler.Should().NotBeNull();
-        _mockServiceProvider.Received(1).GetService(typeof(PlaywrightCrawler));
+        crawler.Should().BeSameAs(mockCrawler);
     }
 
     [Fact]

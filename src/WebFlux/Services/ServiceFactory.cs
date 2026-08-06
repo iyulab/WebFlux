@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using WebFlux.Core.Interfaces;
 using WebFlux.Core.Models;
 using WebFlux.Core.Options;
+using WebFlux.Services.Crawlers;
 
 namespace WebFlux.Services;
 
@@ -41,7 +42,7 @@ public class ServiceFactory : IServiceFactory
             CrawlStrategy.DepthFirst => _serviceProvider.GetRequiredKeyedService<ICrawler>("DepthFirst"),
             CrawlStrategy.Intelligent => _serviceProvider.GetRequiredKeyedService<ICrawler>("Intelligent"),
             CrawlStrategy.Sitemap => _serviceProvider.GetRequiredKeyedService<ICrawler>("Sitemap"),
-            CrawlStrategy.Dynamic => _serviceProvider.GetRequiredKeyedService<ICrawler>("Dynamic"),
+            CrawlStrategy.Dynamic => DynamicCrawlerResolver.Resolve(_serviceProvider),
             _ => throw new ArgumentException($"Unknown crawl strategy: {strategy}")
         };
     }

@@ -12,8 +12,8 @@ public class ExtractOptions : IValidatable
     #region 크롤링 설정
 
     /// <summary>
-    /// JavaScript 렌더링 사용 여부 (Playwright 기반)
-    /// SPA, 동적 콘텐츠 페이지에 사용
+    /// JavaScript 렌더링 사용 여부. SPA, 동적 콘텐츠 페이지에 사용.
+    /// <b>WebFlux.Playwright 패키지가 필요하다.</b>
     /// </summary>
     public bool UseDynamicRendering { get; set; }
 
