@@ -60,6 +60,21 @@ public sealed class FluxCuratorChunkingStrategy : BaseChunkingStrategy
         new(factory, CuratorStrategy.Semantic, "Semantic",
             "의미론적 청킹 - 임베딩 기반 의미적 일관성 최적화 (임베딩 서비스 필요)", events);
 
+    /// <summary>
+    /// Splits to a consistent size, formerly "memory optimized".
+    /// </summary>
+    /// <remarks>
+    /// The strategy this replaces claimed streaming and did not stream: it received the whole text
+    /// as a string and sliced it, so the only behaviour distinguishing it from fixed-size chunking
+    /// was that it measured the slices in characters — the defect, not a feature. It also called
+    /// <c>GC.Collect</c> every hundred chunks, which takes a decision that belongs to the host
+    /// process and costs throughput to no measured end. The name is kept because consumers select
+    /// strategies by string, and removing it would read as a capability being withdrawn.
+    /// </remarks>
+    public static FluxCuratorChunkingStrategy MemoryOptimized(IChunkerFactory factory, IEventPublisher? events = null) =>
+        new(factory, CuratorStrategy.Token, "MemoryOptimized",
+            "대용량 문서용 일관 크기 청킹 - 토큰 기준", events);
+
     /// <param name="chunkerFactory">FluxCurator chunker factory.</param>
     /// <param name="strategy">The FluxCurator strategy this instance delegates to.</param>
     /// <param name="name">The WebFlux-facing strategy name (unchanged from before delegation).</param>

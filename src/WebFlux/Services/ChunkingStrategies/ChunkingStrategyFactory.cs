@@ -234,7 +234,9 @@ public partial class ChunkingStrategyFactory : IChunkingStrategyFactory
 
         // 6. MemoryOptimized - 메모리 최적화
         _strategyCreators["MemoryOptimized"] = () =>
-            _serviceProvider.GetRequiredService<MemoryOptimizedChunkingStrategy>();
+            FluxCuratorChunkingStrategy.MemoryOptimized(
+                _serviceProvider.GetRequiredService<FluxCurator.Core.Core.IChunkerFactory>(),
+                _serviceProvider.GetService<IEventPublisher>());
 
         _strategyInfos["MemoryOptimized"] = new StrategyInfo
         {

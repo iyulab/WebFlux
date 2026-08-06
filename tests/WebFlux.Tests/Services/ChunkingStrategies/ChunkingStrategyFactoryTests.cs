@@ -30,7 +30,6 @@ public class ChunkingStrategyFactoryTests
             new FluxCurator.Infrastructure.Chunking.ChunkerFactory());
         services.AddTransient<SmartChunkingStrategy>();
         services.AddTransient<AutoChunkingStrategy>();
-        services.AddTransient<MemoryOptimizedChunkingStrategy>();
 
         _serviceProvider = services.BuildServiceProvider();
         _mockLogger = Substitute.For<ILogger<ChunkingStrategyFactory>>();

@@ -190,8 +190,8 @@ var strategies = new Dictionary<string, IChunkingStrategy>
 {
     ["FixedSize"] = FluxCuratorChunkingStrategy.FixedSize(chunkerFactory),
     ["Paragraph"] = FluxCuratorChunkingStrategy.Paragraph(chunkerFactory),
-    ["Smart"] = new SmartChunkingStrategy(),
-    ["MemoryOptimized"] = new MemoryOptimizedChunkingStrategy(),
+    ["Smart"] = new SmartChunkingStrategy(chunkerFactory),
+    ["MemoryOptimized"] = FluxCuratorChunkingStrategy.MemoryOptimized(chunkerFactory),
     ["Auto"] = new AutoChunkingStrategy(serviceProvider: serviceProvider)
 };
 

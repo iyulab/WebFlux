@@ -104,7 +104,7 @@ public class LongRunningStabilityTests
             MaxChunkSize = 512
         };
 
-        var strategy = new MemoryOptimizedChunkingStrategy();
+        var strategy = FluxCuratorChunkingStrategy.MemoryOptimized(new FluxCurator.Infrastructure.Chunking.ChunkerFactory());
         var metrics = new LongRunningMetrics();
 
         // Act: 10분 동안 고속 처리
@@ -154,7 +154,7 @@ public class LongRunningStabilityTests
             MaxChunkSize = 512
         };
 
-        var strategy = new MemoryOptimizedChunkingStrategy();
+        var strategy = FluxCuratorChunkingStrategy.MemoryOptimized(new FluxCurator.Infrastructure.Chunking.ChunkerFactory());
 
         var initialGen0 = GC.CollectionCount(0);
         var initialGen1 = GC.CollectionCount(1);

@@ -16,7 +16,7 @@ public class SmartChunkingStrategyTests
 
     public SmartChunkingStrategyTests()
     {
-        _strategy = new SmartChunkingStrategy();
+        _strategy = new SmartChunkingStrategy(new FluxCurator.Infrastructure.Chunking.ChunkerFactory());
     }
 
     #region Basic Properties Tests
@@ -262,10 +262,11 @@ Content for section two";
     }
 
     [Fact]
-    public async Task ChunkAsync_WithDefaultSize_ShouldUse1500Chars()
+    public async Task ChunkAsync_WithDefaultSize_SizesSectionsInTokens()
     {
         // Arrange
-        // Create multiple sections that will be split by heading-based chunking
+        // The name of this test used to say "ShouldUse1500Chars". The default is a TOKEN budget;
+        // it was only ever a character count because the implementation compared it to string.Length.
         var section1 = string.Join(" ", Enumerable.Repeat("word", 400)); // ~2000 chars
         var section2 = string.Join(" ", Enumerable.Repeat("word", 400)); // ~2000 chars
         var text = $"# Heading 1\n{section1}\n## Heading 2\n{section2}";
@@ -559,6 +560,51 @@ Content 3";
 
         // Assert
         chunks.Should().HaveCountGreaterThan(1);
+    }
+
+    #endregion
+
+    #region Structure-vs-size regression lines (2026-08-06)
+
+    [Fact]
+    public async Task ShortDocumentWithHeadings_StillSplitsAtEveryHeading()
+    {
+        // A heading is a seam whether or not enough text has accumulated. Section splitting used to
+        // open a new section only once the running text already exceeded the size, so headings in a
+        // document under that size were ignored entirely and this strategy silently behaved like
+        // paragraph splitting -- under a name that promises structure awareness.
+        var content = new ExtractedContent
+        {
+            MainContent = "# First\nAlpha content.\n# Second\nBeta content.\n# Third\nGamma content.",
+            Url = "https://example.com",
+            Headings = ["First", "Second", "Third"]
+        };
+
+        var chunks = await _strategy.ChunkAsync(content);
+
+        chunks.Should().HaveCount(3, "each heading opens a section regardless of how short it is");
+        chunks[0].Content.Should().Contain("Alpha");
+        chunks[1].Content.Should().Contain("Beta");
+        chunks[2].Content.Should().Contain("Gamma");
+    }
+
+    [Fact]
+    public async Task SectionUnderTheDeclaredTokenBudget_IsNotSplitByCharacterCount()
+    {
+        // MaxChunkSize is a token count. This section is ~500 English words -- roughly 500 tokens,
+        // comfortably under the 512 default, but ~2,700 characters. Measured in characters against
+        // the same 512 it would have come out as five or six chunks.
+        var body = string.Join(" ", Enumerable.Repeat("word", 500));
+        var content = new ExtractedContent
+        {
+            MainContent = "# Only section\n" + body,
+            Url = "https://example.com",
+            Headings = ["Only section"]
+        };
+
+        var chunks = await _strategy.ChunkAsync(content, new ChunkingOptions { MaxChunkSize = 512 });
+
+        chunks.Should().ContainSingle("512 is a token budget, not a character budget");
     }
 
     #endregion

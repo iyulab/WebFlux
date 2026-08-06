@@ -221,12 +221,9 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<FluxCurator.Core.Core.IChunkerFactory>(),
             sp.GetService<IEventPublisher>()));
 
-        // 청킹 전략들 등록 (Transient)
-        services.TryAddTransient<SmartChunkingStrategy>();
-
         // Phase 4D: 고급 청킹 전략들
+        services.TryAddTransient<SmartChunkingStrategy>();
         services.TryAddTransient<AutoChunkingStrategy>();
-        services.TryAddTransient<MemoryOptimizedChunkingStrategy>();
 
         // 키드 서비스로 청킹 전략 등록. 이름은 위임 전후로 동일하다 - 소비자가 문자열로
         // 고르므로, 이름을 바꾸면 구현 교체가 아니라 전략 소멸로 보인다.
@@ -244,7 +241,10 @@ public static class ServiceCollectionExtensions
                 sp.GetService<IEventPublisher>()));
         services.AddKeyedTransient<IChunkingStrategy, SmartChunkingStrategy>("Smart");
         services.AddKeyedTransient<IChunkingStrategy, AutoChunkingStrategy>("Auto");
-        services.AddKeyedTransient<IChunkingStrategy, MemoryOptimizedChunkingStrategy>("MemoryOptimized");
+        services.AddKeyedTransient<IChunkingStrategy>("MemoryOptimized", (sp, _) =>
+            FluxCuratorChunkingStrategy.MemoryOptimized(
+                sp.GetRequiredService<FluxCurator.Core.Core.IChunkerFactory>(),
+                sp.GetService<IEventPublisher>()));
 
         // 청킹 전략 팩토리 등록
         services.TryAddSingleton<IChunkingStrategyFactory, ChunkingStrategyFactory>();

@@ -36,7 +36,7 @@ public class LargeDocumentStabilityTests
             ChunkOverlap = 64
         };
 
-        var strategy = new MemoryOptimizedChunkingStrategy();
+        var strategy = FluxCuratorChunkingStrategy.MemoryOptimized(new FluxCurator.Infrastructure.Chunking.ChunkerFactory());
 
         // Measure initial memory
         GC.Collect();
@@ -85,7 +85,7 @@ public class LargeDocumentStabilityTests
             ChunkOverlap = 64
         };
 
-        var strategy = new MemoryOptimizedChunkingStrategy();
+        var strategy = FluxCuratorChunkingStrategy.MemoryOptimized(new FluxCurator.Infrastructure.Chunking.ChunkerFactory());
 
         GC.Collect();
         var initialMemory = GC.GetTotalMemory(false);
@@ -154,7 +154,7 @@ public class LargeDocumentStabilityTests
             UseStreaming = true  // 스트리밍 모드 활성화
         };
 
-        var strategy = new MemoryOptimizedChunkingStrategy();
+        var strategy = FluxCuratorChunkingStrategy.MemoryOptimized(new FluxCurator.Infrastructure.Chunking.ChunkerFactory());
 
         GC.Collect();
         var initialMemory = GC.GetTotalMemory(false);
@@ -210,8 +210,8 @@ public class LargeDocumentStabilityTests
         {
             FluxCuratorChunkingStrategy.FixedSize(chunkerFactory),
             FluxCuratorChunkingStrategy.Paragraph(chunkerFactory),
-            new SmartChunkingStrategy(),
-            new MemoryOptimizedChunkingStrategy()
+            new SmartChunkingStrategy(chunkerFactory),
+            FluxCuratorChunkingStrategy.MemoryOptimized(chunkerFactory)
         };
 
         // Act & Assert: 모든 전략이 대용량 문서를 처리할 수 있어야 함

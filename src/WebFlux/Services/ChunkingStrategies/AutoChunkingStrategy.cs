@@ -203,8 +203,8 @@ public partial class AutoChunkingStrategy : BaseChunkingStrategy
 
         return bestStrategy.Key switch
         {
-            "Smart" => new SmartChunkingStrategy(EventPublisher),
-            "MemoryOptimized" => new MemoryOptimizedChunkingStrategy(EventPublisher),
+            "Smart" => CreateSmart(),
+            "MemoryOptimized" => CreateDelegated(FluxCurator.Core.Domain.ChunkingStrategy.Token, "MemoryOptimized"),
             "Semantic" => CreateDelegated(FluxCurator.Core.Domain.ChunkingStrategy.Semantic, "Semantic"),
             "Paragraph" => CreateDelegated(FluxCurator.Core.Domain.ChunkingStrategy.Paragraph, "Paragraph"),
             _ => CreateDelegated(FluxCurator.Core.Domain.ChunkingStrategy.Token, "FixedSize")
@@ -232,8 +232,20 @@ public partial class AutoChunkingStrategy : BaseChunkingStrategy
         {
             "Paragraph" => FluxCuratorChunkingStrategy.Paragraph(chunkerFactory, EventPublisher),
             "Semantic" => FluxCuratorChunkingStrategy.Semantic(chunkerFactory, EventPublisher),
+            "MemoryOptimized" => FluxCuratorChunkingStrategy.MemoryOptimized(chunkerFactory, EventPublisher),
             _ => FluxCuratorChunkingStrategy.FixedSize(chunkerFactory, EventPublisher)
         };
+    }
+
+    /// <summary>Builds the structure-aware strategy, which also needs FluxCurator to size sections.</summary>
+    private SmartChunkingStrategy CreateSmart()
+    {
+        var chunkerFactory = _serviceProvider?.GetService<FluxCurator.Core.Core.IChunkerFactory>()
+            ?? throw new InvalidOperationException(
+                "The Auto strategy selected 'Smart', which sizes its sections with FluxCurator, but no " +
+                "IChunkerFactory is resolvable. Register FluxCurator's services (AddWebFluxChunking does this).");
+
+        return new SmartChunkingStrategy(chunkerFactory, EventPublisher);
     }
 
     /// <summary>

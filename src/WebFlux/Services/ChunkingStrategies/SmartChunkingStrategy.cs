@@ -1,114 +1,153 @@
+using FluxCurator.Core.Core;
 using WebFlux.Core.Interfaces;
 using WebFlux.Core.Models;
-using WebFlux.Core.Options;
+using CuratorStrategy = FluxCurator.Core.Domain.ChunkingStrategy;
+using ChunkingOptions = WebFlux.Core.Options.ChunkingOptions;
 
 namespace WebFlux.Services.ChunkingStrategies;
 
 /// <summary>
-/// 스마트 청킹 전략 (단순화됨)
-/// HTML/Markdown 헤더 구조를 고려한 청킹
+/// 구조 인식 청킹 전략 - HTML/Markdown 헤딩 경계를 우선 보존한다.
+///
+/// <para>
+/// Heading detection is what this strategy is for and stays here: it reads the headings the
+/// extractor found on the page, which is web knowledge FluxCurator has no reason to hold. What does
+/// NOT stay here is deciding whether a section is too large. That decision used to compare
+/// <c>ChunkingOptions.MaxChunkSize</c> — documented as a token count — against
+/// <c>string.Length</c>, so a caller declaring 512 got sections cut at 512 characters, and the size
+/// of the error varied by language. Sizing is now delegated: this strategy answers "where are the
+/// seams", FluxCurator answers "is this too big".
+/// </para>
 /// </summary>
 public class SmartChunkingStrategy : BaseChunkingStrategy
 {
     private static readonly string[] ParagraphSplitSeparators = ["\n\n", "\r\n\r\n"];
 
+    private readonly IChunkerFactory _chunkerFactory;
+
     public override string Name => "Smart";
     public override string Description => "구조 인식 청킹 - HTML/Markdown 헤더 기반 맥락 보존";
 
-    public SmartChunkingStrategy(IEventPublisher? eventPublisher = null)
+    /// <param name="chunkerFactory">
+    /// FluxCurator chunker factory, used to split any section that exceeds the declared size.
+    /// Required rather than optional: without it this strategy would fall back to measuring
+    /// characters, which is the defect it exists to not have.
+    /// </param>
+    /// <param name="eventPublisher">Optional event publisher.</param>
+    public SmartChunkingStrategy(IChunkerFactory chunkerFactory, IEventPublisher? eventPublisher = null)
         : base(eventPublisher)
     {
+        _chunkerFactory = chunkerFactory ?? throw new ArgumentNullException(nameof(chunkerFactory));
     }
 
+    /// <inheritdoc />
     public override async Task<IReadOnlyList<WebContentChunk>> ChunkAsync(
         ExtractedContent content,
         ChunkingOptions? options = null,
         CancellationToken cancellationToken = default)
     {
-        await Task.CompletedTask; // 동기 작업을 비동기로 래핑
+        ArgumentNullException.ThrowIfNull(content);
 
         var text = content.MainContent ?? content.Text ?? string.Empty;
         var sourceUrl = content.Url ?? content.OriginalUrl ?? string.Empty;
-        var maxChunkSize = options?.ChunkSize ?? 1500; // 기본 1500자
 
         if (string.IsNullOrWhiteSpace(text))
         {
             return Array.Empty<WebContentChunk>();
         }
 
-        // 헤딩 구조가 있으면 활용, 없으면 문단 기반으로 분할
-        if (content.Headings?.Count > 0)
-        {
-            return SplitByHeadings(text, content.Headings, maxChunkSize, sourceUrl);
-        }
-        else
-        {
-            return SplitByStructuralElements(text, maxChunkSize, sourceUrl);
-        }
+        // Sections come from page structure where the page has any, and from paragraph breaks where
+        // it does not. Either way they are candidate seams, not final chunks.
+        var sections = content.Headings?.Count > 0
+            ? SplitAtHeadings(text)
+            : text.Split(ParagraphSplitSeparators, StringSplitOptions.RemoveEmptyEntries)
+                  .Select(p => p.Trim())
+                  .Where(p => !string.IsNullOrWhiteSpace(p))
+                  .ToList();
+
+        return await SizeSectionsAsync(sections, options, sourceUrl, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
-    /// 헤딩 구조를 기반으로 분할
+    /// Splits the text at heading lines. Every heading opens a section; whether that section is
+    /// then too large is not decided here.
     /// </summary>
-    private List<WebContentChunk> SplitByHeadings(string text, List<string> headings, int maxChunkSize, string sourceUrl)
+    /// <remarks>
+    /// This used to open a new section only once the accumulated text already exceeded the size,
+    /// which conflated "there is a seam here" with "we have enough text" — headings inside a short
+    /// document were ignored entirely and the strategy degenerated into paragraph splitting under
+    /// a name that promised structure awareness.
+    /// </remarks>
+    private static List<string> SplitAtHeadings(string text)
     {
-        var chunks = new List<WebContentChunk>();
         var sections = new List<string>();
-        var currentSection = string.Empty;
-        var sequenceNumber = 0;
+        var current = new System.Text.StringBuilder();
 
-        // 간단한 구현: 헤딩을 찾아서 섹션으로 분할
-        var lines = text.Split('\n');
-        foreach (var line in lines)
+        foreach (var line in text.Split('\n'))
         {
-            if (IsHeading(line) && currentSection.Length > maxChunkSize)
+            if (IsHeading(line) && current.Length > 0)
             {
-                if (!string.IsNullOrWhiteSpace(currentSection))
+                var section = current.ToString().Trim();
+                if (!string.IsNullOrWhiteSpace(section))
                 {
-                    chunks.Add(CreateChunk(currentSection.Trim(), sequenceNumber++, sourceUrl));
-                    currentSection = string.Empty;
+                    sections.Add(section);
                 }
+                current.Clear();
             }
-            currentSection += line + "\n";
+
+            current.Append(line).Append('\n');
         }
 
-        // 마지막 섹션 추가
-        if (!string.IsNullOrWhiteSpace(currentSection))
+        var last = current.ToString().Trim();
+        if (!string.IsNullOrWhiteSpace(last))
         {
-            chunks.Add(CreateChunk(currentSection.Trim(), sequenceNumber, sourceUrl));
+            sections.Add(last);
         }
 
-        return chunks;
+        return sections;
     }
 
     /// <summary>
-    /// 구조적 요소를 기반으로 분할 (헤딩이 없는 경우)
+    /// Emits each section as a chunk, handing any section over the declared size to FluxCurator to
+    /// be split further. Sections that already fit are passed through whole — which is the point of
+    /// detecting seams in the first place.
     /// </summary>
-    private List<WebContentChunk> SplitByStructuralElements(string text, int maxChunkSize, string sourceUrl)
+    private async Task<IReadOnlyList<WebContentChunk>> SizeSectionsAsync(
+        List<string> sections,
+        ChunkingOptions? options,
+        string sourceUrl,
+        CancellationToken cancellationToken)
     {
-        // 헤딩이 없으면 문단 기반으로 분할
-        var paragraphs = text.Split(ParagraphSplitSeparators, StringSplitOptions.RemoveEmptyEntries);
-        var chunks = new List<WebContentChunk>();
-        var currentChunk = new List<string>();
-        var currentLength = 0;
-        var sequenceNumber = 0;
+        var curatorOptions = FluxCuratorChunkAdapter.ToCuratorOptions(options, CuratorStrategy.Paragraph);
 
-        foreach (var paragraph in paragraphs)
+        if (!_chunkerFactory.TryCreateChunker(CuratorStrategy.Paragraph, out var chunker) || chunker is null)
         {
-            if (currentLength + paragraph.Length > maxChunkSize && currentChunk.Count > 0)
-            {
-                chunks.Add(CreateChunk(string.Join("\n\n", currentChunk), sequenceNumber++, sourceUrl));
-                currentChunk.Clear();
-                currentLength = 0;
-            }
-
-            currentChunk.Add(paragraph.Trim());
-            currentLength += paragraph.Length + 2;
+            throw new InvalidOperationException(
+                "The 'Smart' chunking strategy sizes its sections with FluxCurator's Paragraph chunker, " +
+                "which is not available in this configuration. Strategies currently available: " +
+                $"{string.Join(", ", _chunkerFactory.AvailableStrategies)}.");
         }
 
-        if (currentChunk.Count > 0)
+        var chunks = new List<WebContentChunk>();
+        var sequenceNumber = 0;
+
+        foreach (var section in sections)
         {
-            chunks.Add(CreateChunk(string.Join("\n\n", currentChunk), sequenceNumber, sourceUrl));
+            cancellationToken.ThrowIfCancellationRequested();
+
+            // "Would this be split?" is asked of the component that owns the units, rather than
+            // re-derived here in whatever unit happened to be convenient.
+            if (chunker.EstimateChunkCount(section, curatorOptions) <= 1)
+            {
+                chunks.Add(CreateChunk(section, sequenceNumber++, sourceUrl));
+                continue;
+            }
+
+            var split = await chunker.ChunkAsync(section, curatorOptions, cancellationToken).ConfigureAwait(false);
+            foreach (var piece in split)
+            {
+                chunks.Add(CreateChunk(piece.Content, sequenceNumber++, sourceUrl));
+            }
         }
 
         return chunks;
