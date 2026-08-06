@@ -2,6 +2,54 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.6.0] - 2026-08-06
+
+### Changed (Breaking) — 청킹을 FluxCurator 에 위임
+
+**청크 경계가 바뀐다. 이전 버전으로 만든 인덱스는 재구축해야 한다.**
+
+WebFlux 는 문단·고정크기·시맨틱 청커를 자체 구현으로 갖고 있었다. FluxCurator 가 이미 소유한
+청커의 축소 재구현이었고, 축소된 부분이 곧 결함이었다 — 어느 것도 실패로 드러나지 않는다.
+청크는 반환되기 때문이다. 요청한 청크가 아닐 뿐이다.
+
+- **`MaxChunkSize` 가 문서대로 토큰 수로 동작한다.** 이전에는 `string.Length` 와 비교했다.
+  512 를 선언한 호출자는 512 **문자**를 받았고, 오차가 문자당 토큰 비율이라 **크기가 언어마다
+  달랐다** — 같은 선언에서 영어 문서 하나가 5청크로 나왔고 토큰 기준으로는 1청크였다.
+  호출자가 보정할 수도 없었다. 보정 계수가 텍스트에 따라 달라지기 때문이다.
+- **`ChunkOverlap` 이 동작한다.** 9개 전략 중 어느 것도 이 값을 읽지 않았다. 50 을 설정한
+  호출자는 겹침 0 을 받았고, 설정이 무효라는 신호는 어디에도 없었다.
+- **`Semantic` 이 임베더를 요구한다.** 이전에는 임베더가 없으면 문단 분할로 폴백하면서 결과를
+  계속 "Semantic" 으로 라벨했다 — 그럴듯한 답이지만 요청은 이행되지 않았다. 이제 무엇이
+  없는지 밝히며 예외를 던진다.
+- **`Language` 기본값이 전달되지 않는다.** `ChunkingOptions.Language` 는 `"ko"` 로 기본
+  설정되는데 이는 아무도 선택하지 않은 값이다. 토큰 크기는 언어별로 추정되므로, 그 기본값을
+  그대로 넘기면 영어 문서를 한국어 비율로 재고 그것을 호출자의 선택이라 부르게 된다.
+  값이 비어 있으면 언어를 감지에 맡긴다.
+- **`Smart` 가 모든 헤딩에서 섹션을 연다.** 이전에는 누적 텍스트가 이미 크기를 넘은 뒤에만
+  섹션을 열었다 — "여기 이음매가 있다" 와 "충분히 쌓였다" 를 뒤섞은 것이라, 그 크기 아래의
+  문서에서는 헤딩이 통째로 무시되고 구조 인식을 표방한 이름 아래 문단 분할로 퇴화했다.
+- **`MemoryOptimized` 는 위임 별칭이 됐다.** 스트리밍을 표방했으나 스트리밍하지 않았다 —
+  텍스트 전체를 문자열로 받아 잘랐다. 고정 크기 청킹과 구별되는 유일한 동작이 그 조각을
+  문자로 잰다는 것이었고, 그것이 결함이다. 100 청크마다 `GC.Collect` 를 호출하던 것도 함께
+  사라졌다. 호스트 프로세스가 내려야 할 결정이었다.
+
+**마이그레이션**
+
+- 전략 **이름은 그대로다**(`FixedSize` / `Paragraph` / `Semantic` / `Smart` /
+  `MemoryOptimized` / `Auto` / `DomStructure`). 이름으로 전략을 고르는 코드는 수정이 필요 없다.
+- 타입으로 직접 생성하던 코드는 바뀐다: `FixedSizeChunkingStrategy` ·
+  `ParagraphChunkingStrategy` · `SemanticChunkingStrategy` · `MemoryOptimizedChunkingStrategy`
+  는 타입으로서 제거됐다. `FluxCuratorChunkingStrategy.FixedSize(...)` 등 정적 팩토리를 쓰거나
+  종전대로 이름으로 해석한다.
+- `SmartChunkingStrategy` 와 `AutoChunkingStrategy` 는 `FluxCurator.Core.Core.IChunkerFactory`
+  를 필요로 한다. `AddWebFluxChunking()` 을 쓰면 자동으로 등록된다.
+- `DomStructure` 는 그대로다. HTML 구조 분할은 텍스트 청킹이 아니며 위임 대상이 없다.
+
+### Changed — 의존성
+
+- `FluxCurator` / `FluxCurator.Core` **0.8.1** 참조 추가. 릴리스 순서상 WebFlux 는
+  FluxCurator 다음이다.
+
 ## [0.5.4] - 2026-08-02
 
 ### Changed
