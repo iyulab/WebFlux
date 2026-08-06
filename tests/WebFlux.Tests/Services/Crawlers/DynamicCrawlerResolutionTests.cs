@@ -76,13 +76,48 @@ public class DynamicCrawlerResolutionTests
     }
 
     [Fact]
-    public void WithThePackageRegistered_ResolutionSucceedsThroughBothFactories()
+    public void WithADynamicCrawlerRegistered_ResolutionSucceedsThroughBothFactories()
     {
         var registered = Substitute.For<ICrawler>();
         var provider = WithDynamicRenderer(registered);
 
         new CrawlerFactory(provider).CreateCrawler(CrawlStrategy.Dynamic).Should().BeSameAs(registered);
         new ServiceFactory(provider).CreateCrawler(CrawlStrategy.Dynamic).Should().BeSameAs(registered);
+    }
+
+    [Fact]
+    public void AddWebFluxPlaywright_FillsExactlyTheKeyThatAddWebFluxLeavesEmpty()
+    {
+        // The two halves of the contract have to be asserted against each other, and against the real
+        // registration rather than a crawler put under the key by hand — otherwise the extension could
+        // register under a different key and every other test here would still pass.
+        var services = new ServiceCollection();
+        services.AddWebFluxPlaywright();
+
+        // Descriptors only: TryAddSingleton<IPlaywright>(factory) is lazy, so nothing here launches or
+        // requires a browser.
+        services.Any(d => Equals(d.ServiceKey, CrawlerKeys.Dynamic) && d.ServiceType == typeof(ICrawler))
+            .Should().BeTrue();
+    }
+
+    [Fact]
+    public void AddWebFluxPlaywright_MakesTheOtherwiseFailingRequestSucceed()
+    {
+        var services = new ServiceCollection().AddWebFluxCrawlingStub();
+        var before = () => new CrawlerFactory(services.BuildServiceProvider()).CreateCrawler(CrawlStrategy.Dynamic);
+        before.Should().Throw<InvalidOperationException>();
+
+        services.AddWebFluxPlaywright();
+
+        // The crawler's own dependencies, which the base package would normally have supplied. It
+        // opens a browser on first crawl, not on construction, so resolving it here starts nothing.
+        services.AddLogging();
+        services.AddSingleton(Substitute.For<IHttpClientService>());
+        services.AddSingleton(Substitute.For<IEventPublisher>());
+
+        var resolved = services.BuildServiceProvider().GetKeyedService<ICrawler>(CrawlerKeys.Dynamic);
+
+        resolved.Should().NotBeNull("adding the package must make the previously failing request work");
     }
 
     [Fact]

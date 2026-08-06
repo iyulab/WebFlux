@@ -26,6 +26,9 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\WebFlux\WebFlux.csproj" />
+    <!-- The split's contract is that adding this package fills the Dynamic key and nothing else
+         changes. Asserting that needs the real registration, not a stand-in registered by hand. -->
+    <ProjectReference Include="..\..\src\WebFlux.Playwright\WebFlux.Playwright.csproj" />
   </ItemGroup>
 
   <ItemGroup>
