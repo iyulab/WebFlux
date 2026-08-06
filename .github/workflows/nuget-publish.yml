@@ -102,15 +102,31 @@ jobs:
       - name: 📦 Restore Dependencies
         run: dotnet restore WebFlux.slnx
 
-      - name: 📦 Create NuGet Package
+      # Pack the solution, not a single project. Every packable project shares one version and the
+      # optional packages hard-pin the base one, so packing a subset publishes a broken closure:
+      # the base package resolves, the companion never appears, and nothing here fails — the gap is
+      # only visible to a consumer who follows the release notes.
+      - name: 📦 Create NuGet Packages
         run: |
-          dotnet pack src/WebFlux/WebFlux.csproj \
+          dotnet pack WebFlux.slnx \
             --configuration Release \
             --output nupkg/ \
             --no-restore
 
       - name: 📋 Verify Packages
-        run: ls -la nupkg/
+        run: |
+          ls -la nupkg/
+          # Every packable project must have produced a package at this version. A missing one would
+          # otherwise be discovered by a consumer rather than here.
+          version="${{ needs.detect-version.outputs.version }}"
+          missing=0
+          for id in WebFlux WebFlux.Playwright; do
+            if [ ! -f "nupkg/${id}.${version}.nupkg" ]; then
+              echo "::error::${id}.${version}.nupkg was not produced"
+              missing=1
+            fi
+          done
+          [ "$missing" -eq 0 ]
 
       - name: 🚀 Publish to NuGet.org
         run: |
