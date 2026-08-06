@@ -43,6 +43,10 @@
     <!-- 🧩 Flux Ecosystem -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <PackageVersion Include="Flux.Abstractions" Version="0.24.0" />
+    <!-- Chunking is delegated to FluxCurator rather than re-implemented here.
+         This moves WebFlux one tier down the release order: FluxCurator must publish first. -->
+    <PackageVersion Include="FluxCurator.Core" Version="0.8.1" />
+    <PackageVersion Include="FluxCurator" Version="0.8.1" />
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <!-- 🤖 AI Services -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->

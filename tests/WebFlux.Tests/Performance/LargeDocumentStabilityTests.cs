@@ -204,10 +204,12 @@ public class LargeDocumentStabilityTests
             MinChunkSize = 100
         };
 
+        var chunkerFactory = new FluxCurator.Infrastructure.Chunking.ChunkerFactory();
+
         var strategies = new IChunkingStrategy[]
         {
-            new FixedSizeChunkingStrategy(),
-            new ParagraphChunkingStrategy(),
+            FluxCuratorChunkingStrategy.FixedSize(chunkerFactory),
+            FluxCuratorChunkingStrategy.Paragraph(chunkerFactory),
             new SmartChunkingStrategy(),
             new MemoryOptimizedChunkingStrategy()
         };

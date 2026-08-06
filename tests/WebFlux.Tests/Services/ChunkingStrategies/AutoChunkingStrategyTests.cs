@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using WebFlux.Core.Models;
 using WebFlux.Core.Options;
 using WebFlux.Services.ChunkingStrategies;
@@ -16,7 +17,15 @@ public class AutoChunkingStrategyTests
 
     public AutoChunkingStrategyTests()
     {
-        _strategy = new AutoChunkingStrategy(); // No services - basic mode
+        // Auto selects among strategies and the generic ones now delegate to FluxCurator, so a
+        // chunker factory has to be reachable. This is the whole behaviour change for this class:
+        // it used to construct its own chunkers, which is precisely how it kept working while the
+        // chunkers it selected were splitting on characters under a token-named setting.
+        var services = new ServiceCollection();
+        services.AddSingleton<FluxCurator.Core.Core.IChunkerFactory>(
+            new FluxCurator.Infrastructure.Chunking.ChunkerFactory());
+
+        _strategy = new AutoChunkingStrategy(serviceProvider: services.BuildServiceProvider());
     }
 
     #region Basic Properties Tests
@@ -107,8 +116,13 @@ public class AutoChunkingStrategyTests
     [Fact]
     public async Task ChunkAsync_WithLongText_ShouldSplitIntoChunks()
     {
-        // Arrange
-        var text = string.Join(" ", Enumerable.Repeat("word", 500)); // ~2500 chars
+        // Comfortably past the 512-token default however tokens are estimated, and written as
+        // sentences rather than a single run of words. That distinction now matters: the previous
+        // character-based splitter cut at whatever offset the count reached, mid-sentence included,
+        // so it "worked" on degenerate input with no punctuation at all. A boundary-respecting
+        // chunker cannot split a 3000-word text that contains no sentence end, and should not.
+        var text = string.Join(" ",
+            Enumerable.Range(0, 300).Select(i => $"Sentence number {i} describes a separate point in the document."));
         var content = new ExtractedContent
         {
             MainContent = text,
@@ -120,6 +134,30 @@ public class AutoChunkingStrategyTests
 
         // Assert
         chunks.Should().HaveCountGreaterThan(1);
+    }
+
+    [Fact]
+    public async Task ChunkAsync_WithTextUnderTheDeclaredTokenBudget_ShouldNotSplit()
+    {
+        // The regression line for the unit contract. MaxChunkSize defaults to 512 and is documented
+        // as tokens; 500 English words is roughly 500 tokens and must therefore stay whole.
+        //
+        // Read against the previous implementation, which compared the same 512 to string.Length,
+        // this text is ~2500 characters and came out as about five chunks. The test that used to
+        // live here asserted exactly that -- "> 1 chunk" for this input -- so the suite was pinning
+        // the character-based reading as the contract. It is the assertion that had to change, not
+        // the behaviour.
+        var text = string.Join(" ", Enumerable.Repeat("word", 500));
+        var content = new ExtractedContent
+        {
+            MainContent = text,
+            Url = "https://example.com"
+        };
+
+        var chunks = await _strategy.ChunkAsync(content);
+
+        chunks.Should().ContainSingle(
+            "512 is a token budget, not a character budget; this text is under it");
     }
 
     [Fact]

@@ -10,6 +10,8 @@
 
   <ItemGroup>
     <PackageReference Include="Flux.Abstractions" />
+    <PackageReference Include="FluxCurator.Core" />
+    <PackageReference Include="FluxCurator" />
   </ItemGroup>
 
   <ItemGroup>

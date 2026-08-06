@@ -214,21 +214,35 @@ public static class ServiceCollectionExtensions
     /// <returns>서비스 컬렉션</returns>
     public static IServiceCollection AddWebFluxChunking(this IServiceCollection services)
     {
+        // 범용 청킹은 FluxCurator 에 위임한다. 여기서 재구현하지 않는 이유는
+        // FluxCuratorChunkingStrategy 문서 참조 - 같은 규약의 두 구현은 한쪽만 고쳐지고
+        // 다른 쪽이 조용히 틀린 채로 남는다.
+        services.TryAddTransient(sp => FluxCuratorChunkingStrategy.FixedSize(
+            sp.GetRequiredService<FluxCurator.Core.Core.IChunkerFactory>(),
+            sp.GetService<IEventPublisher>()));
+
         // 청킹 전략들 등록 (Transient)
-        services.TryAddTransient<FixedSizeChunkingStrategy>();
-        services.TryAddTransient<ParagraphChunkingStrategy>();
         services.TryAddTransient<SmartChunkingStrategy>();
-        services.TryAddTransient<SemanticChunkingStrategy>();
 
         // Phase 4D: 고급 청킹 전략들
         services.TryAddTransient<AutoChunkingStrategy>();
         services.TryAddTransient<MemoryOptimizedChunkingStrategy>();
 
-        // 키드 서비스로 청킹 전략 등록
-        services.AddKeyedTransient<IChunkingStrategy, FixedSizeChunkingStrategy>("FixedSize");
-        services.AddKeyedTransient<IChunkingStrategy, ParagraphChunkingStrategy>("Paragraph");
+        // 키드 서비스로 청킹 전략 등록. 이름은 위임 전후로 동일하다 - 소비자가 문자열로
+        // 고르므로, 이름을 바꾸면 구현 교체가 아니라 전략 소멸로 보인다.
+        services.AddKeyedTransient<IChunkingStrategy>("FixedSize", (sp, _) =>
+            FluxCuratorChunkingStrategy.FixedSize(
+                sp.GetRequiredService<FluxCurator.Core.Core.IChunkerFactory>(),
+                sp.GetService<IEventPublisher>()));
+        services.AddKeyedTransient<IChunkingStrategy>("Paragraph", (sp, _) =>
+            FluxCuratorChunkingStrategy.Paragraph(
+                sp.GetRequiredService<FluxCurator.Core.Core.IChunkerFactory>(),
+                sp.GetService<IEventPublisher>()));
+        services.AddKeyedTransient<IChunkingStrategy>("Semantic", (sp, _) =>
+            FluxCuratorChunkingStrategy.Semantic(
+                sp.GetRequiredService<FluxCurator.Core.Core.IChunkerFactory>(),
+                sp.GetService<IEventPublisher>()));
         services.AddKeyedTransient<IChunkingStrategy, SmartChunkingStrategy>("Smart");
-        services.AddKeyedTransient<IChunkingStrategy, SemanticChunkingStrategy>("Semantic");
         services.AddKeyedTransient<IChunkingStrategy, AutoChunkingStrategy>("Auto");
         services.AddKeyedTransient<IChunkingStrategy, MemoryOptimizedChunkingStrategy>("MemoryOptimized");
 

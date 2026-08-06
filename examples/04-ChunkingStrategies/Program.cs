@@ -28,15 +28,26 @@ class Program
         Console.WriteLine($"테스트 문서 크기: {testContent.Text.Length:N0} 문자\n");
 
         // 3. 테스트할 청킹 전략 목록
+        // 범용 청킹(FixedSize/Paragraph/Semantic)은 FluxCurator 에 위임한다. 직접 new 하지 않고
+        // 청커 팩토리를 넘기는 이유는, 그것이 크기 단위·겹침·임베더 요구를 실제로 지키는 구현이
+        // 있는 곳이기 때문이다.
+        var chunkerFactory = new FluxCurator.Infrastructure.Chunking.ChunkerFactory();
+        var serviceProvider = new ServiceCollection()
+            .AddSingleton<FluxCurator.Core.Core.IChunkerFactory>(chunkerFactory)
+            .BuildServiceProvider();
+
         var strategies = new Dictionary<string, IChunkingStrategy>
         {
-            ["FixedSize"] = new FixedSizeChunkingStrategy(),
-            ["Paragraph"] = new ParagraphChunkingStrategy(),
+            ["FixedSize"] = FluxCuratorChunkingStrategy.FixedSize(chunkerFactory),
+            ["Paragraph"] = FluxCuratorChunkingStrategy.Paragraph(chunkerFactory),
             ["Smart"] = new SmartChunkingStrategy(),
-            ["Semantic"] = new SemanticChunkingStrategy(),
             ["MemoryOptimized"] = new MemoryOptimizedChunkingStrategy(),
-            ["Auto"] = new AutoChunkingStrategy()
+            ["Auto"] = new AutoChunkingStrategy(serviceProvider: serviceProvider)
         };
+
+        // Semantic 은 임베더가 등록된 ChunkerFactory 를 요구한다. 임베더 없이 요청하면
+        // 조용히 다른 방식으로 쪼개는 대신 예외로 알린다 -- 이 예제는 임베더를 구성하지 않으므로
+        // 목록에서 제외한다.
 
         // 4. 비교 결과 저장
         var results = new List<ChunkingComparisonResult>();

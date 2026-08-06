@@ -133,7 +133,9 @@ public partial class ChunkingStrategyFactory : IChunkingStrategyFactory
     {
         // 1. FixedSize - 고정 크기 분할
         _strategyCreators["FixedSize"] = () =>
-            _serviceProvider.GetRequiredService<FixedSizeChunkingStrategy>();
+            FluxCuratorChunkingStrategy.FixedSize(
+                _serviceProvider.GetRequiredService<FluxCurator.Core.Core.IChunkerFactory>(),
+                _serviceProvider.GetService<IEventPublisher>());
 
         _strategyInfos["FixedSize"] = new StrategyInfo
         {
@@ -152,7 +154,9 @@ public partial class ChunkingStrategyFactory : IChunkingStrategyFactory
 
         // 2. Paragraph - 문단 기반 분할
         _strategyCreators["Paragraph"] = () =>
-            _serviceProvider.GetRequiredService<ParagraphChunkingStrategy>();
+            FluxCuratorChunkingStrategy.Paragraph(
+                _serviceProvider.GetRequiredService<FluxCurator.Core.Core.IChunkerFactory>(),
+                _serviceProvider.GetService<IEventPublisher>());
 
         _strategyInfos["Paragraph"] = new StrategyInfo
         {
@@ -190,7 +194,9 @@ public partial class ChunkingStrategyFactory : IChunkingStrategyFactory
 
         // 4. Semantic - 의미론적 분할
         _strategyCreators["Semantic"] = () =>
-            _serviceProvider.GetRequiredService<SemanticChunkingStrategy>();
+            FluxCuratorChunkingStrategy.Semantic(
+                _serviceProvider.GetRequiredService<FluxCurator.Core.Core.IChunkerFactory>(),
+                _serviceProvider.GetService<IEventPublisher>());
 
         _strategyInfos["Semantic"] = new StrategyInfo
         {

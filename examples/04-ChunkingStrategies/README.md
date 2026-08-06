@@ -183,15 +183,20 @@ dotnet run
 
 ### 1. 전략 목록 정의
 ```csharp
+// 범용 청킹은 FluxCurator 에 위임한다 - 크기 단위(토큰)와 겹침을 실제로 지키는 구현이 그쪽에 있다.
+var chunkerFactory = new FluxCurator.Infrastructure.Chunking.ChunkerFactory();
+
 var strategies = new Dictionary<string, IChunkingStrategy>
 {
-    ["FixedSize"] = new FixedSizeChunkingStrategy(),
-    ["Paragraph"] = new ParagraphChunkingStrategy(),
+    ["FixedSize"] = FluxCuratorChunkingStrategy.FixedSize(chunkerFactory),
+    ["Paragraph"] = FluxCuratorChunkingStrategy.Paragraph(chunkerFactory),
     ["Smart"] = new SmartChunkingStrategy(),
-    ["Semantic"] = new SemanticChunkingStrategy(),
     ["MemoryOptimized"] = new MemoryOptimizedChunkingStrategy(),
-    ["Auto"] = new AutoChunkingStrategy()
+    ["Auto"] = new AutoChunkingStrategy(serviceProvider: serviceProvider)
 };
+
+// Semantic 은 임베더가 등록된 ChunkerFactory 를 요구한다. 없으면 조용히 다른 방식으로
+// 쪼개는 대신 예외를 던진다.
 ```
 
 ### 2. 성능 측정

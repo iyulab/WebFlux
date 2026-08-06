@@ -23,11 +23,12 @@ public class ChunkingStrategyFactoryTests
     {
         var services = new ServiceCollection();
 
-        // Register all chunking strategies
-        services.AddTransient<FixedSizeChunkingStrategy>();
-        services.AddTransient<ParagraphChunkingStrategy>();
+        // Register all chunking strategies. FixedSize/Paragraph/Semantic are no longer types of
+        // their own: the factory builds them from FluxCurator's chunker factory, so that is what
+        // has to be resolvable here.
+        services.AddSingleton<FluxCurator.Core.Core.IChunkerFactory>(
+            new FluxCurator.Infrastructure.Chunking.ChunkerFactory());
         services.AddTransient<SmartChunkingStrategy>();
-        services.AddTransient<SemanticChunkingStrategy>();
         services.AddTransient<AutoChunkingStrategy>();
         services.AddTransient<MemoryOptimizedChunkingStrategy>();
 

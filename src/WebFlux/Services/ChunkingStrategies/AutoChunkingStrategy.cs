@@ -96,7 +96,7 @@ public partial class AutoChunkingStrategy : BaseChunkingStrategy
             operationScope?.RecordError(ex);
 
             // Fallback to simple strategy
-            var fallbackStrategy = new ParagraphChunkingStrategy(EventPublisher);
+            var fallbackStrategy = CreateDelegated(FluxCurator.Core.Domain.ChunkingStrategy.Paragraph, "Paragraph");
             return await fallbackStrategy.ChunkAsync(content, options, cancellationToken);
         }
     }
@@ -204,10 +204,35 @@ public partial class AutoChunkingStrategy : BaseChunkingStrategy
         return bestStrategy.Key switch
         {
             "Smart" => new SmartChunkingStrategy(EventPublisher),
-            "Semantic" => new SemanticChunkingStrategy(EventPublisher),
             "MemoryOptimized" => new MemoryOptimizedChunkingStrategy(EventPublisher),
-            "Paragraph" => new ParagraphChunkingStrategy(EventPublisher),
-            _ => new FixedSizeChunkingStrategy(EventPublisher)
+            "Semantic" => CreateDelegated(FluxCurator.Core.Domain.ChunkingStrategy.Semantic, "Semantic"),
+            "Paragraph" => CreateDelegated(FluxCurator.Core.Domain.ChunkingStrategy.Paragraph, "Paragraph"),
+            _ => CreateDelegated(FluxCurator.Core.Domain.ChunkingStrategy.Token, "FixedSize")
+        };
+    }
+
+    /// <summary>
+    /// Builds a chunking strategy that delegates to FluxCurator.
+    /// </summary>
+    /// <remarks>
+    /// These used to be constructed directly here, which is why this orchestrator kept working
+    /// while the strategies it selected were splitting on characters under a token-named setting.
+    /// Resolving the chunker factory instead means this path and the DI path cannot diverge:
+    /// there is one implementation to select, not a copy reachable only from here.
+    /// </remarks>
+    private FluxCuratorChunkingStrategy CreateDelegated(FluxCurator.Core.Domain.ChunkingStrategy strategy, string name)
+    {
+        var chunkerFactory = _serviceProvider?.GetService<FluxCurator.Core.Core.IChunkerFactory>()
+            ?? throw new InvalidOperationException(
+                $"The Auto strategy selected '{name}', which delegates chunking to FluxCurator, but no " +
+                "IChunkerFactory is resolvable. Register FluxCurator's services (AddWebFluxChunking does " +
+                "this), or construct AutoChunkingStrategy with a service provider that can supply one.");
+
+        return name switch
+        {
+            "Paragraph" => FluxCuratorChunkingStrategy.Paragraph(chunkerFactory, EventPublisher),
+            "Semantic" => FluxCuratorChunkingStrategy.Semantic(chunkerFactory, EventPublisher),
+            _ => FluxCuratorChunkingStrategy.FixedSize(chunkerFactory, EventPublisher)
         };
     }
 
