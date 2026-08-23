@@ -95,14 +95,28 @@ public interface ITextEmbeddingService
 ### Optional AI Services
 
 #### ITextCompletionService (Optional)
-LLM text completion for multimodal processing and content reconstruction:
+LLM text completion for multimodal processing and content reconstruction. Defined in the shared
+[`Flux.Abstractions`](https://www.nuget.org/packages/Flux.Abstractions/) contract package — only
+`CompleteAsync` is required, the rest have default implementations:
 
 ```csharp
 public interface ITextCompletionService
 {
     Task<string> CompleteAsync(string prompt, TextCompletionOptions? options = null, CancellationToken cancellationToken = default);
+    Task<string> CompleteJsonAsync(string prompt, TextCompletionOptions? options = null, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<string>> CompleteBatchAsync(IEnumerable<string> prompts, TextCompletionOptions? options = null, CancellationToken cancellationToken = default);
     IAsyncEnumerable<string> CompleteStreamAsync(string prompt, TextCompletionOptions? options = null, CancellationToken cancellationToken = default);
+}
+```
+
+Implement `WebFlux.Core.Interfaces.IWebLlmService` instead (it extends `ITextCompletionService`)
+when you also want health-check support:
+
+```csharp
+public interface IWebLlmService : ITextCompletionService
+{
     Task<bool> IsAvailableAsync(CancellationToken cancellationToken = default);
+    ServiceHealthInfo GetHealthInfo();
 }
 ```
 

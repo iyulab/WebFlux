@@ -1,8 +1,8 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Flux.Abstractions;
 using WebFlux.Core.Interfaces;
-using WebFlux.Core.Options;
 using WebFlux.Core.Models;
 using OpenAI.Chat;
 using OpenAI;

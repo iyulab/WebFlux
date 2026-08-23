@@ -4,8 +4,10 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Flux.Abstractions;
 using WebFlux.Core.Interfaces;
 using WebFlux.Core.Models;
+using WebFlux.Core.Models.Events;
 using WebFlux.Core.Options;
 using WebFlux.Extensions;
 using WebFlux.Services;
@@ -85,7 +87,8 @@ public class SimpleOpenAITest
             });
 
             // AI 서비스 구현체 등록 (OpenAI)
-            services.AddSingleton<ITextCompletionService>(sp => new OpenAiTextCompletionService(model, apiKey));
+            services.AddSingleton<IWebLlmService>(sp => new OpenAiTextCompletionService(model, apiKey));
+            services.AddSingleton<ITextCompletionService>(sp => sp.GetRequiredService<IWebLlmService>());
 
             // AI 증강 서비스 등록
             services.AddWebFluxAIEnhancement();
@@ -95,7 +98,7 @@ public class SimpleOpenAITest
 
             // WebFlux 처리기 가져오기
             var processor = serviceProvider.GetRequiredService<IWebContentProcessor>();
-            var llmService = serviceProvider.GetRequiredService<ITextCompletionService>();
+            var llmService = serviceProvider.GetRequiredService<IWebLlmService>();
             var eventPublisher = serviceProvider.GetRequiredService<IEventPublisher>();
 
             // 실시간 진행 상황 이벤트 구독

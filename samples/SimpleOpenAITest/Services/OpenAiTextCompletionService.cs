@@ -1,15 +1,15 @@
 using System.Runtime.CompilerServices;
 using OpenAI.Chat;
+using Flux.Abstractions;
 using WebFlux.Core.Interfaces;
 using WebFlux.Core.Models;
-using WebFlux.Core.Options;
 
 namespace WebFlux.SimpleTest.Services;
 
 /// <summary>
-/// OpenAI 공식 SDK를 사용한 ITextCompletionService 구현
+/// OpenAI 공식 SDK를 사용한 IWebLlmService 구현 (ITextCompletionService + health-check 확장)
 /// </summary>
-public class OpenAiTextCompletionService : ITextCompletionService
+public class OpenAiTextCompletionService : IWebLlmService
 {
     private readonly ChatClient _chatClient;
     private readonly string _model;
