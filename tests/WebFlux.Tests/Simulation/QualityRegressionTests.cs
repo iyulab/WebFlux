@@ -1,6 +1,6 @@
 using System.Reflection;
 using System.Text.RegularExpressions;
-using FluentAssertions;
+using AwesomeAssertions;
 using WebFlux.Services.ContentExtractors;
 using WebFlux.Tests.Fixtures;
 using Xunit;

@@ -7,7 +7,7 @@ using WebFlux.Core.Options;
 using WebFlux.Services;
 using WebFlux.Strategies.Reconstruct;
 using Xunit;
-using FluentAssertions;
+using AwesomeAssertions;
 
 namespace WebFlux.Tests.Services;
 

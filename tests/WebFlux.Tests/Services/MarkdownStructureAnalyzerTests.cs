@@ -2,7 +2,7 @@ using WebFlux.Core.Interfaces;
 using WebFlux.Core.Models;
 using WebFlux.Services;
 using Xunit;
-using FluentAssertions;
+using AwesomeAssertions;
 
 namespace WebFlux.Tests.Services;
 

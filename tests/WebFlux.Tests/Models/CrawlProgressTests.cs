@@ -1,4 +1,4 @@
-using FluentAssertions;
+using AwesomeAssertions;
 using WebFlux.Core.Models;
 
 namespace WebFlux.Tests.Models;

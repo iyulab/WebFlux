@@ -1,4 +1,4 @@
-using FluentAssertions;
+using AwesomeAssertions;
 using ReverseMarkdown;
 using WebFlux.Core.Options;
 using WebFlux.Services.ContentExtractors;

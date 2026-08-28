@@ -1,4 +1,4 @@
-using FluentAssertions;
+using AwesomeAssertions;
 using NSubstitute;
 using WebFlux.Core.Interfaces;
 using WebFlux.Core.Options;

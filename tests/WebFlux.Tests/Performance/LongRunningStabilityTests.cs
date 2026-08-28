@@ -3,7 +3,7 @@ using WebFlux.Core.Models;
 using WebFlux.Core.Options;
 using WebFlux.Services.ChunkingStrategies;
 using Xunit;
-using FluentAssertions;
+using AwesomeAssertions;
 using System.Diagnostics;
 
 namespace WebFlux.Tests.Performance;

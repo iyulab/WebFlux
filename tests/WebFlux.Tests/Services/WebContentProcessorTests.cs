@@ -6,7 +6,7 @@ using WebFlux.Core.Models.Events;
 using WebFlux.Core.Options;
 using WebFlux.Services;
 using Xunit;
-using FluentAssertions;
+using AwesomeAssertions;
 
 namespace WebFlux.Tests.Services;
 

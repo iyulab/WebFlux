@@ -1,4 +1,4 @@
-using FluentAssertions;
+using AwesomeAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using WebFlux.Core.Interfaces;
 using WebFlux.Core.Models;

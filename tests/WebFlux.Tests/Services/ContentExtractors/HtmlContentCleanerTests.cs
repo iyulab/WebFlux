@@ -1,7 +1,7 @@
 using WebFlux.Core.Options;
 using WebFlux.Services.ContentExtractors;
 using Xunit;
-using FluentAssertions;
+using AwesomeAssertions;
 
 namespace WebFlux.Tests.Services.ContentExtractors;
 

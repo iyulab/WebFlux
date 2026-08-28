@@ -8,7 +8,7 @@ using WebFlux.Core.Options;
 using WebFlux.Services.Crawlers;
 using WebFlux.Services;
 using Xunit;
-using FluentAssertions;
+using AwesomeAssertions;
 using System.Net;
 
 namespace WebFlux.Tests.Services.Crawlers;

@@ -1,4 +1,4 @@
-using FluentAssertions;
+using AwesomeAssertions;
 using WebFlux.Services.ContentExtractors;
 using WebFlux.Tests.Fixtures;
 using Xunit;

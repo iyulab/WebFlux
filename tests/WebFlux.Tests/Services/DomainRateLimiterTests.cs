@@ -3,7 +3,7 @@ using NSubstitute;
 using WebFlux.Core.Interfaces;
 using WebFlux.Services;
 using Xunit;
-using FluentAssertions;
+using AwesomeAssertions;
 
 namespace WebFlux.Tests.Services;
 

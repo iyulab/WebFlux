@@ -2,7 +2,7 @@ using NSubstitute;
 using WebFlux.Core.Interfaces;
 using WebFlux.Services.ContentExtractors;
 using Xunit;
-using FluentAssertions;
+using AwesomeAssertions;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace WebFlux.Tests.Services.ContentExtractors;

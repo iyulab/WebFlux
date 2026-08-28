@@ -1,6 +1,6 @@
 using WebFlux.Core.Interfaces;
 using Xunit;
-using FluentAssertions;
+using AwesomeAssertions;
 
 namespace WebFlux.Tests.Core.Interfaces;
 

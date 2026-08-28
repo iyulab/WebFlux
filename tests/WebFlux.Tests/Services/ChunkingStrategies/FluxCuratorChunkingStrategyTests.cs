@@ -1,4 +1,4 @@
-using FluentAssertions;
+using AwesomeAssertions;
 using FluxCurator.Core.Core;
 using WebFlux.Core.Models;
 using WebFlux.Services.ChunkingStrategies;

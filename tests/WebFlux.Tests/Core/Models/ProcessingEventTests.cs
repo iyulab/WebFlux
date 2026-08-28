@@ -1,7 +1,7 @@
 using WebFlux.Core.Models;
 using WebFlux.Core.Models.Events;
 using Xunit;
-using FluentAssertions;
+using AwesomeAssertions;
 
 namespace WebFlux.Tests.Core.Models;
 

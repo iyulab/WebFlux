@@ -5,7 +5,7 @@ using WebFlux.Core.Models;
 using WebFlux.Core.Options;
 using WebFlux.Services.Crawlers;
 using Xunit;
-using FluentAssertions;
+using AwesomeAssertions;
 
 namespace WebFlux.Tests.Services.Crawlers;
 
