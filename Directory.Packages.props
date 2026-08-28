@@ -32,8 +32,8 @@
     <!-- 📝 Document Processing -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <PackageVersion Include="Markdig" Version="1.2.0" />
-    <PackageVersion Include="ReverseMarkdown" Version="5.3.0" />
-    <PackageVersion Include="YamlDotNet" Version="17.1.0" />
+    <PackageVersion Include="ReverseMarkdown" Version="6.2.1" />
+    <PackageVersion Include="YamlDotNet" Version="18.1.0" />
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <!-- 🛡️ Resilience -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
@@ -50,7 +50,7 @@
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <!-- 🤖 AI Services -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <PackageVersion Include="OpenAI" Version="2.4.0" />
+    <PackageVersion Include="OpenAI" Version="2.13.0" />
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <!-- 🔗 Source Link -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
@@ -63,6 +63,6 @@
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
     <PackageVersion Include="coverlet.collector" Version="10.0.1" />
     <PackageVersion Include="AwesomeAssertions" Version="9.6.0" />
-    <PackageVersion Include="NSubstitute" Version="5.3.0" />
+    <PackageVersion Include="NSubstitute" Version="6.2.0" />
   </ItemGroup>
 </Project>

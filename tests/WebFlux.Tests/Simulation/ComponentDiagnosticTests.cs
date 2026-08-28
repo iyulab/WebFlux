@@ -24,13 +24,11 @@ public class ComponentDiagnosticTests
         _output = output;
         _cleaner = new HtmlContentCleaner();
         _densityFilter = new TextDensityFilter();
-        _markdownConverter = new Converter(new ReverseMarkdown.Config
-        {
-            GithubFlavored = true,
-            SmartHrefHandling = true,
-            RemoveComments = true,
-            UnknownTags = Config.UnknownTagsOption.Bypass
-        });
+        var markdownConfig = new ReverseMarkdown.Config { GithubFlavored = true };
+        markdownConfig.Links.SmartHref = true;
+        markdownConfig.Formatting.RemoveComments = true;
+        markdownConfig.Tags.Unknown = Config.UnknownTagsOption.Bypass;
+        _markdownConverter = new Converter(markdownConfig);
     }
 
     public static IEnumerable<object[]> AllSnapshots =>
