@@ -12,6 +12,7 @@ on:
     paths:
       - 'src/WebFlux/**/*.cs'
       - 'tests/WebFlux.Tests/Performance/**/*.cs'
+      - '.github/workflows/performance-tests.yml'
 
 env:
   DOTNET_VERSION: '10.0.x'
