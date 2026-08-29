@@ -42,7 +42,7 @@ jobs:
         run: dotnet build WebFlux.slnx --configuration ${{ env.BUILD_CONFIGURATION }} --no-restore
 
       - name: ⚡ Run Performance Tests (excluding LongRunning)
-        run: dotnet test tests/WebFlux.Tests/WebFlux.Tests.csproj --configuration ${{ env.BUILD_CONFIGURATION }} --no-build --verbosity normal --filter "Category=Performance&Category!=LongRunning"
+        run: dotnet test tests/WebFlux.Tests/WebFlux.Tests.csproj --configuration ${{ env.BUILD_CONFIGURATION }} --no-build --verbosity normal --filter "Category=Performance&Category!=LongRunning" --blame-hang --blame-hang-timeout 5m
 
       - name: 📊 Performance Test Summary
         if: always()
@@ -72,7 +72,12 @@ jobs:
         run: dotnet build WebFlux.slnx --configuration ${{ env.BUILD_CONFIGURATION }} --no-restore
 
       - name: 🕐 Run LongRunning Tests
-        run: dotnet test tests/WebFlux.Tests/WebFlux.Tests.csproj --configuration ${{ env.BUILD_CONFIGURATION }} --no-build --verbosity normal --filter "Category=LongRunning"
+        # HighLoadProcessing_ShouldRemainStable_For10Minutes는 실제로 10분 wall-clock 루프를
+        # 돈다(WebFlux.Tests/Performance/LongRunningStabilityTests.cs) — 5분 표준값을 쓰면
+        # 정상 동작을 거짓 hang으로 오탐한다. ContinuousProcessing_ShouldRemainStable_For24Hours는
+        # [Fact(Skip=...)]로 항상 skip이라 실행되지 않는다(2026-08-29 실측, job timeout-minutes: 120
+        # 안에서 15분 여유를 둠).
+        run: dotnet test tests/WebFlux.Tests/WebFlux.Tests.csproj --configuration ${{ env.BUILD_CONFIGURATION }} --no-build --verbosity normal --filter "Category=LongRunning" --blame-hang --blame-hang-timeout 15m
 
       - name: 📊 LongRunning Test Summary
         if: always()
