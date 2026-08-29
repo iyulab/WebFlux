@@ -32,7 +32,7 @@ public class TextDensityFilterTests
             </article>";
 
         // Act
-        var result = await _filter.FilterAsync(html);
+        var result = await _filter.FilterAsync(html, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().Contain("substantial paragraph");
@@ -59,7 +59,7 @@ public class TextDensityFilterTests
             </div>";
 
         // Act
-        var result = await _filter.FilterAsync(html);
+        var result = await _filter.FilterAsync(html, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().Contain("meaningful article content");
@@ -82,7 +82,7 @@ public class TextDensityFilterTests
             </div>";
 
         // Act
-        var result = await _filter.FilterAsync(html);
+        var result = await _filter.FilterAsync(html, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().Contain("Main content");
@@ -109,7 +109,7 @@ public class TextDensityFilterTests
             </div>";
 
         // Act
-        var result = await filter.FilterAsync(html);
+        var result = await filter.FilterAsync(html, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().Contain("Main content");
@@ -131,7 +131,7 @@ public class TextDensityFilterTests
             </div>";
 
         // Act
-        var result = await filter.FilterAsync(html);
+        var result = await filter.FilterAsync(html, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().Contain("Regular content");
@@ -155,7 +155,7 @@ public class TextDensityFilterTests
             </div>";
 
         // Act
-        var result = await _filter.FilterAsync(html);
+        var result = await _filter.FilterAsync(html, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().Contain("Name");
@@ -175,7 +175,7 @@ public class TextDensityFilterTests
             </div>";
 
         // Act
-        var result = await _filter.FilterAsync(html);
+        var result = await _filter.FilterAsync(html, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().Contain("function hello()");
@@ -196,7 +196,7 @@ public class TextDensityFilterTests
             </div>";
 
         // Act
-        var result = await _filter.FilterAsync(html);
+        var result = await _filter.FilterAsync(html, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().Contain("Important Heading");
@@ -211,7 +211,7 @@ public class TextDensityFilterTests
     public async Task FilterAsync_WithEmptyInput_ShouldReturnEmpty()
     {
         // Act
-        var result = await _filter.FilterAsync("");
+        var result = await _filter.FilterAsync("", TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().BeEmpty();
@@ -221,7 +221,7 @@ public class TextDensityFilterTests
     public async Task FilterAsync_WithWhitespace_ShouldReturnEmpty()
     {
         // Act
-        var result = await _filter.FilterAsync("   ");
+        var result = await _filter.FilterAsync("   ", TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().BeEmpty();
@@ -234,7 +234,7 @@ public class TextDensityFilterTests
         var html = "<p>Simple paragraph text without any block containers.</p>";
 
         // Act
-        var result = await _filter.FilterAsync(html);
+        var result = await _filter.FilterAsync(html, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().Contain("Simple paragraph");
@@ -247,7 +247,7 @@ public class TextDensityFilterTests
         var html = "<span>Text</span> <strong>bold</strong> <em>italic</em>";
 
         // Act
-        var result = await _filter.FilterAsync(html);
+        var result = await _filter.FilterAsync(html, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().Contain("Text");
@@ -275,7 +275,7 @@ public class TextDensityFilterTests
             </div>";
 
         // Act
-        var result = await _filter.FilterAsync(html);
+        var result = await _filter.FilterAsync(html, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().Contain("main article content");
@@ -297,7 +297,7 @@ public class TextDensityFilterTests
             </div>";
 
         // Act
-        var result = await _filter.FilterAsync(html);
+        var result = await _filter.FilterAsync(html, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().Contain("Main article content");

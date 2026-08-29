@@ -82,7 +82,7 @@ public class WebContentProcessorTests : IDisposable
         var urls = new List<string>();
 
         // Act
-        var result = await _processor.ProcessUrlsBatchAsync(urls);
+        var result = await _processor.ProcessUrlsBatchAsync(urls, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();
@@ -97,7 +97,7 @@ public class WebContentProcessorTests : IDisposable
         SetupMocksForProcessUrl();
 
         // Act
-        var result = await _processor.ProcessUrlsBatchAsync(urls);
+        var result = await _processor.ProcessUrlsBatchAsync(urls, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();
@@ -141,7 +141,7 @@ public class WebContentProcessorTests : IDisposable
 
         // Act
         var chunks = new List<WebContentChunk>();
-        await foreach (var chunk in _processor.ProcessWebsiteAsync(startUrl))
+        await foreach (var chunk in _processor.ProcessWebsiteAsync(startUrl, cancellationToken: TestContext.Current.CancellationToken))
         {
             chunks.Add(chunk);
         }
@@ -168,7 +168,7 @@ public class WebContentProcessorTests : IDisposable
 
         // Act
         var chunks = new List<WebContentChunk>();
-        await foreach (var chunk in _processor.ProcessWebsiteAsync(startUrl, crawlOptions, chunkingOptions))
+        await foreach (var chunk in _processor.ProcessWebsiteAsync(startUrl, crawlOptions, chunkingOptions, TestContext.Current.CancellationToken))
         {
             chunks.Add(chunk);
         }
@@ -216,7 +216,7 @@ public class WebContentProcessorTests : IDisposable
         SetupMocksForHtmlProcessing(sourceUrl);
 
         // Act
-        var result = await _processor.ProcessHtmlAsync(html, sourceUrl);
+        var result = await _processor.ProcessHtmlAsync(html, sourceUrl, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();
@@ -233,7 +233,7 @@ public class WebContentProcessorTests : IDisposable
         SetupMocksForHtmlProcessing(sourceUrl);
 
         // Act
-        var result = await _processor.ProcessHtmlAsync(html, sourceUrl, options);
+        var result = await _processor.ProcessHtmlAsync(html, sourceUrl, options, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();
@@ -390,7 +390,7 @@ public class WebContentProcessorTests : IDisposable
         _mockServiceFactory.CreateAiEnhancementService().Returns((IAiEnhancementService)null!);
 
         // Act
-        var result = await _processor.ProcessUrlAsync(url);
+        var result = await _processor.ProcessUrlAsync(url, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();
@@ -435,7 +435,7 @@ public class WebContentProcessorTests : IDisposable
         _mockServiceFactory.CreateAiEnhancementService().Returns((IAiEnhancementService)null!);
 
         // Act
-        var result = await _processor.ProcessUrlAsync(url, options);
+        var result = await _processor.ProcessUrlAsync(url, options, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();
@@ -504,7 +504,7 @@ public class WebContentProcessorTests : IDisposable
         _mockServiceFactory.CreateAiEnhancementService().Returns((IAiEnhancementService)null!);
 
         // Act - This will trigger ExtractTitle internally
-        var task = _processor.ProcessUrlAsync("https://test.com");
+        var task = _processor.ProcessUrlAsync("https://test.com", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert - Method should complete without throwing
         task.Should().NotBeNull();
@@ -549,7 +549,7 @@ public class WebContentProcessorTests : IDisposable
         _mockServiceFactory.CreateAiEnhancementService().Returns((IAiEnhancementService)null!);
 
         // Act
-        await _processor.ProcessUrlAsync(url);
+        await _processor.ProcessUrlAsync(url, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         await _mockEventPublisher.Received(1).PublishAsync(
@@ -592,7 +592,7 @@ public class WebContentProcessorTests : IDisposable
         _mockServiceFactory.CreateAiEnhancementService().Returns((IAiEnhancementService)null!);
 
         // Act
-        await _processor.ProcessUrlAsync(url);
+        await _processor.ProcessUrlAsync(url, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         await _mockEventPublisher.Received(1).PublishAsync(

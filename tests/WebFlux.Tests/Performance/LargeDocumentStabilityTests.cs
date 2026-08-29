@@ -46,7 +46,7 @@ public class LargeDocumentStabilityTests
         var initialMemory = GC.GetTotalMemory(false);
 
         // Act: 대용량 문서 청킹
-        var chunks = await strategy.ChunkAsync(content, options);
+        var chunks = await strategy.ChunkAsync(content, options, TestContext.Current.CancellationToken);
 
         // Measure final memory
         GC.Collect();
@@ -105,7 +105,7 @@ public class LargeDocumentStabilityTests
                 OriginalContentType = "text/html"
             };
 
-            var chunks = await strategy.ChunkAsync(content, options);
+            var chunks = await strategy.ChunkAsync(content, options, TestContext.Current.CancellationToken);
             totalChunks += chunks.Count;
 
             // 각 문서 처리 후 메모리 정리
@@ -160,7 +160,7 @@ public class LargeDocumentStabilityTests
         var initialMemory = GC.GetTotalMemory(false);
 
         // Act: 스트리밍 모드로 청킹
-        var chunks = await strategy.ChunkAsync(content, options);
+        var chunks = await strategy.ChunkAsync(content, options, TestContext.Current.CancellationToken);
 
         // 청크를 즉시 소비 (실제 시나리오 시뮬레이션)
         var processedCount = 0;

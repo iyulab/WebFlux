@@ -46,7 +46,7 @@ public class LongRunningStabilityTests
             {
                 // 다양한 문서 처리
                 var content = GenerateRandomWebContent();
-                var chunks = await strategy.ChunkAsync(content, options);
+                var chunks = await strategy.ChunkAsync(content, options, TestContext.Current.CancellationToken);
 
                 chunks.Should().NotBeEmpty();
                 metrics.RecordSuccess(chunks.Count);
@@ -73,7 +73,7 @@ public class LongRunningStabilityTests
             }
 
             // CPU 휴식 (과부하 방지)
-            await Task.Delay(100);
+            await Task.Delay(100, TestContext.Current.CancellationToken);
         }
 
         // Assert: 안정성 검증
@@ -113,7 +113,7 @@ public class LongRunningStabilityTests
             LongRunningMetrics.StartIteration();
 
             var content = GenerateRandomWebContent();
-            var chunks = await strategy.ChunkAsync(content, options);
+            var chunks = await strategy.ChunkAsync(content, options, TestContext.Current.CancellationToken);
 
             chunks.Should().NotBeEmpty();
             metrics.RecordSuccess(chunks.Count);
@@ -125,7 +125,7 @@ public class LongRunningStabilityTests
             }
 
             // 높은 처리 속도 (딜레이 최소화)
-            await Task.Delay(10);
+            await Task.Delay(10, TestContext.Current.CancellationToken);
         }
 
         // Assert
@@ -164,14 +164,14 @@ public class LongRunningStabilityTests
         for (int i = 0; i < iterations; i++)
         {
             var content = GenerateRandomWebContent();
-            var chunks = await strategy.ChunkAsync(content, options);
+            var chunks = await strategy.ChunkAsync(content, options, TestContext.Current.CancellationToken);
 
             chunks.Should().NotBeEmpty();
 
             // 중간 GC 방지 (압력 측정을 위해)
             if (i % 100 == 0)
             {
-                await Task.Delay(10);
+                await Task.Delay(10, TestContext.Current.CancellationToken);
             }
         }
 

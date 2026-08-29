@@ -56,7 +56,7 @@ public class ContentQualityEvaluatorTests
         };
 
         // Act
-        var quality = await _evaluator.EvaluateAsync(content);
+        var quality = await _evaluator.EvaluateAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         quality.Should().NotBeNull();
@@ -77,7 +77,7 @@ public class ContentQualityEvaluatorTests
         };
 
         // Act
-        var quality = await _evaluator.EvaluateAsync(content);
+        var quality = await _evaluator.EvaluateAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         quality.OverallScore.Should().BeLessThanOrEqualTo(0.5);
@@ -97,7 +97,7 @@ public class ContentQualityEvaluatorTests
         var html = "<div class='paywall'>Subscribe to continue reading</div>";
 
         // Act
-        var quality = await _evaluator.EvaluateAsync(content, html);
+        var quality = await _evaluator.EvaluateAsync(content, html, TestContext.Current.CancellationToken);
 
         // Assert
         quality.HasPaywall.Should().BeTrue();
@@ -119,7 +119,7 @@ public class ContentQualityEvaluatorTests
         };
 
         // Act
-        var quality = await _evaluator.EvaluateAsync(content);
+        var quality = await _evaluator.EvaluateAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         quality.OverallScore.Should().BeGreaterThan(0.5);
@@ -138,7 +138,7 @@ public class ContentQualityEvaluatorTests
         var url = "https://example.com";
 
         // Act
-        var quality = await _evaluator.EvaluateHtmlAsync(html, url);
+        var quality = await _evaluator.EvaluateHtmlAsync(html, url, TestContext.Current.CancellationToken);
 
         // Assert
         quality.Should().NotBeNull();
@@ -153,7 +153,7 @@ public class ContentQualityEvaluatorTests
         var url = "https://example.com";
 
         // Act
-        var quality = await _evaluator.EvaluateHtmlAsync(html, url);
+        var quality = await _evaluator.EvaluateHtmlAsync(html, url, TestContext.Current.CancellationToken);
 
         // Assert
         quality.OverallScore.Should().BeLessThanOrEqualTo(0.5);

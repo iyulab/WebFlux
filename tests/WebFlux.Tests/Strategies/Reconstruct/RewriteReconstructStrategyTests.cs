@@ -108,8 +108,7 @@ public class RewriteReconstructStrategyTests
 
         // Act & Assert
         await Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await strategyWithoutLlm.ApplyAsync(content, options)
-        );
+            async () => await strategyWithoutLlm.ApplyAsync(content, options, TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -134,7 +133,7 @@ public class RewriteReconstructStrategyTests
             .Returns(expectedRewrite);
 
         // Act
-        var result = await _strategy.ApplyAsync(content, options);
+        var result = await _strategy.ApplyAsync(content, options, TestContext.Current.CancellationToken);
 
         // Assert
         await _mockLlmService.Received(1)
@@ -167,7 +166,7 @@ public class RewriteReconstructStrategyTests
             .Returns("Rewritten content");
 
         // Act
-        await _strategy.ApplyAsync(content, options);
+        await _strategy.ApplyAsync(content, options, TestContext.Current.CancellationToken);
 
         // Assert
         await _mockLlmService.Received(1)
@@ -197,7 +196,7 @@ public class RewriteReconstructStrategyTests
             .Returns("Rewritten");
 
         // Act
-        await _strategy.ApplyAsync(content, options);
+        await _strategy.ApplyAsync(content, options, TestContext.Current.CancellationToken);
 
         // Assert
         await _mockLlmService.Received(1)
@@ -223,7 +222,7 @@ public class RewriteReconstructStrategyTests
             .Returns(rewrite);
 
         // Act
-        var result = await _strategy.ApplyAsync(content, options);
+        var result = await _strategy.ApplyAsync(content, options, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result.Metrics);
@@ -248,7 +247,7 @@ public class RewriteReconstructStrategyTests
             .Returns(rewrite);
 
         // Act
-        var result = await _strategy.ApplyAsync(content, options);
+        var result = await _strategy.ApplyAsync(content, options, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Single(result.Enhancements);
@@ -320,7 +319,7 @@ public class RewriteReconstructStrategyTests
             .Returns("Rewritten");
 
         // Act
-        await _strategy.ApplyAsync(content, options);
+        await _strategy.ApplyAsync(content, options, TestContext.Current.CancellationToken);
 
         // Assert
         await _mockLlmService.Received(1)

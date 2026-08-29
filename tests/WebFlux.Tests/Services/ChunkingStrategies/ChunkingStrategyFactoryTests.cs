@@ -369,7 +369,7 @@ public class ChunkingStrategyFactoryTests
         // Act
         var strategyName = await _factory.RecommendStrategyAsync(content);
         var strategy = await _factory.CreateStrategyAsync(strategyName);
-        var chunks = await strategy.ChunkAsync(content);
+        var chunks = await strategy.ChunkAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         chunks.Should().NotBeNull();

@@ -86,7 +86,7 @@ public class FluxCuratorChunkingStrategyTests
         var chunker = new CapturingChunker();
         var strategy = FluxCuratorChunkingStrategy.Paragraph(new StubChunkerFactory(chunker));
 
-        await strategy.ChunkAsync(Content("Some prose to split."), new ChunkingOptions { MaxChunkSize = 512 });
+        await strategy.ChunkAsync(Content("Some prose to split."), new ChunkingOptions { MaxChunkSize = 512 }, TestContext.Current.CancellationToken);
 
         chunker.Received.Should().NotBeNull();
         chunker.Received!.TargetChunkSize.Should().Be(512);
@@ -100,7 +100,7 @@ public class FluxCuratorChunkingStrategyTests
         var chunker = new CapturingChunker();
         var strategy = FluxCuratorChunkingStrategy.Paragraph(new StubChunkerFactory(chunker));
 
-        await strategy.ChunkAsync(Content("Some prose."), new ChunkingOptions { MaxChunkSize = 300 });
+        await strategy.ChunkAsync(Content("Some prose."), new ChunkingOptions { MaxChunkSize = 300 }, TestContext.Current.CancellationToken);
 
         chunker.Received!.MaxChunkSize.Should().Be(300);
     }
@@ -113,7 +113,7 @@ public class FluxCuratorChunkingStrategyTests
         var chunker = new CapturingChunker();
         var strategy = FluxCuratorChunkingStrategy.Paragraph(new StubChunkerFactory(chunker));
 
-        await strategy.ChunkAsync(Content("Some prose."), new ChunkingOptions { ChunkOverlap = 50 });
+        await strategy.ChunkAsync(Content("Some prose."), new ChunkingOptions { ChunkOverlap = 50 }, TestContext.Current.CancellationToken);
 
         chunker.Received!.OverlapSize.Should().Be(50);
     }
@@ -124,8 +124,7 @@ public class FluxCuratorChunkingStrategyTests
         var chunker = new CapturingChunker();
         var strategy = FluxCuratorChunkingStrategy.Paragraph(new StubChunkerFactory(chunker));
 
-        await strategy.ChunkAsync(
-            Content("Some prose."), new ChunkingOptions { MaxChunkSize = 100, ChunkOverlap = 500 });
+        await strategy.ChunkAsync(Content("Some prose."), new ChunkingOptions { MaxChunkSize = 100, ChunkOverlap = 500 }, TestContext.Current.CancellationToken);
 
         chunker.Received!.OverlapSize.Should().BeLessThan(chunker.Received.TargetChunkSize);
     }
@@ -136,8 +135,7 @@ public class FluxCuratorChunkingStrategyTests
         var chunker = new CapturingChunker();
         var strategy = FluxCuratorChunkingStrategy.Paragraph(new StubChunkerFactory(chunker));
 
-        await strategy.ChunkAsync(
-            Content("Some prose."), new ChunkingOptions { MaxChunkSize = 100, MinChunkSize = 400 });
+        await strategy.ChunkAsync(Content("Some prose."), new ChunkingOptions { MaxChunkSize = 100, MinChunkSize = 400 }, TestContext.Current.CancellationToken);
 
         chunker.Received!.MinChunkSize.Should().BeLessThan(chunker.Received.TargetChunkSize);
     }
@@ -151,7 +149,7 @@ public class FluxCuratorChunkingStrategyTests
         var chunker = new CapturingChunker();
         var strategy = FluxCuratorChunkingStrategy.Paragraph(new StubChunkerFactory(chunker));
 
-        await strategy.ChunkAsync(Content("Some prose."), new ChunkingOptions { Language = "  " });
+        await strategy.ChunkAsync(Content("Some prose."), new ChunkingOptions { Language = "  " }, TestContext.Current.CancellationToken);
 
         chunker.Received!.LanguageCode.Should().BeNull();
     }
@@ -162,7 +160,7 @@ public class FluxCuratorChunkingStrategyTests
         var chunker = new CapturingChunker();
         var strategy = FluxCuratorChunkingStrategy.Paragraph(new StubChunkerFactory(chunker));
 
-        await strategy.ChunkAsync(Content("Some prose."), new ChunkingOptions { Language = "en" });
+        await strategy.ChunkAsync(Content("Some prose."), new ChunkingOptions { Language = "en" }, TestContext.Current.CancellationToken);
 
         chunker.Received!.LanguageCode.Should().Be("en");
     }
@@ -189,7 +187,7 @@ public class FluxCuratorChunkingStrategyTests
         var chunker = new CapturingChunker();
         var strategy = FluxCuratorChunkingStrategy.Paragraph(new StubChunkerFactory(chunker));
 
-        var chunks = await strategy.ChunkAsync(Content(text));
+        var chunks = await strategy.ChunkAsync(Content(text), cancellationToken: TestContext.Current.CancellationToken);
 
         chunks.Should().BeEmpty();
         chunker.Received.Should().BeNull("an empty document must not reach the chunker at all");
@@ -203,7 +201,7 @@ public class FluxCuratorChunkingStrategyTests
         var outOfOrder = new OutOfOrderChunker();
         var strategy = FluxCuratorChunkingStrategy.Paragraph(new StubChunkerFactory(outOfOrder));
 
-        var chunks = await strategy.ChunkAsync(Content("a b c"));
+        var chunks = await strategy.ChunkAsync(Content("a b c"), cancellationToken: TestContext.Current.CancellationToken);
 
         chunks.Select(c => c.SequenceNumber).Should().Equal(7, 3);
     }

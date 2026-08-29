@@ -137,7 +137,7 @@ For detailed API documentation, visit:
         var sourceUrl = "https://github.com/iyulab/WebFlux/README.md";
 
         // Act
-        var result = await _analyzer.AnalyzeStructureAsync(markdownContent, sourceUrl);
+        var result = await _analyzer.AnalyzeStructureAsync(markdownContent, sourceUrl, TestContext.Current.CancellationToken);
 
         // Assert - Phase 5C 목표: 95% 마크다운 구조 정확도
         var accuracy = _analyzer.ValidateStructureAccuracy(result);
@@ -211,7 +211,7 @@ For detailed API documentation, visit:
         var sourceUrl = $"https://test.com/{description.Replace(" ", "-")}.md";
 
         // Act
-        var result = await _analyzer.AnalyzeStructureAsync(markdown, sourceUrl);
+        var result = await _analyzer.AnalyzeStructureAsync(markdown, sourceUrl, TestContext.Current.CancellationToken);
 
         // Assert
         result.Headings.Should().HaveCount(expectedHeadings,
@@ -249,7 +249,7 @@ var test = ""Hello World"";
 ";
 
         // Act
-        var result = await _analyzer.ConvertToHtmlWithStructureAsync(markdown);
+        var result = await _analyzer.ConvertToHtmlWithStructureAsync(markdown, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Html.Should().NotBeNullOrEmpty();
@@ -288,7 +288,7 @@ This is the main content of the document.
 ";
 
         // Act
-        var result = await _analyzer.AnalyzeStructureAsync(markdownWithFrontMatter, "test.md");
+        var result = await _analyzer.AnalyzeStructureAsync(markdownWithFrontMatter, "test.md", TestContext.Current.CancellationToken);
 
         // Assert
         result.Metadata.FrontMatter.Should().NotBeEmpty();
@@ -314,7 +314,7 @@ This is the main content of the document.
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 
         // Act
-        var result = await _analyzer.AnalyzeStructureAsync(largeMarkdown, sourceUrl);
+        var result = await _analyzer.AnalyzeStructureAsync(largeMarkdown, sourceUrl, TestContext.Current.CancellationToken);
 
         stopwatch.Stop();
 
@@ -342,7 +342,7 @@ This is the main content of the document.
         var markdown = $"# Test\n\n{markdownCode}";
 
         // Act
-        var result = await _analyzer.AnalyzeStructureAsync(markdown, "test.md");
+        var result = await _analyzer.AnalyzeStructureAsync(markdown, "test.md", TestContext.Current.CancellationToken);
 
         // Assert
         result.CodeBlocks.Should().HaveCount(1);

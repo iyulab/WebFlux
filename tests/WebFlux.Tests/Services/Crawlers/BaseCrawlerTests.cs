@@ -73,7 +73,7 @@ public class BaseCrawlerTests : IDisposable
             .Returns(response);
 
         // Act
-        var result = await _crawler.CrawlAsync(url);
+        var result = await _crawler.CrawlAsync(url, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();
@@ -88,9 +88,9 @@ public class BaseCrawlerTests : IDisposable
     public async Task CrawlAsync_WithNullOrEmptyUrl_ShouldThrowArgumentException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() => _crawler.CrawlAsync(null!));
-        await Assert.ThrowsAsync<ArgumentException>(() => _crawler.CrawlAsync(""));
-        await Assert.ThrowsAsync<ArgumentException>(() => _crawler.CrawlAsync("   "));
+        await Assert.ThrowsAsync<ArgumentException>(() => _crawler.CrawlAsync(null!, cancellationToken: TestContext.Current.CancellationToken));
+        await Assert.ThrowsAsync<ArgumentException>(() => _crawler.CrawlAsync("", cancellationToken: TestContext.Current.CancellationToken));
+        await Assert.ThrowsAsync<ArgumentException>(() => _crawler.CrawlAsync("   ", cancellationToken: TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -110,7 +110,7 @@ public class BaseCrawlerTests : IDisposable
             .Returns(response);
 
         // Act
-        var result = await _crawler.CrawlAsync(url);
+        var result = await _crawler.CrawlAsync(url, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();
@@ -130,7 +130,7 @@ public class BaseCrawlerTests : IDisposable
             .Throws(new HttpRequestException(exceptionMessage));
 
         // Act
-        var result = await _crawler.CrawlAsync(url);
+        var result = await _crawler.CrawlAsync(url, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();
@@ -148,7 +148,7 @@ public class BaseCrawlerTests : IDisposable
         SetupSuccessfulHttpResponse(url, "<html></html>");
 
         // Act
-        await _crawler.CrawlAsync(url);
+        await _crawler.CrawlAsync(url, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         await _mockEventPublisher.Received(1).PublishAsync(
@@ -164,7 +164,7 @@ public class BaseCrawlerTests : IDisposable
         SetupSuccessfulHttpResponse(url, "<html></html>");
 
         // Act
-        await _crawler.CrawlAsync(url);
+        await _crawler.CrawlAsync(url, cancellationToken: TestContext.Current.CancellationToken);
         var stats = _crawler.GetStatistics();
 
         // Assert
@@ -203,7 +203,7 @@ public class BaseCrawlerTests : IDisposable
 
         // Act
         var results = new List<CrawlResult>();
-        await foreach (var result in _crawler.CrawlWebsiteAsync(startUrl, options))
+        await foreach (var result in _crawler.CrawlWebsiteAsync(startUrl, options, TestContext.Current.CancellationToken))
         {
             results.Add(result);
         }
@@ -221,14 +221,14 @@ public class BaseCrawlerTests : IDisposable
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentException>(async () =>
         {
-            await foreach (var _ in _crawler.CrawlWebsiteAsync(null!))
+            await foreach (var _ in _crawler.CrawlWebsiteAsync(null!, cancellationToken: TestContext.Current.CancellationToken))
             {
             }
         });
 
         await Assert.ThrowsAsync<ArgumentException>(async () =>
         {
-            await foreach (var _ in _crawler.CrawlWebsiteAsync(""))
+            await foreach (var _ in _crawler.CrawlWebsiteAsync("", cancellationToken: TestContext.Current.CancellationToken))
             {
             }
         });
@@ -252,7 +252,7 @@ public class BaseCrawlerTests : IDisposable
 
         // Act
         var results = new List<CrawlResult>();
-        await foreach (var result in _crawler.CrawlWebsiteAsync(startUrl, options))
+        await foreach (var result in _crawler.CrawlWebsiteAsync(startUrl, options, TestContext.Current.CancellationToken))
         {
             results.Add(result);
         }
@@ -285,7 +285,7 @@ public class BaseCrawlerTests : IDisposable
 
         // Act
         var results = new List<CrawlResult>();
-        await foreach (var result in _crawler.CrawlWebsiteAsync(startUrl, options))
+        await foreach (var result in _crawler.CrawlWebsiteAsync(startUrl, options, TestContext.Current.CancellationToken))
         {
             results.Add(result);
         }
@@ -317,7 +317,7 @@ public class BaseCrawlerTests : IDisposable
 
         // Act
         var results = new List<CrawlResult>();
-        await foreach (var result in _crawler.CrawlWebsiteAsync(startUrl, options))
+        await foreach (var result in _crawler.CrawlWebsiteAsync(startUrl, options, TestContext.Current.CancellationToken))
         {
             results.Add(result);
         }
@@ -344,7 +344,7 @@ public class BaseCrawlerTests : IDisposable
 
         // Act
         var startTime = DateTime.UtcNow;
-        await foreach (var _ in _crawler.CrawlWebsiteAsync(startUrl, options))
+        await foreach (var _ in _crawler.CrawlWebsiteAsync(startUrl, options, TestContext.Current.CancellationToken))
         {
         }
         var elapsed = (DateTime.UtcNow - startTime).TotalMilliseconds;
@@ -376,7 +376,7 @@ public class BaseCrawlerTests : IDisposable
 
         // Act
         var results = new List<CrawlResult>();
-        await foreach (var result in _crawler.CrawlSitemapAsync(sitemapUrl, options))
+        await foreach (var result in _crawler.CrawlSitemapAsync(sitemapUrl, options, TestContext.Current.CancellationToken))
         {
             results.Add(result);
         }
@@ -393,7 +393,7 @@ public class BaseCrawlerTests : IDisposable
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentException>(async () =>
         {
-            await foreach (var _ in _crawler.CrawlSitemapAsync(null!))
+            await foreach (var _ in _crawler.CrawlSitemapAsync(null!, cancellationToken: TestContext.Current.CancellationToken))
             {
             }
         });
@@ -414,7 +414,7 @@ public class BaseCrawlerTests : IDisposable
 
         // Act
         var startTime = DateTime.UtcNow;
-        await foreach (var _ in _crawler.CrawlSitemapAsync(sitemapUrl, options))
+        await foreach (var _ in _crawler.CrawlSitemapAsync(sitemapUrl, options, TestContext.Current.CancellationToken))
         {
         }
         var elapsed = (DateTime.UtcNow - startTime).TotalMilliseconds;
@@ -443,7 +443,7 @@ Sitemap: https://example.com/sitemap.xml
         SetupSuccessfulHttpResponse("https://example.com/robots.txt", robotsTxtContent);
 
         // Act
-        var result = await _crawler.GetRobotsTxtAsync(baseUrl, "*");
+        var result = await _crawler.GetRobotsTxtAsync(baseUrl, "*", TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();
@@ -470,7 +470,7 @@ Sitemap: https://example.com/sitemap.xml
             .Returns(response);
 
         // Act
-        var result = await _crawler.GetRobotsTxtAsync(baseUrl, "*");
+        var result = await _crawler.GetRobotsTxtAsync(baseUrl, "*", TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();
@@ -496,7 +496,7 @@ Crawl-delay: 10
         SetupSuccessfulHttpResponse("https://example.com/robots.txt", robotsTxtContent);
 
         // Act
-        var result = await _crawler.GetRobotsTxtAsync(baseUrl, "*");
+        var result = await _crawler.GetRobotsTxtAsync(baseUrl, "*", TestContext.Current.CancellationToken);
 
         // Assert
         result.Rules.Should().HaveCount(2);
@@ -685,7 +685,7 @@ Disallow: /admin/
         SetupSuccessfulHttpResponse(url, "<html></html>");
 
         // Act
-        await _crawler.CrawlAsync(url);
+        await _crawler.CrawlAsync(url, cancellationToken: TestContext.Current.CancellationToken);
         var stats = _crawler.GetStatistics();
 
         // Assert
@@ -705,7 +705,7 @@ Disallow: /admin/
             .Throws(new HttpRequestException("Network error"));
 
         // Act
-        await _crawler.CrawlAsync(url);
+        await _crawler.CrawlAsync(url, cancellationToken: TestContext.Current.CancellationToken);
         var stats = _crawler.GetStatistics();
 
         // Assert
@@ -723,9 +723,9 @@ Disallow: /admin/
         SetupSuccessfulHttpResponse("https://example1.com/page", "<html></html>");
 
         // Act
-        await _crawler.CrawlAsync("https://example1.com");
-        await _crawler.CrawlAsync("https://example2.com");
-        await _crawler.CrawlAsync("https://example1.com/page");
+        await _crawler.CrawlAsync("https://example1.com", cancellationToken: TestContext.Current.CancellationToken);
+        await _crawler.CrawlAsync("https://example2.com", cancellationToken: TestContext.Current.CancellationToken);
+        await _crawler.CrawlAsync("https://example1.com/page", cancellationToken: TestContext.Current.CancellationToken);
         var stats = _crawler.GetStatistics();
 
         // Assert

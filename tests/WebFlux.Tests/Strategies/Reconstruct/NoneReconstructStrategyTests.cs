@@ -75,7 +75,7 @@ public class NoneReconstructStrategyTests
         var options = new ReconstructOptions();
 
         // Act
-        var result = await _strategy.ApplyAsync(content, options);
+        var result = await _strategy.ApplyAsync(content, options, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -94,7 +94,7 @@ public class NoneReconstructStrategyTests
         var options = new ReconstructOptions();
 
         // Act
-        var result = await _strategy.ApplyAsync(content, options);
+        var result = await _strategy.ApplyAsync(content, options, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result.Metrics);
@@ -146,7 +146,7 @@ public class NoneReconstructStrategyTests
         var options = new ReconstructOptions();
 
         // Act
-        var result = await _strategy.ApplyAsync(content, options);
+        var result = await _strategy.ApplyAsync(content, options, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -167,7 +167,7 @@ public class NoneReconstructStrategyTests
         var options = new ReconstructOptions();
 
         // Act
-        var result = await _strategy.ApplyAsync(content, options);
+        var result = await _strategy.ApplyAsync(content, options, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(longText, result.ReconstructedText);

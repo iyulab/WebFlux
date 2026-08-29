@@ -391,7 +391,7 @@ public class CrawlProgressReporterTests
         var reporter = new CrawlProgressReporter();
         var updates = new List<CrawlProgress>();
 
-        await foreach (var progress in reporter.MonitorProgressAsync("nonexistent"))
+        await foreach (var progress in reporter.MonitorProgressAsync("nonexistent", TestContext.Current.CancellationToken))
         {
             updates.Add(progress);
         }

@@ -84,12 +84,12 @@ public class HttpClientServiceTests : IDisposable
         _mockHandler.SetupResponse(HttpStatusCode.OK, "Test content");
 
         // Act
-        var response = await _service.GetAsync(url);
+        var response = await _service.GetAsync(url, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         response.Should().NotBeNull();
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var content = await response.Content.ReadAsStringAsync();
+        var content = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         content.Should().Be("Test content");
     }
 
@@ -106,7 +106,7 @@ public class HttpClientServiceTests : IDisposable
         _mockHandler.SetupResponse(HttpStatusCode.OK, "Success");
 
         // Act
-        var response = await _service.GetAsync(url, headers);
+        var response = await _service.GetAsync(url, headers, TestContext.Current.CancellationToken);
 
         // Assert
         response.Should().NotBeNull();
@@ -138,7 +138,7 @@ public class HttpClientServiceTests : IDisposable
         _mockHandler.SetupResponse(HttpStatusCode.NotFound, "Not Found");
 
         // Act
-        var response = await _service.GetAsync(url);
+        var response = await _service.GetAsync(url, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         response.Should().NotBeNull();
@@ -158,7 +158,7 @@ public class HttpClientServiceTests : IDisposable
         _mockHandler.SetupResponse(HttpStatusCode.OK, expectedContent);
 
         // Act
-        var content = await _service.GetStringAsync(url);
+        var content = await _service.GetStringAsync(url, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         content.Should().Be(expectedContent);
@@ -173,7 +173,7 @@ public class HttpClientServiceTests : IDisposable
         _mockHandler.SetupResponse(HttpStatusCode.OK, "HTML");
 
         // Act
-        var content = await _service.GetStringAsync(url, headers);
+        var content = await _service.GetStringAsync(url, headers, TestContext.Current.CancellationToken);
 
         // Assert
         content.Should().Be("HTML");
@@ -189,7 +189,7 @@ public class HttpClientServiceTests : IDisposable
 
         // Act & Assert
         await Assert.ThrowsAsync<HttpRequestException>(async () =>
-            await _service.GetStringAsync(url));
+            await _service.GetStringAsync(url, cancellationToken: TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -220,7 +220,7 @@ public class HttpClientServiceTests : IDisposable
         _mockHandler.SetupBytesResponse(HttpStatusCode.OK, expectedBytes);
 
         // Act
-        var bytes = await _service.GetBytesAsync(url);
+        var bytes = await _service.GetBytesAsync(url, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         bytes.Should().BeEquivalentTo(expectedBytes);
@@ -235,7 +235,7 @@ public class HttpClientServiceTests : IDisposable
         _mockHandler.SetupBytesResponse(HttpStatusCode.OK, new byte[] { 0x25, 0x50, 0x44, 0x46 });
 
         // Act
-        var bytes = await _service.GetBytesAsync(url, headers);
+        var bytes = await _service.GetBytesAsync(url, headers, TestContext.Current.CancellationToken);
 
         // Assert
         bytes.Should().NotBeNull();
@@ -251,7 +251,7 @@ public class HttpClientServiceTests : IDisposable
 
         // Act & Assert
         await Assert.ThrowsAsync<HttpRequestException>(async () =>
-            await _service.GetBytesAsync(url));
+            await _service.GetBytesAsync(url, cancellationToken: TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -281,7 +281,7 @@ public class HttpClientServiceTests : IDisposable
         _mockHandler.SetupResponse(HttpStatusCode.OK, "");
 
         // Act
-        var response = await _service.HeadAsync(url);
+        var response = await _service.HeadAsync(url, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         response.Should().NotBeNull();
@@ -298,7 +298,7 @@ public class HttpClientServiceTests : IDisposable
         _mockHandler.SetupResponse(HttpStatusCode.OK, "");
 
         // Act
-        var response = await _service.HeadAsync(url, headers);
+        var response = await _service.HeadAsync(url, headers, TestContext.Current.CancellationToken);
 
         // Assert
         response.Should().NotBeNull();
@@ -313,7 +313,7 @@ public class HttpClientServiceTests : IDisposable
         _mockHandler.SetupResponse(HttpStatusCode.NotFound, "");
 
         // Act
-        var response = await _service.HeadAsync(url);
+        var response = await _service.HeadAsync(url, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
@@ -345,7 +345,7 @@ public class HttpClientServiceTests : IDisposable
         _service.SetUserAgent(customAgent);
 
         // Act
-        await _service.GetAsync("https://example.com");
+        await _service.GetAsync("https://example.com", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         _mockHandler.LastRequest!.Headers.UserAgent.ToString().Should().Contain("TestAgent/1.0");
@@ -424,7 +424,7 @@ public class HttpClientServiceTests : IDisposable
         _service.SetDefaultHeaders(headers);
 
         // Act
-        await _service.GetAsync("https://example.com");
+        await _service.GetAsync("https://example.com", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         _mockHandler.LastRequest!.Headers.Should().Contain(h => h.Key == "X-Default-Header");
@@ -440,7 +440,7 @@ public class HttpClientServiceTests : IDisposable
         _service.SetDefaultHeaders(defaultHeaders);
 
         // Act
-        await _service.GetAsync("https://example.com", requestHeaders);
+        await _service.GetAsync("https://example.com", requestHeaders, TestContext.Current.CancellationToken);
 
         // Assert
         _mockHandler.LastRequest!.Headers.Should().Contain(h => h.Key == "X-Default");
@@ -472,7 +472,7 @@ public class HttpClientServiceTests : IDisposable
         service.SetDefaultHeaders(new Dictionary<string, string> { { "X-Test", "integration" } });
 
         // GetAsync should work
-        var response = await service.GetAsync("https://example.com");
+        var response = await service.GetAsync("https://example.com", cancellationToken: TestContext.Current.CancellationToken);
         response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 

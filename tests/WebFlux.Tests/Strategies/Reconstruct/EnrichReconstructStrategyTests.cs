@@ -108,8 +108,7 @@ public class EnrichReconstructStrategyTests
 
         // Act & Assert
         await Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await strategyWithoutLlm.ApplyAsync(content, options)
-        );
+            async () => await strategyWithoutLlm.ApplyAsync(content, options, TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -133,7 +132,7 @@ public class EnrichReconstructStrategyTests
             .Returns("Enrichment content");
 
         // Act
-        var result = await _strategy.ApplyAsync(content, options);
+        var result = await _strategy.ApplyAsync(content, options, TestContext.Current.CancellationToken);
 
         // Assert
         // Should call LLM 3 times (once for each enrichment type)
@@ -167,7 +166,7 @@ public class EnrichReconstructStrategyTests
             .Returns("Definition enrichment");
 
         // Act
-        await _strategy.ApplyAsync(content, options);
+        await _strategy.ApplyAsync(content, options, TestContext.Current.CancellationToken);
 
         // Assert
         await _mockLlmService.Received(1)
@@ -199,7 +198,7 @@ public class EnrichReconstructStrategyTests
             .Returns("Enriched");
 
         // Act
-        await _strategy.ApplyAsync(content, options);
+        await _strategy.ApplyAsync(content, options, TestContext.Current.CancellationToken);
 
         // Assert
         await _mockLlmService.Received(1)
@@ -228,7 +227,7 @@ public class EnrichReconstructStrategyTests
             .Returns("Enrichment");
 
         // Act
-        var result = await _strategy.ApplyAsync(content, options);
+        var result = await _strategy.ApplyAsync(content, options, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result.Metrics);
@@ -256,7 +255,7 @@ public class EnrichReconstructStrategyTests
             .Returns("Enrichment content");
 
         // Act
-        var result = await _strategy.ApplyAsync(content, options);
+        var result = await _strategy.ApplyAsync(content, options, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(2, result.Enhancements.Count);
@@ -284,7 +283,7 @@ public class EnrichReconstructStrategyTests
             .Returns(enrichment);
 
         // Act
-        var result = await _strategy.ApplyAsync(content, options);
+        var result = await _strategy.ApplyAsync(content, options, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Contains("Original text.", result.ReconstructedText);
@@ -381,7 +380,7 @@ public class EnrichReconstructStrategyTests
             .Returns("Enrichment");
 
         // Act
-        await _strategy.ApplyAsync(content, options);
+        await _strategy.ApplyAsync(content, options, TestContext.Current.CancellationToken);
 
         // Assert
         await _mockLlmService.Received(1)

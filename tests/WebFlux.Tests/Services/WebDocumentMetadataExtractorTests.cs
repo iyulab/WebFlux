@@ -23,7 +23,7 @@ public class WebDocumentMetadataExtractorTests
     {
         var html = "<html><head><title>Test Page</title></head><body></body></html>";
 
-        var result = await _extractor.ExtractAsync(html, "https://example.com");
+        var result = await _extractor.ExtractAsync(html, "https://example.com", cancellationToken: TestContext.Current.CancellationToken);
 
         result.Title.Should().Be("Test Page");
     }
@@ -33,7 +33,7 @@ public class WebDocumentMetadataExtractorTests
     {
         var html = "<html><head></head><body></body></html>";
 
-        var result = await _extractor.ExtractAsync(html, "https://example.com");
+        var result = await _extractor.ExtractAsync(html, "https://example.com", cancellationToken: TestContext.Current.CancellationToken);
 
         result.Title.Should().BeEmpty();
     }
@@ -50,7 +50,7 @@ public class WebDocumentMetadataExtractorTests
             </head><body></body></html>
             """;
 
-        var result = await _extractor.ExtractAsync(html, "https://example.com");
+        var result = await _extractor.ExtractAsync(html, "https://example.com", cancellationToken: TestContext.Current.CancellationToken);
 
         result.Description.Should().Be("A great page about testing");
     }
@@ -65,7 +65,7 @@ public class WebDocumentMetadataExtractorTests
             </head><body></body></html>
             """;
 
-        var result = await _extractor.ExtractAsync(html, "https://example.com");
+        var result = await _extractor.ExtractAsync(html, "https://example.com", cancellationToken: TestContext.Current.CancellationToken);
 
         result.Keywords.Should().HaveCount(4);
         result.Keywords.Should().Contain("testing");
@@ -77,7 +77,7 @@ public class WebDocumentMetadataExtractorTests
     {
         var html = "<html><head><title>T</title></head><body></body></html>";
 
-        var result = await _extractor.ExtractAsync(html, "https://example.com");
+        var result = await _extractor.ExtractAsync(html, "https://example.com", cancellationToken: TestContext.Current.CancellationToken);
 
         result.Keywords.Should().BeEmpty();
     }
@@ -92,7 +92,7 @@ public class WebDocumentMetadataExtractorTests
             </head><body></body></html>
             """;
 
-        var result = await _extractor.ExtractAsync(html, "https://example.com");
+        var result = await _extractor.ExtractAsync(html, "https://example.com", cancellationToken: TestContext.Current.CancellationToken);
 
         result.Author.Should().Be("John Doe");
     }
@@ -107,7 +107,7 @@ public class WebDocumentMetadataExtractorTests
             </head><body></body></html>
             """;
 
-        var result = await _extractor.ExtractAsync(html, "https://example.com");
+        var result = await _extractor.ExtractAsync(html, "https://example.com", cancellationToken: TestContext.Current.CancellationToken);
 
         result.Robots.Should().Be("noindex, nofollow");
     }
@@ -122,7 +122,7 @@ public class WebDocumentMetadataExtractorTests
             </head><body></body></html>
             """;
 
-        var result = await _extractor.ExtractAsync(html, "https://example.com/page");
+        var result = await _extractor.ExtractAsync(html, "https://example.com/page", cancellationToken: TestContext.Current.CancellationToken);
 
         result.CanonicalUrl.Should().Be("https://example.com/canonical");
     }
@@ -144,7 +144,7 @@ public class WebDocumentMetadataExtractorTests
             </head><body></body></html>
             """;
 
-        var result = await _extractor.ExtractAsync(html, "https://example.com");
+        var result = await _extractor.ExtractAsync(html, "https://example.com", cancellationToken: TestContext.Current.CancellationToken);
 
         result.OgTitle.Should().Be("OG Title");
         result.OgDescription.Should().Be("OG Desc");
@@ -166,7 +166,7 @@ public class WebDocumentMetadataExtractorTests
             </head><body></body></html>
             """;
 
-        var result = await _extractor.ExtractAsync(html, "https://example.com");
+        var result = await _extractor.ExtractAsync(html, "https://example.com", cancellationToken: TestContext.Current.CancellationToken);
 
         result.PublishedAt.Should().NotBeNull();
         result.PublishedAt!.Value.Year.Should().Be(2024);
@@ -183,7 +183,7 @@ public class WebDocumentMetadataExtractorTests
             </head><body></body></html>
             """;
 
-        var result = await _extractor.ExtractAsync(html, "https://example.com");
+        var result = await _extractor.ExtractAsync(html, "https://example.com", cancellationToken: TestContext.Current.CancellationToken);
 
         result.PublishedAt.Should().BeNull();
     }
@@ -202,7 +202,7 @@ public class WebDocumentMetadataExtractorTests
             </head><body></body></html>
             """;
 
-        var result = await _extractor.ExtractAsync(html, "https://example.com");
+        var result = await _extractor.ExtractAsync(html, "https://example.com", cancellationToken: TestContext.Current.CancellationToken);
 
         result.SchemaOrgType.Should().Be("Article");
     }
@@ -219,7 +219,7 @@ public class WebDocumentMetadataExtractorTests
             </body></html>
             """;
 
-        var result = await _extractor.ExtractAsync(html, "https://example.com");
+        var result = await _extractor.ExtractAsync(html, "https://example.com", cancellationToken: TestContext.Current.CancellationToken);
 
         result.SchemaOrgType.Should().Be("Product");
     }
@@ -236,7 +236,7 @@ public class WebDocumentMetadataExtractorTests
             </head><body></body></html>
             """;
 
-        var result = await _extractor.ExtractAsync(html, "https://example.com");
+        var result = await _extractor.ExtractAsync(html, "https://example.com", cancellationToken: TestContext.Current.CancellationToken);
 
         result.StructuredData.Should().ContainKey("@type");
         result.StructuredData.Should().ContainKey("headline");
@@ -255,7 +255,7 @@ public class WebDocumentMetadataExtractorTests
             </head><body></body></html>
             """;
 
-        var result = await _extractor.ExtractAsync(html, "https://example.com");
+        var result = await _extractor.ExtractAsync(html, "https://example.com", cancellationToken: TestContext.Current.CancellationToken);
 
         result.SchemaOrgType.Should().BeNull();
         result.StructuredData.Should().BeEmpty();
@@ -268,7 +268,7 @@ public class WebDocumentMetadataExtractorTests
     {
         var html = """<html lang="ko-KR"><head><title>T</title></head><body></body></html>""";
 
-        var result = await _extractor.ExtractAsync(html, "https://example.com");
+        var result = await _extractor.ExtractAsync(html, "https://example.com", cancellationToken: TestContext.Current.CancellationToken);
 
         result.Language.Should().Be("ko");
         result.LanguageDetectionMethod.Should().Be(LanguageDetectionMethod.HtmlLangAttribute);
@@ -280,7 +280,7 @@ public class WebDocumentMetadataExtractorTests
         var html = "<html><head><title>T</title></head><body></body></html>";
         var headers = new Dictionary<string, string> { ["Content-Language"] = "ja" };
 
-        var result = await _extractor.ExtractAsync(html, "https://example.com", headers);
+        var result = await _extractor.ExtractAsync(html, "https://example.com", headers, TestContext.Current.CancellationToken);
 
         result.Language.Should().Be("ja");
         result.LanguageDetectionMethod.Should().Be(LanguageDetectionMethod.HttpHeader);
@@ -293,7 +293,7 @@ public class WebDocumentMetadataExtractorTests
         var koreanText = string.Concat(Enumerable.Repeat("한글테스트문장입니다", 20));
         var html = $"<html><head><title>T</title></head><body><p>{koreanText}</p></body></html>";
 
-        var result = await _extractor.ExtractAsync(html, "https://example.com");
+        var result = await _extractor.ExtractAsync(html, "https://example.com", cancellationToken: TestContext.Current.CancellationToken);
 
         result.Language.Should().Be("ko");
         result.LanguageDetectionMethod.Should().Be(LanguageDetectionMethod.ContentAnalysis);
@@ -305,7 +305,7 @@ public class WebDocumentMetadataExtractorTests
         var html = """<html lang="en"><head><title>T</title></head><body></body></html>""";
         var headers = new Dictionary<string, string> { ["Content-Language"] = "ko" };
 
-        var result = await _extractor.ExtractAsync(html, "https://example.com", headers);
+        var result = await _extractor.ExtractAsync(html, "https://example.com", headers, TestContext.Current.CancellationToken);
 
         result.Language.Should().Be("en");
         result.LanguageDetectionMethod.Should().Be(LanguageDetectionMethod.HtmlLangAttribute);
@@ -316,7 +316,7 @@ public class WebDocumentMetadataExtractorTests
     {
         var html = """<html lang="en-US"><head><title>T</title></head><body></body></html>""";
 
-        var result = await _extractor.ExtractAsync(html, "https://example.com");
+        var result = await _extractor.ExtractAsync(html, "https://example.com", cancellationToken: TestContext.Current.CancellationToken);
 
         result.Language.Should().Be("en");
     }
@@ -338,7 +338,7 @@ public class WebDocumentMetadataExtractorTests
             </head><body></body></html>
             """;
 
-        var result = await _extractor.ExtractAsync(html, "https://example.com");
+        var result = await _extractor.ExtractAsync(html, "https://example.com", cancellationToken: TestContext.Current.CancellationToken);
 
         result.TwitterCard.Should().NotBeNull();
         result.TwitterCard!.Card.Should().Be("summary_large_image");
@@ -354,7 +354,7 @@ public class WebDocumentMetadataExtractorTests
     {
         var html = "<html><head><title>T</title></head><body></body></html>";
 
-        var result = await _extractor.ExtractAsync(html, "https://example.com");
+        var result = await _extractor.ExtractAsync(html, "https://example.com", cancellationToken: TestContext.Current.CancellationToken);
 
         result.TwitterCard.Should().BeNull();
     }
@@ -371,7 +371,7 @@ public class WebDocumentMetadataExtractorTests
             </head><body></body></html>
             """;
 
-        var result = await _extractor.ExtractAsync(html, "https://example.com");
+        var result = await _extractor.ExtractAsync(html, "https://example.com", cancellationToken: TestContext.Current.CancellationToken);
 
         result.FeedUrl.Should().Be("https://example.com/feed.xml");
     }
@@ -386,7 +386,7 @@ public class WebDocumentMetadataExtractorTests
             </head><body></body></html>
             """;
 
-        var result = await _extractor.ExtractAsync(html, "https://example.com");
+        var result = await _extractor.ExtractAsync(html, "https://example.com", cancellationToken: TestContext.Current.CancellationToken);
 
         result.FeedUrl.Should().Be("https://example.com/atom.xml");
     }
@@ -398,7 +398,7 @@ public class WebDocumentMetadataExtractorTests
     {
         var html = "<html><head><title>T</title></head><body></body></html>";
 
-        var result = await _extractor.ExtractAsync(html, "https://www.example.com/path");
+        var result = await _extractor.ExtractAsync(html, "https://www.example.com/path", cancellationToken: TestContext.Current.CancellationToken);
 
         result.Domain.Should().Be("www.example.com");
     }
@@ -424,7 +424,7 @@ public class WebDocumentMetadataExtractorTests
             </head><body></body></html>
             """;
 
-        var result = await _extractor.ExtractAsync(html, "https://example.com/docs/api");
+        var result = await _extractor.ExtractAsync(html, "https://example.com/docs/api", cancellationToken: TestContext.Current.CancellationToken);
 
         result.SiteContext.Should().NotBeNull();
         result.SiteContext!.Breadcrumbs.Should().HaveCount(3);
@@ -449,7 +449,7 @@ public class WebDocumentMetadataExtractorTests
             </body></html>
             """;
 
-        var result = await _extractor.ExtractAsync(html, "https://example.com/docs/current");
+        var result = await _extractor.ExtractAsync(html, "https://example.com/docs/current", cancellationToken: TestContext.Current.CancellationToken);
 
         result.SiteContext.Should().NotBeNull();
         result.SiteContext!.Breadcrumbs.Should().Contain("Home");
@@ -469,7 +469,7 @@ public class WebDocumentMetadataExtractorTests
             </head><body></body></html>
             """;
 
-        var result = await _extractor.ExtractAsync(html, "https://example.com/page/2");
+        var result = await _extractor.ExtractAsync(html, "https://example.com/page/2", cancellationToken: TestContext.Current.CancellationToken);
 
         result.SiteContext.Should().NotBeNull();
         result.SiteContext!.PreviousPage.Should().Be("/page/1");
@@ -483,7 +483,7 @@ public class WebDocumentMetadataExtractorTests
     {
         var html = "<html><head><title>T</title></head><body></body></html>";
 
-        var result = await _extractor.ExtractAsync(html, "https://example.com/path");
+        var result = await _extractor.ExtractAsync(html, "https://example.com/path", cancellationToken: TestContext.Current.CancellationToken);
 
         result.Url.Should().Be("https://example.com/path");
     }
@@ -501,7 +501,7 @@ public class WebDocumentMetadataExtractorTests
              "https://example.com/2", null)
         };
 
-        var results = await _extractor.ExtractBatchAsync(docs);
+        var results = await _extractor.ExtractBatchAsync(docs, TestContext.Current.CancellationToken);
 
         results.Should().HaveCount(2);
         results[0].Title.Should().Be("Page 1");
@@ -520,7 +520,7 @@ public class WebDocumentMetadataExtractorTests
             </head><body></body></html>
             """;
 
-        var result = await _extractor.ExtractAsync(html, "https://example.com");
+        var result = await _extractor.ExtractAsync(html, "https://example.com", cancellationToken: TestContext.Current.CancellationToken);
 
         result.GetEffectiveTitle().Should().Be("OG Title");
     }
@@ -530,7 +530,7 @@ public class WebDocumentMetadataExtractorTests
     {
         var html = "<html><head><title>Regular Title</title></head><body></body></html>";
 
-        var result = await _extractor.ExtractAsync(html, "https://example.com");
+        var result = await _extractor.ExtractAsync(html, "https://example.com", cancellationToken: TestContext.Current.CancellationToken);
 
         result.GetEffectiveTitle().Should().Be("Regular Title");
     }
@@ -551,7 +551,7 @@ public class WebDocumentMetadataExtractorTests
             : "";
         var html = $"<html><head><title>T</title>{ogMeta}</head><body></body></html>";
 
-        var result = await _extractor.ExtractAsync(html, "https://example.com");
+        var result = await _extractor.ExtractAsync(html, "https://example.com", cancellationToken: TestContext.Current.CancellationToken);
 
         result.GetCategory().Should().Be(expectedCategory);
     }
@@ -592,7 +592,7 @@ public class WebDocumentMetadataExtractorTests
             </html>
             """;
 
-        var result = await _extractor.ExtractAsync(html, "https://mysite.com/complete");
+        var result = await _extractor.ExtractAsync(html, "https://mysite.com/complete", cancellationToken: TestContext.Current.CancellationToken);
 
         // Basic
         result.Title.Should().Be("Complete Example - My Site");

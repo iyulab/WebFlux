@@ -4,7 +4,6 @@ using WebFlux.Core.Options;
 using WebFlux.Services.ContentExtractors;
 using WebFlux.Tests.Fixtures;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace WebFlux.Tests.Simulation;
 
@@ -43,7 +42,7 @@ public class ComponentDiagnosticTests
         var html = HtmlSnapshotLoader.Load(category, name);
 
         // Act - HtmlContentCleaner만 적용
-        var cleanedHtml = await _cleaner.CleanAsync(html, $"https://test.example.com/{name}");
+        var cleanedHtml = await _cleaner.CleanAsync(html, $"https://test.example.com/{name}", cancellationToken: TestContext.Current.CancellationToken);
 
         // Output
         var reductionPct = html.Length > 0
@@ -65,13 +64,13 @@ public class ComponentDiagnosticTests
     {
         // Arrange
         var html = HtmlSnapshotLoader.Load(category, name);
-        var cleanedHtml = await _cleaner.CleanAsync(html, $"https://test.example.com/{name}");
+        var cleanedHtml = await _cleaner.CleanAsync(html, $"https://test.example.com/{name}", cancellationToken: TestContext.Current.CancellationToken);
 
         if (string.IsNullOrWhiteSpace(cleanedHtml))
             return;
 
         // Act - TextDensityFilter만 적용
-        var filteredHtml = await _densityFilter.FilterAsync(cleanedHtml);
+        var filteredHtml = await _densityFilter.FilterAsync(cleanedHtml, TestContext.Current.CancellationToken);
 
         // Output
         var retainedPct = cleanedHtml.Length > 0
@@ -97,7 +96,7 @@ public class ComponentDiagnosticTests
     {
         // Arrange
         var html = HtmlSnapshotLoader.Load(category, name);
-        var cleanedHtml = await _cleaner.CleanAsync(html, $"https://test.example.com/{name}");
+        var cleanedHtml = await _cleaner.CleanAsync(html, $"https://test.example.com/{name}", cancellationToken: TestContext.Current.CancellationToken);
 
         if (string.IsNullOrWhiteSpace(cleanedHtml))
             return;
@@ -123,7 +122,7 @@ public class ComponentDiagnosticTests
         var html = HtmlSnapshotLoader.Load(category, name);
 
         // Act
-        var cleanedHtml = await _cleaner.CleanAsync(html, $"https://test.example.com/{name}");
+        var cleanedHtml = await _cleaner.CleanAsync(html, $"https://test.example.com/{name}", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert - 클리너가 노이즈 요소를 제거했는지 확인
         cleanedHtml.Should().NotContain("cookie", "cookie banners should be removed");
@@ -140,7 +139,7 @@ public class ComponentDiagnosticTests
         var html = HtmlSnapshotLoader.Load(category, name);
 
         // Act - 각 단계별 테이블 보존 확인
-        var cleanedHtml = await _cleaner.CleanAsync(html, $"https://test.example.com/{name}");
+        var cleanedHtml = await _cleaner.CleanAsync(html, $"https://test.example.com/{name}", cancellationToken: TestContext.Current.CancellationToken);
         var markdown = _markdownConverter.Convert(cleanedHtml);
 
         // Output
@@ -166,7 +165,7 @@ public class ComponentDiagnosticTests
         var html = HtmlSnapshotLoader.Load(category, name);
 
         // Act
-        var cleanedHtml = await _cleaner.CleanAsync(html, $"https://test.example.com/{name}");
+        var cleanedHtml = await _cleaner.CleanAsync(html, $"https://test.example.com/{name}", cancellationToken: TestContext.Current.CancellationToken);
         var markdown = _markdownConverter.Convert(cleanedHtml);
 
         // Output

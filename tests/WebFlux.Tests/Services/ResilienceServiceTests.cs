@@ -43,7 +43,7 @@ public class ResilienceServiceTests
         Func<CancellationToken, Task<string>> operation = _ => Task.FromResult(expectedResult);
 
         // Act
-        var result = await _resilienceService.ExecuteWithRetryAsync(operation, retryPolicy);
+        var result = await _resilienceService.ExecuteWithRetryAsync(operation, retryPolicy, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().Be(expectedResult);
@@ -74,7 +74,7 @@ public class ResilienceServiceTests
         };
 
         // Act
-        var result = await _resilienceService.ExecuteWithRetryAsync(operation, retryPolicy);
+        var result = await _resilienceService.ExecuteWithRetryAsync(operation, retryPolicy, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().Be(expectedResult);
@@ -102,7 +102,7 @@ public class ResilienceServiceTests
 
         // Act & Assert
         await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _resilienceService.ExecuteWithRetryAsync(operation, retryPolicy));
+            () => _resilienceService.ExecuteWithRetryAsync(operation, retryPolicy, TestContext.Current.CancellationToken));
 
         // Verify exponential backoff pattern
         attemptTimes.Should().HaveCount(4); // 초기 시도 + 3번 재시도
@@ -134,7 +134,7 @@ public class ResilienceServiceTests
         };
 
         // Act
-        var result = await _resilienceService.ExecuteWithRetryAsync(operation, retryPolicy);
+        var result = await _resilienceService.ExecuteWithRetryAsync(operation, retryPolicy, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().Be("success");
@@ -163,7 +163,7 @@ public class ResilienceServiceTests
         Func<CancellationToken, Task<string>> operation = _ => Task.FromResult(expectedResult);
 
         // Act
-        var result = await _resilienceService.ExecuteWithCircuitBreakerAsync(operation, circuitBreakerPolicy);
+        var result = await _resilienceService.ExecuteWithCircuitBreakerAsync(operation, circuitBreakerPolicy, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().Be(expectedResult);
@@ -200,7 +200,7 @@ public class ResilienceServiceTests
         Func<CancellationToken, Task<string>> operation = _ => Task.FromResult(expectedResult);
 
         // Act
-        var result = await _resilienceService.ExecuteWithTimeoutAsync(operation, timeoutPolicy);
+        var result = await _resilienceService.ExecuteWithTimeoutAsync(operation, timeoutPolicy, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().Be(expectedResult);
@@ -224,7 +224,7 @@ public class ResilienceServiceTests
 
         // Act & Assert
         await Assert.ThrowsAnyAsync<Exception>(
-            () => _resilienceService.ExecuteWithTimeoutAsync(operation, timeoutPolicy));
+            () => _resilienceService.ExecuteWithTimeoutAsync(operation, timeoutPolicy, TestContext.Current.CancellationToken));
     }
 
     [Theory]
@@ -243,7 +243,7 @@ public class ResilienceServiceTests
         Func<CancellationToken, Task<string>> operation = _ => Task.FromResult(expectedResult);
 
         // Act
-        var result = await _resilienceService.ExecuteWithTimeoutAsync(operation, timeoutPolicy);
+        var result = await _resilienceService.ExecuteWithTimeoutAsync(operation, timeoutPolicy, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().Be(expectedResult);
@@ -268,7 +268,7 @@ public class ResilienceServiceTests
         Func<CancellationToken, Task<string>> operation = _ => Task.FromResult(expectedResult);
 
         // Act
-        var result = await _resilienceService.ExecuteWithBulkheadAsync(operation, bulkheadPolicy);
+        var result = await _resilienceService.ExecuteWithBulkheadAsync(operation, bulkheadPolicy, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().Be(expectedResult);
@@ -326,7 +326,7 @@ public class ResilienceServiceTests
         };
 
         // Act
-        var result = await _resilienceService.ExecuteWithResilienceAsync(operation, resiliencePolicy);
+        var result = await _resilienceService.ExecuteWithResilienceAsync(operation, resiliencePolicy, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().Be(expectedResult);
@@ -343,7 +343,7 @@ public class ResilienceServiceTests
         Func<CancellationToken, Task<string>> operation = _ => Task.FromResult(expectedResult);
 
         // Act
-        var result = await _resilienceService.ExecuteHttpWithResilienceAsync(operation, httpPolicy);
+        var result = await _resilienceService.ExecuteHttpWithResilienceAsync(operation, httpPolicy, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().Be(expectedResult);
@@ -365,8 +365,7 @@ public class ResilienceServiceTests
         };
 
         // Act - 성공적인 작업 실행
-        await _resilienceService.ExecuteWithRetryAsync(
-            _ => Task.FromResult("success"), retryPolicy);
+        await _resilienceService.ExecuteWithRetryAsync(_ => Task.FromResult("success"), retryPolicy, TestContext.Current.CancellationToken);
 
         // Act - 통계 가져오기
         var stats = _resilienceService.GetStatistics();
@@ -449,7 +448,7 @@ public class ResilienceServiceTests
         };
 
         // Act
-        var result = await _resilienceService.ExecuteWithResilienceAsync(operation, databasePolicy);
+        var result = await _resilienceService.ExecuteWithResilienceAsync(operation, databasePolicy, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().Be(expectedResult);
@@ -485,7 +484,7 @@ public class ResilienceServiceTests
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _resilienceService.ExecuteWithRetryAsync<string>(null!, retryPolicy));
+            () => _resilienceService.ExecuteWithRetryAsync<string>(null!, retryPolicy, TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -496,7 +495,7 @@ public class ResilienceServiceTests
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _resilienceService.ExecuteWithRetryAsync(operation, null!));
+            () => _resilienceService.ExecuteWithRetryAsync(operation, null!, TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -565,7 +564,7 @@ public class ResilienceServiceTests
         };
 
         // Act
-        var result = await _resilienceService.ExecuteHttpWithResilienceAsync(httpOperation, httpPolicy);
+        var result = await _resilienceService.ExecuteHttpWithResilienceAsync(httpOperation, httpPolicy, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().Be(expectedResult);
@@ -597,7 +596,7 @@ public class ResilienceServiceTests
 
         // Act & Assert
         await Assert.ThrowsAsync<HttpRequestException>(
-            () => _resilienceService.ExecuteHttpWithResilienceAsync(alwaysFailOperation, httpPolicy));
+            () => _resilienceService.ExecuteHttpWithResilienceAsync(alwaysFailOperation, httpPolicy, TestContext.Current.CancellationToken));
 
         // 통계 확인 - 실패가 기록되어야 함
         var stats = _resilienceService.GetStatistics();
@@ -625,7 +624,7 @@ public class ResilienceServiceTests
 
         // Act & Assert
         await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _resilienceService.ExecuteWithResilienceAsync(alwaysFailOperation, resiliencePolicy));
+            () => _resilienceService.ExecuteWithResilienceAsync(alwaysFailOperation, resiliencePolicy, TestContext.Current.CancellationToken));
 
         // 통계 확인 - 실패가 기록되어야 함
         var stats = _resilienceService.GetStatistics();
@@ -648,7 +647,7 @@ public class ResilienceServiceTests
 
         // Act & Assert
         await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _resilienceService.ExecuteWithBulkheadAsync(alwaysFailOperation, bulkheadPolicy));
+            () => _resilienceService.ExecuteWithBulkheadAsync(alwaysFailOperation, bulkheadPolicy, TestContext.Current.CancellationToken));
 
         // 통계 확인 - 실패가 기록되어야 함
         var stats = _resilienceService.GetStatistics();
@@ -726,7 +725,7 @@ public class ResilienceServiceTests
 
         // Act & Assert
         await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _resilienceService.ExecuteWithRetryAsync(operation, retryPolicy));
+            () => _resilienceService.ExecuteWithRetryAsync(operation, retryPolicy, TestContext.Current.CancellationToken));
 
         attemptCount.Should().Be(4); // 초기 + 3번 재시도
     }
@@ -753,7 +752,7 @@ public class ResilienceServiceTests
 
         // Act & Assert
         await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _resilienceService.ExecuteWithRetryAsync(operation, retryPolicy));
+            () => _resilienceService.ExecuteWithRetryAsync(operation, retryPolicy, TestContext.Current.CancellationToken));
 
         attemptCount.Should().Be(6); // 초기 + 5번 재시도
     }
@@ -781,7 +780,7 @@ public class ResilienceServiceTests
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentException>(
-            () => _resilienceService.ExecuteWithRetryAsync(operation, retryPolicy));
+            () => _resilienceService.ExecuteWithRetryAsync(operation, retryPolicy, TestContext.Current.CancellationToken));
 
         attemptCount.Should().Be(2); // 재시도하다가 ArgumentException에서 중단
     }
@@ -808,7 +807,7 @@ public class ResilienceServiceTests
 
         // Act & Assert
         await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _resilienceService.ExecuteWithRetryAsync(operation, retryPolicy));
+            () => _resilienceService.ExecuteWithRetryAsync(operation, retryPolicy, TestContext.Current.CancellationToken));
 
         attemptCount.Should().Be(4);
     }
@@ -831,7 +830,7 @@ public class ResilienceServiceTests
         Func<CancellationToken, Task<string>> operation = _ => Task.FromResult(expectedResult);
 
         // Act
-        var result = await _resilienceService.ExecuteWithResilienceAsync(operation, resiliencePolicy);
+        var result = await _resilienceService.ExecuteWithResilienceAsync(operation, resiliencePolicy, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().Be(expectedResult);
@@ -856,7 +855,7 @@ public class ResilienceServiceTests
         Func<CancellationToken, Task<string>> operation = _ => Task.FromResult(expectedResult);
 
         // Act
-        var result = await _resilienceService.ExecuteWithResilienceAsync(operation, resiliencePolicy);
+        var result = await _resilienceService.ExecuteWithResilienceAsync(operation, resiliencePolicy, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().Be(expectedResult);
@@ -910,7 +909,7 @@ public class ResilienceServiceTests
         };
 
         // Act
-        var result = await _resilienceService.ExecuteWithResilienceAsync(operation, resiliencePolicy);
+        var result = await _resilienceService.ExecuteWithResilienceAsync(operation, resiliencePolicy, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().Be(expectedResult);
@@ -937,7 +936,7 @@ public class ResilienceServiceTests
         Func<CancellationToken, Task<string>> operation = _ => Task.FromResult(expectedResult);
 
         // Act
-        var result = await _resilienceService.ExecuteWithResilienceAsync(operation, resiliencePolicy);
+        var result = await _resilienceService.ExecuteWithResilienceAsync(operation, resiliencePolicy, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().Be(expectedResult);
@@ -972,7 +971,7 @@ public class ResilienceServiceTests
         };
 
         // Act
-        var result = await _resilienceService.ExecuteWithResilienceAsync(operation, resiliencePolicy);
+        var result = await _resilienceService.ExecuteWithResilienceAsync(operation, resiliencePolicy, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().Be(expectedResult);
@@ -1000,14 +999,12 @@ public class ResilienceServiceTests
         };
 
         // Act - 성공
-        await _resilienceService.ExecuteWithRetryAsync(_ => Task.FromResult("success"), retryPolicy);
+        await _resilienceService.ExecuteWithRetryAsync(_ => Task.FromResult("success"), retryPolicy, TestContext.Current.CancellationToken);
 
         // Act - 타임아웃
         try
         {
-            await _resilienceService.ExecuteWithTimeoutAsync(
-                async ct => { await Task.Delay(200, ct); return "slow"; },
-                timeoutPolicy);
+            await _resilienceService.ExecuteWithTimeoutAsync(async ct => { await Task.Delay(200, ct); return "slow"; }, timeoutPolicy, TestContext.Current.CancellationToken);
         }
         catch { }
 
@@ -1035,13 +1032,11 @@ public class ResilienceServiceTests
         // Act - 여러 작업 실행
         for (int i = 0; i < 10; i++)
         {
-            await _resilienceService.ExecuteWithRetryAsync(
-                async ct =>
+            await _resilienceService.ExecuteWithRetryAsync(async ct =>
                 {
                     await Task.Delay(10, ct);
                     return $"result-{i}";
-                },
-                retryPolicy);
+                }, retryPolicy, TestContext.Current.CancellationToken);
         }
 
         var stats = _resilienceService.GetStatistics();
@@ -1068,9 +1063,7 @@ public class ResilienceServiceTests
         {
             try
             {
-                await _resilienceService.ExecuteWithRetryAsync(
-                    _ => i % 2 == 0 ? Task.FromResult($"success-{i}") : throw new InvalidOperationException($"fail-{i}"),
-                    retryPolicy);
+                await _resilienceService.ExecuteWithRetryAsync(_ => i % 2 == 0 ? Task.FromResult($"success-{i}") : throw new InvalidOperationException($"fail-{i}"), retryPolicy, TestContext.Current.CancellationToken);
             }
             catch { }
         }
@@ -1102,7 +1095,7 @@ public class ResilienceServiceTests
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _resilienceService.ExecuteWithCircuitBreakerAsync<string>(null!, policy));
+            () => _resilienceService.ExecuteWithCircuitBreakerAsync<string>(null!, policy, TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -1113,7 +1106,7 @@ public class ResilienceServiceTests
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _resilienceService.ExecuteWithCircuitBreakerAsync(operation, null!));
+            () => _resilienceService.ExecuteWithCircuitBreakerAsync(operation, null!, TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -1128,7 +1121,7 @@ public class ResilienceServiceTests
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _resilienceService.ExecuteWithTimeoutAsync<string>(null!, policy));
+            () => _resilienceService.ExecuteWithTimeoutAsync<string>(null!, policy, TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -1139,7 +1132,7 @@ public class ResilienceServiceTests
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _resilienceService.ExecuteWithTimeoutAsync(operation, null!));
+            () => _resilienceService.ExecuteWithTimeoutAsync(operation, null!, TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -1155,7 +1148,7 @@ public class ResilienceServiceTests
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _resilienceService.ExecuteWithBulkheadAsync<string>(null!, policy));
+            () => _resilienceService.ExecuteWithBulkheadAsync<string>(null!, policy, TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -1166,7 +1159,7 @@ public class ResilienceServiceTests
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _resilienceService.ExecuteWithBulkheadAsync(operation, null!));
+            () => _resilienceService.ExecuteWithBulkheadAsync(operation, null!, TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -1181,7 +1174,7 @@ public class ResilienceServiceTests
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _resilienceService.ExecuteWithResilienceAsync<string>(null!, policy));
+            () => _resilienceService.ExecuteWithResilienceAsync<string>(null!, policy, TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -1192,7 +1185,7 @@ public class ResilienceServiceTests
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _resilienceService.ExecuteWithResilienceAsync(operation, null!));
+            () => _resilienceService.ExecuteWithResilienceAsync(operation, null!, TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -1203,7 +1196,7 @@ public class ResilienceServiceTests
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _resilienceService.ExecuteHttpWithResilienceAsync<string>(null!, policy));
+            () => _resilienceService.ExecuteHttpWithResilienceAsync<string>(null!, policy, TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -1214,7 +1207,7 @@ public class ResilienceServiceTests
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _resilienceService.ExecuteHttpWithResilienceAsync(operation, null!));
+            () => _resilienceService.ExecuteHttpWithResilienceAsync(operation, null!, TestContext.Current.CancellationToken));
     }
 
     #endregion

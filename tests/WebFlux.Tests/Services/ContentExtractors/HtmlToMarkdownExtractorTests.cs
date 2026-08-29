@@ -27,7 +27,7 @@ public class HtmlToMarkdownExtractorTests
         var url = "https://example.com";
 
         // Act
-        var result = await _extractor.ExtractFromHtmlAsync(html, url);
+        var result = await _extractor.ExtractFromHtmlAsync(html, url, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();
@@ -50,7 +50,7 @@ public class HtmlToMarkdownExtractorTests
         var url = "https://example.com";
 
         // Act
-        var result = await _extractor.ExtractFromHtmlAsync(html, url);
+        var result = await _extractor.ExtractFromHtmlAsync(html, url, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Text.Should().Contain("# Title 1");
@@ -72,7 +72,7 @@ public class HtmlToMarkdownExtractorTests
         var url = "https://example.com";
 
         // Act
-        var result = await _extractor.ExtractFromHtmlAsync(html, url);
+        var result = await _extractor.ExtractFromHtmlAsync(html, url, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Text.Should().Contain("Name");
@@ -94,7 +94,7 @@ console.log(x);</code></pre>
         var url = "https://example.com";
 
         // Act
-        var result = await _extractor.ExtractFromHtmlAsync(html, url);
+        var result = await _extractor.ExtractFromHtmlAsync(html, url, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Text.Should().Contain("var x = 42;");
@@ -111,7 +111,7 @@ console.log(x);</code></pre>
         var url = "https://example.com";
 
         // Act
-        var result = await _extractor.ExtractFromHtmlAsync(html, url);
+        var result = await _extractor.ExtractFromHtmlAsync(html, url, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Text.Should().Contain("[Example]");
@@ -132,7 +132,7 @@ console.log(x);</code></pre>
         var url = "https://example.com";
 
         // Act
-        var result = await _extractor.ExtractFromHtmlAsync(html, url);
+        var result = await _extractor.ExtractFromHtmlAsync(html, url, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Text.Should().Contain("Item 1");
@@ -151,7 +151,7 @@ console.log(x);</code></pre>
         var url = "https://example.com";
 
         // Act
-        var result = await _extractor.ExtractFromHtmlAsync(html, url);
+        var result = await _extractor.ExtractFromHtmlAsync(html, url, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Text.Should().Contain("![Test image]");
@@ -168,7 +168,7 @@ console.log(x);</code></pre>
         var url = "https://example.com";
 
         // Act
-        var result = await _extractor.ExtractFromHtmlAsync(html, url);
+        var result = await _extractor.ExtractFromHtmlAsync(html, url, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Text.Should().Contain("**bold**");
@@ -187,7 +187,7 @@ console.log(x);</code></pre>
         var url = "https://example.com";
 
         // Act
-        var result = await _extractor.ExtractFromHtmlAsync(html, url);
+        var result = await _extractor.ExtractFromHtmlAsync(html, url, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.RawMarkdown.Should().NotBeNullOrEmpty();
@@ -202,7 +202,7 @@ console.log(x);</code></pre>
         var url = "https://example.com";
 
         // Act
-        var result = await _extractor.ExtractFromHtmlAsync(html, url);
+        var result = await _extractor.ExtractFromHtmlAsync(html, url, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         // Text는 FitMarkdown 또는 RawMarkdown 중 하나를 사용해야 함
@@ -228,7 +228,7 @@ console.log(x);</code></pre>
         var url = "https://example.com";
 
         // Act
-        var result = await _extractor.ExtractFromHtmlAsync(html, url);
+        var result = await _extractor.ExtractFromHtmlAsync(html, url, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Text.Should().Contain("main article content");
@@ -247,7 +247,7 @@ console.log(x);</code></pre>
         var url = "https://example.com";
 
         // Act
-        var result = await _extractor.ExtractFromHtmlAsync(html, url);
+        var result = await _extractor.ExtractFromHtmlAsync(html, url, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Text.Should().Contain("Real content");
@@ -267,7 +267,7 @@ console.log(x);</code></pre>
         var url = "https://example.com/page";
 
         // Act
-        var result = await _extractor.ExtractFromHtmlAsync(html, url, enableMetadataExtraction: true);
+        var result = await _extractor.ExtractFromHtmlAsync(html, url, enableMetadataExtraction: true, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Metadata.Should().NotBeNull();
@@ -284,7 +284,7 @@ console.log(x);</code></pre>
         var url = "https://example.com";
 
         // Act
-        var result = await _extractor.ExtractFromHtmlAsync(html, url);
+        var result = await _extractor.ExtractFromHtmlAsync(html, url, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.WordCount.Should().BeGreaterThan(0);
@@ -300,7 +300,7 @@ console.log(x);</code></pre>
     public async Task ExtractFromHtmlAsync_WithEmptyHtml_ShouldReturnEmptyContent()
     {
         // Act
-        var result = await _extractor.ExtractFromHtmlAsync("", "https://example.com");
+        var result = await _extractor.ExtractFromHtmlAsync("", "https://example.com", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();
@@ -311,7 +311,7 @@ console.log(x);</code></pre>
     public async Task ExtractFromHtmlAsync_WithWhitespaceOnly_ShouldReturnEmptyContent()
     {
         // Act
-        var result = await _extractor.ExtractFromHtmlAsync("   ", "https://example.com");
+        var result = await _extractor.ExtractFromHtmlAsync("   ", "https://example.com", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Text.Should().BeEmpty();
@@ -324,7 +324,7 @@ console.log(x);</code></pre>
         var html = "<html><body><p>Content</p></body></html>";
 
         // Act
-        var result = await _extractor.ExtractFromHtmlAsync(html, "https://example.com");
+        var result = await _extractor.ExtractFromHtmlAsync(html, "https://example.com", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Title.Should().Be("Untitled");
@@ -338,7 +338,7 @@ console.log(x);</code></pre>
         var url = "https://example.com";
 
         // Act
-        var result = await _extractor.ExtractFromHtmlAsync(html, url);
+        var result = await _extractor.ExtractFromHtmlAsync(html, url, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.OriginalHtml.Should().Be(html);
@@ -356,7 +356,7 @@ console.log(x);</code></pre>
         var url = "https://example.com";
 
         // Act
-        var result = await _extractor.ExtractFromMarkdownAsync(markdown, url);
+        var result = await _extractor.ExtractFromMarkdownAsync(markdown, url, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();
@@ -371,7 +371,7 @@ console.log(x);</code></pre>
         var url = "https://example.com";
 
         // Act
-        var result = await _extractor.ExtractFromJsonAsync(json, url);
+        var result = await _extractor.ExtractFromJsonAsync(json, url, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();
@@ -386,7 +386,7 @@ console.log(x);</code></pre>
         var url = "https://example.com";
 
         // Act
-        var result = await _extractor.ExtractAutoAsync(html, url, "text/html");
+        var result = await _extractor.ExtractAutoAsync(html, url, "text/html", TestContext.Current.CancellationToken);
 
         // Assert
         result.ExtractionMethod.Should().Be("HtmlToMarkdown");
@@ -401,7 +401,7 @@ console.log(x);</code></pre>
         var url = "https://example.com";
 
         // Act
-        var result = await _extractor.ExtractAutoAsync(text, url, "text/plain");
+        var result = await _extractor.ExtractAutoAsync(text, url, "text/plain", TestContext.Current.CancellationToken);
 
         // Assert
         result.Text.Should().Be(text);
@@ -432,7 +432,7 @@ console.log(x);</code></pre>
         var url = "https://example.com";
 
         // Act
-        var result = await _extractor.ExtractFromHtmlAsync(html, url);
+        var result = await _extractor.ExtractFromHtmlAsync(html, url, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         // 어떤 형태로든 텍스트가 추출되어야 함
@@ -489,7 +489,7 @@ console.log(x);</code></pre>
         var url = "https://example.com/blog/post";
 
         // Act
-        var result = await _extractor.ExtractFromHtmlAsync(html, url, enableMetadataExtraction: true);
+        var result = await _extractor.ExtractFromHtmlAsync(html, url, enableMetadataExtraction: true, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Title.Should().Be("Blog Post Title");

@@ -2,7 +2,6 @@ using AwesomeAssertions;
 using WebFlux.Services.ContentExtractors;
 using WebFlux.Tests.Fixtures;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace WebFlux.Tests.Simulation;
 
@@ -36,8 +35,8 @@ public class ExtractorComparisonTests
         var url = $"https://test.example.com/{name}";
 
         // Act
-        var mdResult = await _markdownExtractor.ExtractFromHtmlAsync(html, url);
-        var basicResult = await _basicExtractor.ExtractFromHtmlAsync(html, url);
+        var mdResult = await _markdownExtractor.ExtractFromHtmlAsync(html, url, cancellationToken: TestContext.Current.CancellationToken);
+        var basicResult = await _basicExtractor.ExtractFromHtmlAsync(html, url, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert - 두 추출기 모두 결과를 생성해야 함
         mdResult.Text.Should().NotBeNullOrEmpty($"HtmlToMarkdown should produce text for {name}");
@@ -57,8 +56,8 @@ public class ExtractorComparisonTests
         var url = $"https://test.example.com/{name}";
 
         // Act
-        var mdResult = await _markdownExtractor.ExtractFromHtmlAsync(html, url);
-        var basicResult = await _basicExtractor.ExtractFromHtmlAsync(html, url);
+        var mdResult = await _markdownExtractor.ExtractFromHtmlAsync(html, url, cancellationToken: TestContext.Current.CancellationToken);
+        var basicResult = await _basicExtractor.ExtractFromHtmlAsync(html, url, cancellationToken: TestContext.Current.CancellationToken);
 
         var mdMetrics = QualityMeasurer.Measure(mdResult, html);
         var basicMetrics = QualityMeasurer.Measure(basicResult, html);
@@ -87,8 +86,8 @@ public class ExtractorComparisonTests
         var url = $"https://test.example.com/{name}";
 
         // Act
-        var mdResult = await _markdownExtractor.ExtractFromHtmlAsync(html, url);
-        var basicResult = await _basicExtractor.ExtractFromHtmlAsync(html, url);
+        var mdResult = await _markdownExtractor.ExtractFromHtmlAsync(html, url, cancellationToken: TestContext.Current.CancellationToken);
+        var basicResult = await _basicExtractor.ExtractFromHtmlAsync(html, url, cancellationToken: TestContext.Current.CancellationToken);
 
         var mdMetrics = QualityMeasurer.Measure(mdResult, html);
         var basicMetrics = QualityMeasurer.Measure(basicResult, html);

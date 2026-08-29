@@ -21,7 +21,7 @@ public class EventPublisherTests
         });
 
         var published = new UrlProcessedEvent { Url = "https://example.com", ContentLength = 1024 };
-        await publisher.PublishAsync(published);
+        await publisher.PublishAsync(published, TestContext.Current.CancellationToken);
 
         received.Should().NotBeNull();
         received!.Url.Should().Be("https://example.com");
@@ -45,7 +45,7 @@ public class EventPublisherTests
             return Task.CompletedTask;
         });
 
-        await publisher.PublishAsync(new UrlProcessedEvent { Url = "test" });
+        await publisher.PublishAsync(new UrlProcessedEvent { Url = "test" }, TestContext.Current.CancellationToken);
 
         received.Should().HaveCount(2);
         received.Should().Contain(["handler1", "handler2"]);
@@ -63,7 +63,7 @@ public class EventPublisherTests
             return Task.CompletedTask;
         });
 
-        await publisher.PublishAsync(new UrlProcessingStartedEvent { Url = "test" });
+        await publisher.PublishAsync(new UrlProcessingStartedEvent { Url = "test" }, TestContext.Current.CancellationToken);
 
         called.Should().BeFalse();
     }
@@ -83,10 +83,10 @@ public class EventPublisherTests
             tcs.SetResult();
         });
 
-        await publisher.PublishAsync(new UrlProcessingStartedEvent { Url = "https://example.com" });
+        await publisher.PublishAsync(new UrlProcessingStartedEvent { Url = "https://example.com" }, TestContext.Current.CancellationToken);
 
         // Sync handlers run on Task.Run background thread, wait briefly
-        await Task.WhenAny(tcs.Task, Task.Delay(2000));
+        await Task.WhenAny(tcs.Task, Task.Delay(2000, TestContext.Current.CancellationToken));
 
         received.Should().NotBeNull();
         received!.Url.Should().Be("https://example.com");
@@ -106,12 +106,12 @@ public class EventPublisherTests
             return Task.CompletedTask;
         });
 
-        await publisher.PublishAsync(new UrlProcessedEvent { Url = "first" });
+        await publisher.PublishAsync(new UrlProcessedEvent { Url = "first" }, TestContext.Current.CancellationToken);
         callCount.Should().Be(1);
 
         subscription.Dispose();
 
-        await publisher.PublishAsync(new UrlProcessedEvent { Url = "second" });
+        await publisher.PublishAsync(new UrlProcessedEvent { Url = "second" }, TestContext.Current.CancellationToken);
         callCount.Should().Be(1); // Should not increase
     }
 
@@ -128,8 +128,8 @@ public class EventPublisherTests
             tcs.TrySetResult();
         });
 
-        await publisher.PublishAsync(new UrlProcessedEvent { Url = "first" });
-        await Task.WhenAny(tcs.Task, Task.Delay(2000));
+        await publisher.PublishAsync(new UrlProcessedEvent { Url = "first" }, TestContext.Current.CancellationToken);
+        await Task.WhenAny(tcs.Task, Task.Delay(2000, TestContext.Current.CancellationToken));
         callCount.Should().Be(1);
 
         subscription.Dispose();
@@ -192,9 +192,9 @@ public class EventPublisherTests
         var publisher = new EventPublisher();
         publisher.Subscribe<UrlProcessedEvent>(_ => Task.CompletedTask);
 
-        await publisher.PublishAsync(new UrlProcessedEvent { Url = "a" });
-        await publisher.PublishAsync(new UrlProcessedEvent { Url = "b" });
-        await publisher.PublishAsync(new UrlProcessingStartedEvent { Url = "c" });
+        await publisher.PublishAsync(new UrlProcessedEvent { Url = "a" }, TestContext.Current.CancellationToken);
+        await publisher.PublishAsync(new UrlProcessedEvent { Url = "b" }, TestContext.Current.CancellationToken);
+        await publisher.PublishAsync(new UrlProcessingStartedEvent { Url = "c" }, TestContext.Current.CancellationToken);
 
         var stats = publisher.GetStatistics();
 

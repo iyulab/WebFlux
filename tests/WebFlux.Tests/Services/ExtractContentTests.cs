@@ -40,7 +40,7 @@ public class ExtractContentTests : IDisposable
         var invalidUrl = "not-a-valid-url";
 
         // Act
-        var result = await _processor.ExtractContentAsync(invalidUrl);
+        var result = await _processor.ExtractContentAsync(invalidUrl, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.IsSuccess.Should().BeFalse();
@@ -56,7 +56,7 @@ public class ExtractContentTests : IDisposable
         SetupSuccessfulCrawl(url);
 
         // Act
-        var result = await _processor.ExtractContentAsync(url);
+        var result = await _processor.ExtractContentAsync(url, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -78,7 +78,7 @@ public class ExtractContentTests : IDisposable
         SetupSuccessfulCrawl(url);
 
         // Act
-        var result = await _processor.ExtractContentAsync(url, options);
+        var result = await _processor.ExtractContentAsync(url, options, TestContext.Current.CancellationToken);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -93,7 +93,7 @@ public class ExtractContentTests : IDisposable
         SetupFailedCrawl(url, 404);
 
         // Act
-        var result = await _processor.ExtractContentAsync(url);
+        var result = await _processor.ExtractContentAsync(url, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.IsSuccess.Should().BeFalse();
@@ -108,7 +108,7 @@ public class ExtractContentTests : IDisposable
         SetupEmptyContentCrawl(url);
 
         // Act
-        var result = await _processor.ExtractContentAsync(url);
+        var result = await _processor.ExtractContentAsync(url, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.IsSuccess.Should().BeFalse();
@@ -153,7 +153,7 @@ public class ExtractContentTests : IDisposable
         SetupExtractor();
 
         // Act
-        var result = await _processor.ExtractContentAsync(url, options);
+        var result = await _processor.ExtractContentAsync(url, options, TestContext.Current.CancellationToken);
 
         // Assert
         _mockServiceFactory.Received(1).CreateCrawler(CrawlStrategy.Dynamic);
@@ -173,7 +173,7 @@ public class ExtractContentTests : IDisposable
         _mockServiceFactory.TryCreateContentQualityEvaluator().Returns(mockQualityEvaluator);
 
         // Act
-        var result = await _processor.ExtractContentAsync(url, options);
+        var result = await _processor.ExtractContentAsync(url, options, TestContext.Current.CancellationToken);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -192,7 +192,7 @@ public class ExtractContentTests : IDisposable
         var urls = new List<string>();
 
         // Act
-        var result = await _processor.ExtractBatchAsync(urls);
+        var result = await _processor.ExtractBatchAsync(urls, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();
@@ -216,7 +216,7 @@ public class ExtractContentTests : IDisposable
         SetupSuccessfulCrawlForAnyUrl();
 
         // Act
-        var result = await _processor.ExtractBatchAsync(urls);
+        var result = await _processor.ExtractBatchAsync(urls, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.TotalCount.Should().Be(3);
@@ -237,7 +237,7 @@ public class ExtractContentTests : IDisposable
         var urls = new List<string> { successUrl, failUrl };
 
         // Act
-        var result = await _processor.ExtractBatchAsync(urls);
+        var result = await _processor.ExtractBatchAsync(urls, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.TotalCount.Should().Be(2);
@@ -254,7 +254,7 @@ public class ExtractContentTests : IDisposable
         SetupSuccessfulCrawl(urls[0]);
 
         // Act
-        var result = await _processor.ExtractBatchAsync(urls);
+        var result = await _processor.ExtractBatchAsync(urls, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Statistics.Should().NotBeNull();
@@ -275,7 +275,7 @@ public class ExtractContentTests : IDisposable
         }
 
         // Act
-        var result = await _processor.ExtractBatchAsync(urls, options);
+        var result = await _processor.ExtractBatchAsync(urls, options, TestContext.Current.CancellationToken);
 
         // Assert
         result.TotalCount.Should().Be(10);
@@ -302,7 +302,7 @@ public class ExtractContentTests : IDisposable
 
         // Act
         var results = new List<ProcessingResult<ExtractedContent>>();
-        await foreach (var result in _processor.ExtractBatchStreamAsync(urls))
+        await foreach (var result in _processor.ExtractBatchStreamAsync(urls, cancellationToken: TestContext.Current.CancellationToken))
         {
             results.Add(result);
         }
@@ -319,7 +319,7 @@ public class ExtractContentTests : IDisposable
 
         // Act
         var results = new List<ProcessingResult<ExtractedContent>>();
-        await foreach (var result in _processor.ExtractBatchStreamAsync(urls))
+        await foreach (var result in _processor.ExtractBatchStreamAsync(urls, cancellationToken: TestContext.Current.CancellationToken))
         {
             results.Add(result);
         }

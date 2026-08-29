@@ -22,11 +22,11 @@ public class MetadataQualityValidationTest
     public async Task ValidateMetadataQuality_ShouldAchieve90PercentTarget()
     {
         // Arrange - Rich metadata HTML from test data
-        var htmlContent = await File.ReadAllTextAsync("TestData/sample-rich-metadata.html");
+        var htmlContent = await File.ReadAllTextAsync("TestData/sample-rich-metadata.html", TestContext.Current.CancellationToken);
         var sourceUrl = "https://github.com/iyulab/WebFlux";
 
         // Act
-        var metadata = await _extractor.ExtractMetadataAsync(htmlContent, sourceUrl);
+        var metadata = await _extractor.ExtractMetadataAsync(htmlContent, sourceUrl, TestContext.Current.CancellationToken);
 
         // Assert - Phase 5C 목표: 90% 메타데이터 품질 달성
         metadata.QualityScore.Should().BeGreaterThan(0.90,
@@ -60,11 +60,11 @@ public class MetadataQualityValidationTest
     public async Task ValidateMarkdownStructureAccuracy_ShouldAchieve95PercentTarget()
     {
         // Arrange - Blog post with complex structure
-        var htmlContent = await File.ReadAllTextAsync("TestData/sample-blog-post.html");
+        var htmlContent = await File.ReadAllTextAsync("TestData/sample-blog-post.html", TestContext.Current.CancellationToken);
         var sourceUrl = "https://techblog.example.com/rag-optimization";
 
         // Act
-        var metadata = await _extractor.ExtractMetadataAsync(htmlContent, sourceUrl);
+        var metadata = await _extractor.ExtractMetadataAsync(htmlContent, sourceUrl, TestContext.Current.CancellationToken);
 
         // Assert - Phase 5C 목표: 95% 마크다운 구조 정확도
 
@@ -96,11 +96,11 @@ public class MetadataQualityValidationTest
     public async Task ExtractSpecificMetadataStandard_ShouldSupportAllStandards(string description)
     {
         // Arrange
-        var htmlContent = await File.ReadAllTextAsync("TestData/sample-rich-metadata.html");
+        var htmlContent = await File.ReadAllTextAsync("TestData/sample-rich-metadata.html", TestContext.Current.CancellationToken);
         var sourceUrl = "https://webflux.dev/test";
 
         // Act
-        var metadata = await _extractor.ExtractMetadataAsync(htmlContent, sourceUrl);
+        var metadata = await _extractor.ExtractMetadataAsync(htmlContent, sourceUrl, TestContext.Current.CancellationToken);
 
         // Assert - 모든 15개 웹 표준이 지원되어야 함
         switch (description)

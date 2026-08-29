@@ -37,7 +37,7 @@ public class DomStructureChunkingStrategyTests
             Url = "https://example.com"
         };
 
-        var chunks = await _strategy.ChunkAsync(content);
+        var chunks = await _strategy.ChunkAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         chunks.Should().NotBeEmpty();
     }
@@ -52,7 +52,7 @@ public class DomStructureChunkingStrategyTests
             Url = "https://example.com"
         };
 
-        var chunks = await _strategy.ChunkAsync(content);
+        var chunks = await _strategy.ChunkAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         chunks.Should().NotBeEmpty();
     }
@@ -74,7 +74,7 @@ public class DomStructureChunkingStrategyTests
         """;
 
         var content = CreateContent(html);
-        var chunks = await _strategy.ChunkAsync(content);
+        var chunks = await _strategy.ChunkAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         chunks.Should().NotBeEmpty();
         chunks.Should().AllSatisfy(c =>
@@ -94,7 +94,7 @@ public class DomStructureChunkingStrategyTests
         """;
 
         var content = CreateContent(html);
-        var chunks = await _strategy.ChunkAsync(content);
+        var chunks = await _strategy.ChunkAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         chunks.Should().NotBeEmpty();
     }
@@ -117,7 +117,7 @@ public class DomStructureChunkingStrategyTests
         """;
 
         var content = CreateContent(html);
-        var chunks = await _strategy.ChunkAsync(content);
+        var chunks = await _strategy.ChunkAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         chunks.Should().NotBeEmpty();
         var allText = string.Join(" ", chunks.Select(c => c.Content));
@@ -139,7 +139,7 @@ public class DomStructureChunkingStrategyTests
         """;
 
         var content = CreateContent(html);
-        var chunks = await _strategy.ChunkAsync(content);
+        var chunks = await _strategy.ChunkAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         var allText = string.Join(" ", chunks.Select(c => c.Content));
         allText.Should().Contain("Main area content");
@@ -164,7 +164,7 @@ public class DomStructureChunkingStrategyTests
         """;
 
         var content = CreateContent(html);
-        var chunks = await _strategy.ChunkAsync(content);
+        var chunks = await _strategy.ChunkAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         var allText = string.Join(" ", chunks.Select(c => c.Content));
         allText.Should().NotContain("Navigation links");
@@ -188,7 +188,7 @@ public class DomStructureChunkingStrategyTests
         """;
 
         var content = CreateContent(html);
-        var chunks = await _strategy.ChunkAsync(content);
+        var chunks = await _strategy.ChunkAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         chunks.Should().ContainSingle();
         chunks[0].Type.Should().Be(ChunkType.Code);
@@ -207,7 +207,7 @@ public class DomStructureChunkingStrategyTests
         """;
 
         var content = CreateContent(html);
-        var chunks = await _strategy.ChunkAsync(content);
+        var chunks = await _strategy.ChunkAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         chunks.Should().Contain(c => c.Type == ChunkType.Code);
     }
@@ -232,7 +232,7 @@ public class DomStructureChunkingStrategyTests
         """;
 
         var content = CreateContent(html);
-        var chunks = await _strategy.ChunkAsync(content);
+        var chunks = await _strategy.ChunkAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         chunks.Should().ContainSingle();
         chunks[0].Type.Should().Be(ChunkType.Table);
@@ -260,7 +260,7 @@ public class DomStructureChunkingStrategyTests
         """;
 
         var content = CreateContent(html);
-        var chunks = await _strategy.ChunkAsync(content);
+        var chunks = await _strategy.ChunkAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         chunks.Should().Contain(c => c.Type == ChunkType.List);
         var listChunk = chunks.First(c => c.Type == ChunkType.List);
@@ -283,7 +283,7 @@ public class DomStructureChunkingStrategyTests
         """;
 
         var content = CreateContent(html);
-        var chunks = await _strategy.ChunkAsync(content);
+        var chunks = await _strategy.ChunkAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         chunks.Should().Contain(c => c.Type == ChunkType.List);
     }
@@ -306,7 +306,7 @@ public class DomStructureChunkingStrategyTests
         """;
 
         var content = CreateContent(html);
-        var chunks = await _strategy.ChunkAsync(content);
+        var chunks = await _strategy.ChunkAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         chunks.Should().NotBeEmpty();
         var textChunks = chunks.Where(c => c.Type == ChunkType.Text).ToList();
@@ -333,7 +333,7 @@ public class DomStructureChunkingStrategyTests
         """;
 
         var content = CreateContent(html);
-        var chunks = await _strategy.ChunkAsync(content);
+        var chunks = await _strategy.ChunkAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         chunks.Should().HaveCountGreaterThanOrEqualTo(2);
     }
@@ -359,7 +359,7 @@ public class DomStructureChunkingStrategyTests
         """;
 
         var content = CreateContent(html);
-        var chunks = await _strategy.ChunkAsync(content);
+        var chunks = await _strategy.ChunkAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         chunks.Should().HaveCountGreaterThanOrEqualTo(2);
     }
@@ -378,7 +378,7 @@ public class DomStructureChunkingStrategyTests
         """;
 
         var content = CreateContent(html);
-        var chunks = await _strategy.ChunkAsync(content);
+        var chunks = await _strategy.ChunkAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         chunks.Should().NotBeEmpty();
     }
@@ -402,7 +402,7 @@ public class DomStructureChunkingStrategyTests
 
         var content = CreateContent(html);
         var options = new ChunkingOptions { MaxChunkSize = 200, MinChunkSize = 50 };
-        var chunks = await _strategy.ChunkAsync(content, options);
+        var chunks = await _strategy.ChunkAsync(content, options, TestContext.Current.CancellationToken);
 
         chunks.Should().HaveCountGreaterThan(1);
     }
@@ -425,7 +425,7 @@ public class DomStructureChunkingStrategyTests
 
         var content = CreateContent(html);
         var options = new ChunkingOptions { MinChunkSize = 50, MaxChunkSize = 1500 };
-        var chunks = await _strategy.ChunkAsync(content, options);
+        var chunks = await _strategy.ChunkAsync(content, options, TestContext.Current.CancellationToken);
 
         // Small chunks should be merged
         chunks.Should().NotBeEmpty();
@@ -449,7 +449,7 @@ public class DomStructureChunkingStrategyTests
         """;
 
         var content = CreateContent(html);
-        var chunks = await _strategy.ChunkAsync(content);
+        var chunks = await _strategy.ChunkAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         if (chunks.Count > 1)
         {
@@ -476,7 +476,7 @@ public class DomStructureChunkingStrategyTests
         """;
 
         var content = CreateContent(html);
-        var chunks = await _strategy.ChunkAsync(content);
+        var chunks = await _strategy.ChunkAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         chunks.Should().NotBeEmpty();
         chunks.Should().AllSatisfy(c =>
@@ -539,7 +539,7 @@ public class DomStructureChunkingStrategyTests
         };
 
         var content = CreateContent(html);
-        var chunks = await _strategy.ChunkAsync(content, options);
+        var chunks = await _strategy.ChunkAsync(content, options, TestContext.Current.CancellationToken);
 
         chunks.Should().NotBeEmpty();
         var allText = string.Join(" ", chunks.Select(c => c.Content));
@@ -571,7 +571,7 @@ public class DomStructureChunkingStrategyTests
         };
 
         var content = CreateContent(html);
-        var chunks = await _strategy.ChunkAsync(content, options);
+        var chunks = await _strategy.ChunkAsync(content, options, TestContext.Current.CancellationToken);
 
         // With KeepCodeBlocksTogether = false, code is processed as normal text
         chunks.Should().NotContain(c => c.Type == ChunkType.Code);
@@ -591,7 +591,7 @@ public class DomStructureChunkingStrategyTests
         """;
 
         var content = CreateContent(html);
-        var chunks = await _strategy.ChunkAsync(content);
+        var chunks = await _strategy.ChunkAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         chunks.Should().BeEmpty();
     }
@@ -610,7 +610,7 @@ public class DomStructureChunkingStrategyTests
         """;
 
         var content = CreateContent(html);
-        var chunks = await _strategy.ChunkAsync(content);
+        var chunks = await _strategy.ChunkAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         chunks.Should().BeEmpty();
     }
@@ -636,7 +636,7 @@ public class DomStructureChunkingStrategyTests
 
         var content = CreateContent(html);
         var options = new ChunkingOptions { MinChunkSize = 10, MaxChunkSize = 1500 };
-        var chunks = await _strategy.ChunkAsync(content, options);
+        var chunks = await _strategy.ChunkAsync(content, options, TestContext.Current.CancellationToken);
 
         chunks.Should().Contain(c => c.Type == ChunkType.Code);
         chunks.Should().Contain(c => c.Type == ChunkType.Table);
@@ -655,7 +655,7 @@ public class DomStructureChunkingStrategyTests
         """;
 
         var content = CreateContent(html);
-        var chunks = await _strategy.ChunkAsync(content);
+        var chunks = await _strategy.ChunkAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         chunks.Should().NotBeEmpty();
         chunks.Should().AllSatisfy(c =>
@@ -681,7 +681,7 @@ public class DomStructureChunkingStrategyTests
         """;
 
         var content = CreateContent(html);
-        var chunks = await _strategy.ChunkAsync(content);
+        var chunks = await _strategy.ChunkAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         var tableChunk = chunks.FirstOrDefault(c => c.Type == ChunkType.Table);
         tableChunk.Should().NotBeNull();
@@ -707,7 +707,7 @@ public class DomStructureChunkingStrategyTests
         """;
 
         var content = CreateContent(html);
-        var chunks = await _strategy.ChunkAsync(content);
+        var chunks = await _strategy.ChunkAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         chunks.Should().NotBeEmpty();
         var domPaths = chunks
@@ -730,7 +730,7 @@ public class DomStructureChunkingStrategyTests
         """;
 
         var content = CreateContent(html);
-        var chunks = await _strategy.ChunkAsync(content);
+        var chunks = await _strategy.ChunkAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         chunks.Should().NotBeEmpty();
         var domPaths = chunks

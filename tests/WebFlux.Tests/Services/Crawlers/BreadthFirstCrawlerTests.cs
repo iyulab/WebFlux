@@ -74,7 +74,7 @@ public class BreadthFirstCrawlerTests : IDisposable
             .Returns(response);
 
         // Act
-        var result = await _crawler.CrawlAsync(url);
+        var result = await _crawler.CrawlAsync(url, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();
@@ -113,7 +113,7 @@ public class BreadthFirstCrawlerTests : IDisposable
 
         // Act
         var results = new List<CrawlResult>();
-        await foreach (var result in _crawler.CrawlWebsiteAsync(rootUrl, options))
+        await foreach (var result in _crawler.CrawlWebsiteAsync(rootUrl, options, TestContext.Current.CancellationToken))
         {
             results.Add(result);
         }
@@ -152,7 +152,7 @@ public class BreadthFirstCrawlerTests : IDisposable
 
         // Act
         var results = new List<CrawlResult>();
-        await foreach (var result in _crawler.CrawlWebsiteAsync(url, options))
+        await foreach (var result in _crawler.CrawlWebsiteAsync(url, options, TestContext.Current.CancellationToken))
         {
             results.Add(result);
         }

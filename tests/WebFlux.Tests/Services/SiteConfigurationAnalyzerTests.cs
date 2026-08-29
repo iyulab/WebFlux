@@ -35,7 +35,7 @@ public class SiteConfigurationAnalyzerTests
             """;
 
         // Act
-        var result = await _analyzer.AnalyzeConfigurationAsync(yamlContent, "https://github.com/user/repo/_config.yml");
+        var result = await _analyzer.AnalyzeConfigurationAsync(yamlContent, "https://github.com/user/repo/_config.yml", TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();
@@ -58,7 +58,7 @@ public class SiteConfigurationAnalyzerTests
             """;
 
         // Act
-        var result = await _analyzer.AnalyzeConfigurationAsync(yamlContent, "https://github.com/user/repo/config.yaml");
+        var result = await _analyzer.AnalyzeConfigurationAsync(yamlContent, "https://github.com/user/repo/config.yaml", TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();
@@ -400,7 +400,7 @@ public class SiteConfigurationAnalyzerTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<ArgumentException>(
-            () => _analyzer.AnalyzeConfigurationAsync(invalidYaml, "https://example.com/config.yml"));
+            () => _analyzer.AnalyzeConfigurationAsync(invalidYaml, "https://example.com/config.yml", TestContext.Current.CancellationToken));
 
         exception.Message.Should().Contain("YAML");
     }
@@ -413,7 +413,7 @@ public class SiteConfigurationAnalyzerTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<ArgumentException>(
-            () => _analyzer.AnalyzeConfigurationAsync(emptyYaml, "https://example.com/config.yml"));
+            () => _analyzer.AnalyzeConfigurationAsync(emptyYaml, "https://example.com/config.yml", TestContext.Current.CancellationToken));
 
         exception.Message.Should().Contain("empty");
     }
@@ -426,7 +426,7 @@ public class SiteConfigurationAnalyzerTests
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _analyzer.AnalyzeConfigurationAsync(nullYaml!, "https://example.com/config.yml"));
+            () => _analyzer.AnalyzeConfigurationAsync(nullYaml!, "https://example.com/config.yml", TestContext.Current.CancellationToken));
     }
 
     #endregion
@@ -449,7 +449,7 @@ public class SiteConfigurationAnalyzerTests
             """;
 
         // Act
-        var config = await _analyzer.AnalyzeConfigurationAsync(realWorldYaml, "https://github.com/jane-dev/blog/_config.yml");
+        var config = await _analyzer.AnalyzeConfigurationAsync(realWorldYaml, "https://github.com/jane-dev/blog/_config.yml", TestContext.Current.CancellationToken);
         var quality = _analyzer.AssessQuality(config);
         var issues = _analyzer.ValidateConfiguration(config);
         var recommendations = _analyzer.GetOptimizationRecommendations(config);
@@ -491,7 +491,7 @@ public class SiteConfigurationAnalyzerTests
             """;
 
         // Act
-        var result = await _analyzer.AnalyzeConfigurationAsync(yamlContent, "https://github.com/user/_config.yml");
+        var result = await _analyzer.AnalyzeConfigurationAsync(yamlContent, "https://github.com/user/_config.yml", TestContext.Current.CancellationToken);
 
         // Assert
         result.SiteInfo.Author.Should().NotBeNull();
@@ -512,7 +512,7 @@ public class SiteConfigurationAnalyzerTests
             """;
 
         // Act
-        var result = await _analyzer.AnalyzeConfigurationAsync(yamlContent, "https://github.com/user/_config.yml");
+        var result = await _analyzer.AnalyzeConfigurationAsync(yamlContent, "https://github.com/user/_config.yml", TestContext.Current.CancellationToken);
 
         // Assert
         result.SiteInfo.Author.Should().NotBeNull();
@@ -536,7 +536,7 @@ public class SiteConfigurationAnalyzerTests
             """;
 
         // Act
-        var result = await _analyzer.AnalyzeConfigurationAsync(yamlContent, "https://github.com/user/_config.yml");
+        var result = await _analyzer.AnalyzeConfigurationAsync(yamlContent, "https://github.com/user/_config.yml", TestContext.Current.CancellationToken);
 
         // Assert
         result.BuildConfig.SourceDirectory.Should().Be("src");
@@ -564,7 +564,7 @@ public class SiteConfigurationAnalyzerTests
             """;
 
         // Act
-        var result = await _analyzer.AnalyzeConfigurationAsync(yamlContent, "https://github.com/user/_config.yml");
+        var result = await _analyzer.AnalyzeConfigurationAsync(yamlContent, "https://github.com/user/_config.yml", TestContext.Current.CancellationToken);
 
         // Assert
         result.ContentConfig.MarkdownEngine.Should().Be("kramdown");
@@ -591,7 +591,7 @@ public class SiteConfigurationAnalyzerTests
             """;
 
         // Act
-        var result = await _analyzer.AnalyzeConfigurationAsync(yamlContent, "https://github.com/user/_config.yml");
+        var result = await _analyzer.AnalyzeConfigurationAsync(yamlContent, "https://github.com/user/_config.yml", TestContext.Current.CancellationToken);
 
         // Assert
         result.ContentConfig.Collections.Should().ContainKey("posts");
@@ -613,7 +613,7 @@ public class SiteConfigurationAnalyzerTests
             """;
 
         // Act
-        var result = await _analyzer.AnalyzeConfigurationAsync(yamlContent, "https://github.com/user/_config.yml");
+        var result = await _analyzer.AnalyzeConfigurationAsync(yamlContent, "https://github.com/user/_config.yml", TestContext.Current.CancellationToken);
 
         // Assert
         result.PluginConfig.Plugins.Should().Contain("jekyll-feed");
@@ -634,7 +634,7 @@ public class SiteConfigurationAnalyzerTests
             """;
 
         // Act
-        var result = await _analyzer.AnalyzeConfigurationAsync(yamlContent, "https://github.com/user/_config.yml");
+        var result = await _analyzer.AnalyzeConfigurationAsync(yamlContent, "https://github.com/user/_config.yml", TestContext.Current.CancellationToken);
 
         // Assert
         result.DeploymentConfig.Target.Should().Be("GitHub Pages");
@@ -658,7 +658,7 @@ public class SiteConfigurationAnalyzerTests
             """;
 
         // Act
-        var result = await _analyzer.AnalyzeConfigurationAsync(yamlContent, "https://github.com/user/_config.yml");
+        var result = await _analyzer.AnalyzeConfigurationAsync(yamlContent, "https://github.com/user/_config.yml", TestContext.Current.CancellationToken);
 
         // Assert
         result.DeploymentConfig.Target.Should().Be("Netlify");
@@ -685,7 +685,7 @@ public class SiteConfigurationAnalyzerTests
             """;
 
         // Act
-        var result = await _analyzer.AnalyzeConfigurationAsync(yamlContent, "https://github.com/user/_config.yml");
+        var result = await _analyzer.AnalyzeConfigurationAsync(yamlContent, "https://github.com/user/_config.yml", TestContext.Current.CancellationToken);
 
         // Assert
         result.SeoConfig.GoogleAnalytics.Should().Be("UA-12345678-1");
@@ -716,7 +716,7 @@ public class SiteConfigurationAnalyzerTests
             """;
 
         // Act
-        var result = await _analyzer.AnalyzeConfigurationAsync(yamlContent, "https://github.com/user/_config.yml");
+        var result = await _analyzer.AnalyzeConfigurationAsync(yamlContent, "https://github.com/user/_config.yml", TestContext.Current.CancellationToken);
 
         // Assert
         result.PerformanceConfig.CompressHtml.Should().BeTrue();
@@ -1034,7 +1034,7 @@ public class SiteConfigurationAnalyzerTests
             title: "Jekyll Blog"
             markdown: kramdown
             """;
-        var config = await _analyzer.AnalyzeConfigurationAsync(yamlContent, "https://github.com/user/_config.yml");
+        var config = await _analyzer.AnalyzeConfigurationAsync(yamlContent, "https://github.com/user/_config.yml", TestContext.Current.CancellationToken);
 
         // Act
         var converted = _analyzer.ConvertToFormat(config, SiteConfigurationType.Jekyll);
@@ -1054,7 +1054,7 @@ public class SiteConfigurationAnalyzerTests
             url: "https://example.com"
             lang: "en"
             """;
-        var config = await _analyzer.AnalyzeConfigurationAsync(yamlContent, "https://github.com/user/_config.yml");
+        var config = await _analyzer.AnalyzeConfigurationAsync(yamlContent, "https://github.com/user/_config.yml", TestContext.Current.CancellationToken);
 
         // Act
         var converted = _analyzer.ConvertToFormat(config, SiteConfigurationType.Hugo);
@@ -1072,7 +1072,7 @@ public class SiteConfigurationAnalyzerTests
             title: "Jekyll Documentation"
             description: "Docs site"
             """;
-        var config = await _analyzer.AnalyzeConfigurationAsync(yamlContent, "https://github.com/user/_config.yml");
+        var config = await _analyzer.AnalyzeConfigurationAsync(yamlContent, "https://github.com/user/_config.yml", TestContext.Current.CancellationToken);
 
         // Act
         var converted = _analyzer.ConvertToFormat(config, SiteConfigurationType.GitBook);

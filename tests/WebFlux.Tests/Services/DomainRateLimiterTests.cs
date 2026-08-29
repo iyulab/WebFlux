@@ -74,7 +74,7 @@ public class DomainRateLimiterTests : IDisposable
         {
             executed = true;
             return Task.FromResult(true);
-        });
+        }, TestContext.Current.CancellationToken);
 
         // Assert
         executed.Should().BeTrue();
@@ -88,12 +88,12 @@ public class DomainRateLimiterTests : IDisposable
         _rateLimiter.SetDomainLimit(domain, TimeSpan.FromMilliseconds(100));
 
         // Act - First request
-        await _rateLimiter.ExecuteAsync(domain, () => Task.FromResult(1));
+        await _rateLimiter.ExecuteAsync(domain, () => Task.FromResult(1), TestContext.Current.CancellationToken);
 
         var sw = System.Diagnostics.Stopwatch.StartNew();
 
         // Act - Second request (should wait)
-        await _rateLimiter.ExecuteAsync(domain, () => Task.FromResult(2));
+        await _rateLimiter.ExecuteAsync(domain, () => Task.FromResult(2), TestContext.Current.CancellationToken);
 
         sw.Stop();
 
@@ -109,10 +109,10 @@ public class DomainRateLimiterTests : IDisposable
         var domain2 = "example2.com";
 
         // Act
-        await _rateLimiter.ExecuteAsync(domain1, () => Task.FromResult(1));
+        await _rateLimiter.ExecuteAsync(domain1, () => Task.FromResult(1), TestContext.Current.CancellationToken);
 
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        await _rateLimiter.ExecuteAsync(domain2, () => Task.FromResult(2));
+        await _rateLimiter.ExecuteAsync(domain2, () => Task.FromResult(2), TestContext.Current.CancellationToken);
         sw.Stop();
 
         // Assert - Should execute immediately (no wait needed for different domain)
@@ -144,7 +144,7 @@ public class DomainRateLimiterTests : IDisposable
         {
             executed = true;
             return Task.CompletedTask;
-        });
+        }, TestContext.Current.CancellationToken);
 
         // Assert
         executed.Should().BeTrue();
@@ -157,7 +157,7 @@ public class DomainRateLimiterTests : IDisposable
         var url = "https://www.example.com/path/to/page";
 
         // Act
-        await _rateLimiter.ExecuteAsync(url, () => Task.FromResult(1));
+        await _rateLimiter.ExecuteAsync(url, () => Task.FromResult(1), TestContext.Current.CancellationToken);
 
         // Assert
         var lastRequest = _rateLimiter.GetLastRequestTime("www.example.com");
@@ -241,7 +241,7 @@ public class DomainRateLimiterTests : IDisposable
         var beforeRequest = DateTimeOffset.UtcNow;
 
         // Act
-        await _rateLimiter.ExecuteAsync(domain, () => Task.FromResult(1));
+        await _rateLimiter.ExecuteAsync(domain, () => Task.FromResult(1), TestContext.Current.CancellationToken);
         var lastRequest = _rateLimiter.GetLastRequestTime(domain);
 
         // Assert
@@ -271,7 +271,7 @@ public class DomainRateLimiterTests : IDisposable
         _rateLimiter.SetDomainLimit(domain, TimeSpan.FromSeconds(10));
 
         // Act
-        await _rateLimiter.ExecuteAsync(domain, () => Task.FromResult(1));
+        await _rateLimiter.ExecuteAsync(domain, () => Task.FromResult(1), TestContext.Current.CancellationToken);
         var waitTime = _rateLimiter.GetWaitTime(domain);
 
         // Assert
@@ -302,9 +302,9 @@ public class DomainRateLimiterTests : IDisposable
         _rateLimiter.SetDomainLimit("example.com", TimeSpan.FromMilliseconds(10));
 
         // Act
-        await _rateLimiter.ExecuteAsync("example.com", () => Task.FromResult(1));
-        await _rateLimiter.ExecuteAsync("example.com", () => Task.FromResult(2));
-        await _rateLimiter.ExecuteAsync("other.com", () => Task.FromResult(3));
+        await _rateLimiter.ExecuteAsync("example.com", () => Task.FromResult(1), TestContext.Current.CancellationToken);
+        await _rateLimiter.ExecuteAsync("example.com", () => Task.FromResult(2), TestContext.Current.CancellationToken);
+        await _rateLimiter.ExecuteAsync("other.com", () => Task.FromResult(3), TestContext.Current.CancellationToken);
 
         var stats = _rateLimiter.GetStatistics();
 
@@ -349,7 +349,7 @@ public class DomainRateLimiterTests : IDisposable
     {
         // Arrange
         _rateLimiter.SetDomainLimit("example.com", TimeSpan.FromSeconds(5));
-        await _rateLimiter.ExecuteAsync("example.com", () => Task.FromResult(1));
+        await _rateLimiter.ExecuteAsync("example.com", () => Task.FromResult(1), TestContext.Current.CancellationToken);
 
         // Act
         _rateLimiter.Reset();

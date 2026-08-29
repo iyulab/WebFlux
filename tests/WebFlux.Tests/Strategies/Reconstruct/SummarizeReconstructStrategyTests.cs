@@ -108,8 +108,7 @@ public class SummarizeReconstructStrategyTests
 
         // Act & Assert
         await Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await strategyWithoutLlm.ApplyAsync(content, options)
-        );
+            async () => await strategyWithoutLlm.ApplyAsync(content, options, TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -134,7 +133,7 @@ public class SummarizeReconstructStrategyTests
             .Returns(expectedSummary);
 
         // Act
-        var result = await _strategy.ApplyAsync(content, options);
+        var result = await _strategy.ApplyAsync(content, options, TestContext.Current.CancellationToken);
 
         // Assert
         await _mockLlmService.Received(1)
@@ -168,7 +167,7 @@ public class SummarizeReconstructStrategyTests
             .Returns("Summary");
 
         // Act
-        await _strategy.ApplyAsync(content, options);
+        await _strategy.ApplyAsync(content, options, TestContext.Current.CancellationToken);
 
         // Assert
         await _mockLlmService.Received(1)
@@ -194,7 +193,7 @@ public class SummarizeReconstructStrategyTests
             .Returns(summary);
 
         // Act
-        var result = await _strategy.ApplyAsync(content, options);
+        var result = await _strategy.ApplyAsync(content, options, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result.Metrics);
@@ -220,7 +219,7 @@ public class SummarizeReconstructStrategyTests
             .Returns(summary);
 
         // Act
-        var result = await _strategy.ApplyAsync(content, options);
+        var result = await _strategy.ApplyAsync(content, options, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Single(result.Enhancements);
@@ -286,8 +285,8 @@ public class SummarizeReconstructStrategyTests
             .Returns("Summary");
 
         // Act
-        await _strategy.ApplyAsync(content, options1);
-        await _strategy.ApplyAsync(content, options2);
+        await _strategy.ApplyAsync(content, options1, TestContext.Current.CancellationToken);
+        await _strategy.ApplyAsync(content, options2, TestContext.Current.CancellationToken);
 
         // Assert
         await _mockLlmService.Received(1)

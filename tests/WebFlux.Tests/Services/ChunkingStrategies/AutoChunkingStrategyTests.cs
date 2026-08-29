@@ -66,7 +66,7 @@ public class AutoChunkingStrategyTests
         };
 
         // Act
-        var chunks = await _strategy.ChunkAsync(content);
+        var chunks = await _strategy.ChunkAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         chunks.Should().BeEmpty();
@@ -84,7 +84,7 @@ public class AutoChunkingStrategyTests
         };
 
         // Act
-        var chunks = await _strategy.ChunkAsync(content);
+        var chunks = await _strategy.ChunkAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         chunks.Should().BeEmpty();
@@ -106,7 +106,7 @@ public class AutoChunkingStrategyTests
         };
 
         // Act
-        var chunks = await _strategy.ChunkAsync(content);
+        var chunks = await _strategy.ChunkAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         chunks.Should().NotBeEmpty();
@@ -130,7 +130,7 @@ public class AutoChunkingStrategyTests
         };
 
         // Act
-        var chunks = await _strategy.ChunkAsync(content);
+        var chunks = await _strategy.ChunkAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         chunks.Should().HaveCountGreaterThan(1);
@@ -154,7 +154,7 @@ public class AutoChunkingStrategyTests
             Url = "https://example.com"
         };
 
-        var chunks = await _strategy.ChunkAsync(content);
+        var chunks = await _strategy.ChunkAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         chunks.Should().ContainSingle(
             "512 is a token budget, not a character budget; this text is under it");
@@ -173,7 +173,7 @@ public class AutoChunkingStrategyTests
         };
 
         // Act
-        var chunks = await _strategy.ChunkAsync(content);
+        var chunks = await _strategy.ChunkAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         chunks.Should().NotBeEmpty();
@@ -192,7 +192,7 @@ public class AutoChunkingStrategyTests
         };
 
         // Act
-        var chunks = await _strategy.ChunkAsync(content);
+        var chunks = await _strategy.ChunkAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         chunks.Should().NotBeEmpty();
@@ -213,7 +213,7 @@ public class AutoChunkingStrategyTests
         };
 
         // Act
-        var chunks = await _strategy.ChunkAsync(content);
+        var chunks = await _strategy.ChunkAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert - Should not throw and should return chunks
         chunks.Should().NotBeNull();
@@ -237,7 +237,7 @@ public class AutoChunkingStrategyTests
         var options = new ChunkingOptions { ChunkSize = 500 };
 
         // Act
-        var chunks = await _strategy.ChunkAsync(content, options);
+        var chunks = await _strategy.ChunkAsync(content, options, TestContext.Current.CancellationToken);
 
         // Assert
         chunks.Should().NotBeEmpty();
@@ -259,7 +259,7 @@ public class AutoChunkingStrategyTests
         };
 
         // Act
-        var chunks = await _strategy.ChunkAsync(content);
+        var chunks = await _strategy.ChunkAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         chunks.Should().AllSatisfy(chunk =>
@@ -283,7 +283,7 @@ public class AutoChunkingStrategyTests
         };
 
         // Act
-        var chunks = await _strategy.ChunkAsync(content);
+        var chunks = await _strategy.ChunkAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         var ids = chunks.Select(c => c.Id).ToList();
@@ -302,7 +302,7 @@ public class AutoChunkingStrategyTests
         };
 
         // Act
-        var chunks = await _strategy.ChunkAsync(content);
+        var chunks = await _strategy.ChunkAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         for (int i = 0; i < chunks.Count; i++)
@@ -334,7 +334,7 @@ public class AutoChunkingStrategyTests
         };
 
         // Act
-        var chunks = await _strategy.ChunkAsync(content);
+        var chunks = await _strategy.ChunkAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         chunks.Should().NotBeEmpty();
@@ -353,7 +353,7 @@ public class AutoChunkingStrategyTests
         };
 
         // Act
-        var chunks = await _strategy.ChunkAsync(content);
+        var chunks = await _strategy.ChunkAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         chunks.Should().NotBeEmpty();
@@ -374,7 +374,7 @@ public class AutoChunkingStrategyTests
         };
 
         // Act
-        var chunks = await _strategy.ChunkAsync(content);
+        var chunks = await _strategy.ChunkAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         chunks.All(c => c.SourceUrl == "https://example.com/page").Should().BeTrue();
@@ -421,7 +421,7 @@ public class AutoChunkingStrategyTests
         };
 
         // Act
-        var chunks = await _strategy.ChunkAsync(content);
+        var chunks = await _strategy.ChunkAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         chunks.Should().HaveCountGreaterThan(1);
@@ -458,7 +458,7 @@ Regular paragraph text continues here with more details about the implementation
         };
 
         // Act
-        var chunks = await _strategy.ChunkAsync(content);
+        var chunks = await _strategy.ChunkAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         chunks.Should().NotBeEmpty();

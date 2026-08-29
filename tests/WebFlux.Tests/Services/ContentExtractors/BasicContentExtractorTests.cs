@@ -29,7 +29,7 @@ public class BasicContentExtractorTests
         var url = "https://example.com";
 
         // Act
-        var result = await _extractor.ExtractFromHtmlAsync(html, url);
+        var result = await _extractor.ExtractFromHtmlAsync(html, url, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();
@@ -47,7 +47,7 @@ public class BasicContentExtractorTests
         var url = "https://example.com";
 
         // Act
-        var result = await _extractor.ExtractFromHtmlAsync(html, url);
+        var result = await _extractor.ExtractFromHtmlAsync(html, url, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Text.Should().Contain("<p>");
@@ -63,7 +63,7 @@ public class BasicContentExtractorTests
         var url = "https://example.com";
 
         // Act
-        var result = await _extractor.ExtractFromHtmlAsync(html, url);
+        var result = await _extractor.ExtractFromHtmlAsync(html, url, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Title.Should().Be("Untitled");
@@ -86,7 +86,7 @@ public class BasicContentExtractorTests
         var url = "https://example.com";
 
         // Act
-        var result = await _extractor.ExtractFromHtmlAsync(html, url);
+        var result = await _extractor.ExtractFromHtmlAsync(html, url, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Text.Should().NotContain("<");
@@ -108,7 +108,7 @@ public class BasicContentExtractorTests
         var url = "https://example.com";
 
         // Act
-        var result = await _extractor.ExtractFromMarkdownAsync(markdown, url);
+        var result = await _extractor.ExtractFromMarkdownAsync(markdown, url, TestContext.Current.CancellationToken);
 
         // Assert
         result.Text.Should().Be(markdown);
@@ -134,7 +134,7 @@ var code = ""example"";
         var url = "https://example.com";
 
         // Act
-        var result = await _extractor.ExtractFromMarkdownAsync(markdown, url);
+        var result = await _extractor.ExtractFromMarkdownAsync(markdown, url, TestContext.Current.CancellationToken);
 
         // Assert
         result.Text.Should().Be(markdown);
@@ -153,7 +153,7 @@ var code = ""example"";
         var url = "https://example.com";
 
         // Act
-        var result = await _extractor.ExtractFromJsonAsync(json, url);
+        var result = await _extractor.ExtractFromJsonAsync(json, url, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();
@@ -170,7 +170,7 @@ var code = ""example"";
         var url = "https://example.com";
 
         // Act
-        var result = await _extractor.ExtractFromJsonAsync(json, url);
+        var result = await _extractor.ExtractFromJsonAsync(json, url, TestContext.Current.CancellationToken);
 
         // Assert
         result.Text.Should().Be(json);
@@ -186,7 +186,7 @@ var code = ""example"";
         var url = "https://example.com";
 
         // Act
-        var result = await _extractor.ExtractFromJsonAsync(json, url);
+        var result = await _extractor.ExtractFromJsonAsync(json, url, TestContext.Current.CancellationToken);
 
         // Assert
         result.Text.Should().Contain("Alice");
@@ -205,7 +205,7 @@ var code = ""example"";
         var url = "https://example.com";
 
         // Act
-        var result = await _extractor.ExtractFromXmlAsync(xml, url);
+        var result = await _extractor.ExtractFromXmlAsync(xml, url, TestContext.Current.CancellationToken);
 
         // Assert
         result.Text.Should().Be(xml);
@@ -226,7 +226,7 @@ var code = ""example"";
         var url = "https://example.com";
 
         // Act
-        var result = await _extractor.ExtractFromTextAsync(text, url);
+        var result = await _extractor.ExtractFromTextAsync(text, url, TestContext.Current.CancellationToken);
 
         // Assert
         result.Text.Should().Be(text);
@@ -255,7 +255,7 @@ var code = ""example"";
         var url = "https://example.com";
 
         // Act
-        var result = await _extractor.ExtractAutoAsync(content, url, contentType);
+        var result = await _extractor.ExtractAutoAsync(content, url, contentType, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();
@@ -287,7 +287,7 @@ var code = ""example"";
         var url = "https://example.com";
 
         // Act
-        var result = await _extractor.ExtractAutoAsync(html, url, "text/html");
+        var result = await _extractor.ExtractAutoAsync(html, url, "text/html", TestContext.Current.CancellationToken);
 
         // Assert
         result.Text.Should().NotContain("<");
@@ -339,7 +339,7 @@ var code = ""example"";
     public async Task GetStatistics_AfterExtraction_ShouldStillReturnZero()
     {
         // Arrange
-        await _extractor.ExtractFromHtmlAsync("<html></html>", "https://example.com");
+        await _extractor.ExtractFromHtmlAsync("<html></html>", "https://example.com", cancellationToken: TestContext.Current.CancellationToken);
 
         // Act
         var stats = _extractor.GetStatistics();

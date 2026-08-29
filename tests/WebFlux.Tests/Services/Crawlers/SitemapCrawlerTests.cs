@@ -74,7 +74,7 @@ public class SitemapCrawlerTests : IDisposable
             .Returns(response);
 
         // Act
-        var result = await _crawler.CrawlAsync(url);
+        var result = await _crawler.CrawlAsync(url, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();
@@ -107,7 +107,7 @@ public class SitemapCrawlerTests : IDisposable
 
         // Act
         var results = new List<CrawlResult>();
-        await foreach (var result in _crawler.CrawlSitemapAsync(sitemapUrl))
+        await foreach (var result in _crawler.CrawlSitemapAsync(sitemapUrl, cancellationToken: TestContext.Current.CancellationToken))
         {
             results.Add(result);
         }
@@ -132,7 +132,7 @@ public class SitemapCrawlerTests : IDisposable
 
         // Act
         var results = new List<CrawlResult>();
-        await foreach (var result in _crawler.CrawlSitemapAsync(sitemapUrl))
+        await foreach (var result in _crawler.CrawlSitemapAsync(sitemapUrl, cancellationToken: TestContext.Current.CancellationToken))
         {
             results.Add(result);
         }
@@ -162,7 +162,7 @@ public class SitemapCrawlerTests : IDisposable
 
         // Act
         var results = new List<CrawlResult>();
-        await foreach (var result in _crawler.CrawlSitemapAsync(sitemapIndexUrl))
+        await foreach (var result in _crawler.CrawlSitemapAsync(sitemapIndexUrl, cancellationToken: TestContext.Current.CancellationToken))
         {
             results.Add(result);
         }
@@ -190,7 +190,7 @@ public class SitemapCrawlerTests : IDisposable
 
         // Act
         var results = new List<CrawlResult>();
-        await foreach (var result in _crawler.CrawlWebsiteAsync(url, options))
+        await foreach (var result in _crawler.CrawlWebsiteAsync(url, options, TestContext.Current.CancellationToken))
         {
             results.Add(result);
         }

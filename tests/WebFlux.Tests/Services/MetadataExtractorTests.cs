@@ -23,11 +23,11 @@ public class MetadataExtractorTests
     {
         // Arrange
         var htmlPath = Path.Combine("TestData", "sample-rich-metadata.html");
-        var htmlContent = await File.ReadAllTextAsync(htmlPath);
+        var htmlContent = await File.ReadAllTextAsync(htmlPath, TestContext.Current.CancellationToken);
         var sourceUrl = "https://github.com/iyulab/WebFlux";
 
         // Act
-        var metadata = await _extractor.ExtractMetadataAsync(htmlContent, sourceUrl);
+        var metadata = await _extractor.ExtractMetadataAsync(htmlContent, sourceUrl, TestContext.Current.CancellationToken);
 
         // Assert
         ValidateBasicMetadata(metadata.Basic);
@@ -47,11 +47,11 @@ public class MetadataExtractorTests
     {
         // Arrange
         var htmlPath = Path.Combine("TestData", "sample-blog-post.html");
-        var htmlContent = await File.ReadAllTextAsync(htmlPath);
+        var htmlContent = await File.ReadAllTextAsync(htmlPath, TestContext.Current.CancellationToken);
         var sourceUrl = "https://techblog.example.com/rag-pipeline-optimization";
 
         // Act
-        var metadata = await _extractor.ExtractMetadataAsync(htmlContent, sourceUrl);
+        var metadata = await _extractor.ExtractMetadataAsync(htmlContent, sourceUrl, TestContext.Current.CancellationToken);
 
         // Assert
         // Basic metadata
@@ -86,7 +86,7 @@ public class MetadataExtractorTests
         var sourceUrl = "https://example.com/simple";
 
         // Act
-        var metadata = await _extractor.ExtractMetadataAsync(htmlContent, sourceUrl);
+        var metadata = await _extractor.ExtractMetadataAsync(htmlContent, sourceUrl, TestContext.Current.CancellationToken);
 
         // Assert
         metadata.Basic.Title.Should().Be("Simple Page");
@@ -121,7 +121,7 @@ public class MetadataExtractorTests
         </html>";
 
         // Act
-        var metadata = await _extractor.ExtractMetadataAsync(htmlContent, "https://example.com");
+        var metadata = await _extractor.ExtractMetadataAsync(htmlContent, "https://example.com", TestContext.Current.CancellationToken);
 
         // Assert
         metadata.SchemaOrg.MainEntityType.Should().Be("SoftwareLibrary");
@@ -340,7 +340,7 @@ public class MetadataExtractorTests
         </html>";
 
         // Act
-        var metadata = await _extractor.ExtractMetadataAsync(htmlContent, "https://example.com");
+        var metadata = await _extractor.ExtractMetadataAsync(htmlContent, "https://example.com", TestContext.Current.CancellationToken);
 
         // Assert
         metadata.Basic.Title.Should().Be("Test Page Title");
@@ -379,7 +379,7 @@ public class MetadataExtractorTests
         </html>";
 
         // Act
-        var metadata = await _extractor.ExtractMetadataAsync(htmlContent, "https://example.com");
+        var metadata = await _extractor.ExtractMetadataAsync(htmlContent, "https://example.com", TestContext.Current.CancellationToken);
 
         // Assert
         metadata.OpenGraph.Title.Should().Be("Open Graph Title");
@@ -415,7 +415,7 @@ public class MetadataExtractorTests
         </html>";
 
         // Act
-        var metadata = await _extractor.ExtractMetadataAsync(htmlContent, "https://example.com");
+        var metadata = await _extractor.ExtractMetadataAsync(htmlContent, "https://example.com", TestContext.Current.CancellationToken);
 
         // Assert
         metadata.TwitterCards.Card.Should().Be("summary_large_image");
@@ -459,7 +459,7 @@ public class MetadataExtractorTests
         </html>";
 
         // Act
-        var metadata = await _extractor.ExtractMetadataAsync(htmlContent, "https://example.com");
+        var metadata = await _extractor.ExtractMetadataAsync(htmlContent, "https://example.com", TestContext.Current.CancellationToken);
 
         // Assert
         metadata.SchemaOrg.MainEntityType.Should().Be("Article");
@@ -497,7 +497,7 @@ public class MetadataExtractorTests
         </html>";
 
         // Act
-        var metadata = await _extractor.ExtractMetadataAsync(htmlContent, "https://example.com");
+        var metadata = await _extractor.ExtractMetadataAsync(htmlContent, "https://example.com", TestContext.Current.CancellationToken);
 
         // Assert
         metadata.SchemaOrg.MainEntityType.Should().Be("SoftwareApplication");
@@ -532,7 +532,7 @@ public class MetadataExtractorTests
         </html>";
 
         // Act
-        var metadata = await _extractor.ExtractMetadataAsync(htmlContent, "https://example.com");
+        var metadata = await _extractor.ExtractMetadataAsync(htmlContent, "https://example.com", TestContext.Current.CancellationToken);
 
         // Assert
         metadata.DublinCore.Title.Should().Be("Dublin Core Title");
@@ -577,7 +577,7 @@ public class MetadataExtractorTests
         </html>";
 
         // Act
-        var metadata = await _extractor.ExtractMetadataAsync(htmlContent, "https://example.com");
+        var metadata = await _extractor.ExtractMetadataAsync(htmlContent, "https://example.com", TestContext.Current.CancellationToken);
 
         // Assert
         metadata.Structure.Headings.Should().HaveCount(4); // h1, 2x h2, h3
@@ -618,7 +618,7 @@ public class MetadataExtractorTests
         </html>";
 
         // Act
-        var metadata = await _extractor.ExtractMetadataAsync(htmlContent, "https://example.com");
+        var metadata = await _extractor.ExtractMetadataAsync(htmlContent, "https://example.com", TestContext.Current.CancellationToken);
 
         // Assert
         metadata.Navigation.Should().NotBeNull();
@@ -643,7 +643,7 @@ public class MetadataExtractorTests
         </html>";
 
         // Act
-        var metadata = await _extractor.ExtractMetadataAsync(htmlContent, "https://example.com");
+        var metadata = await _extractor.ExtractMetadataAsync(htmlContent, "https://example.com", TestContext.Current.CancellationToken);
 
         // Assert
         metadata.Technical.RequiresJavaScript.Should().BeTrue();
@@ -659,7 +659,7 @@ public class MetadataExtractorTests
         var htmlContent = "<html><head><title>Test</title></head><body></body></html>";
 
         // Act
-        var metadata = await _extractor.ExtractMetadataAsync(htmlContent, "https://example.com");
+        var metadata = await _extractor.ExtractMetadataAsync(htmlContent, "https://example.com", TestContext.Current.CancellationToken);
 
         // Assert
         metadata.Technical.Security.IsHttps.Should().BeTrue();
@@ -683,7 +683,7 @@ public class MetadataExtractorTests
         </html>";
 
         // Act
-        var metadata = await _extractor.ExtractMetadataAsync(htmlContent, "https://example.com");
+        var metadata = await _extractor.ExtractMetadataAsync(htmlContent, "https://example.com", TestContext.Current.CancellationToken);
 
         // Assert
         metadata.Accessibility.ImageAltTextCoverage.Should().Be(1.0); // 100% alt text coverage
@@ -714,7 +714,7 @@ public class MetadataExtractorTests
         </html>";
 
         // Act
-        var metadata = await _extractor.ExtractMetadataAsync(htmlContent, "https://example.com");
+        var metadata = await _extractor.ExtractMetadataAsync(htmlContent, "https://example.com", TestContext.Current.CancellationToken);
 
         // Assert
         metadata.Classification.ContentType.Should().Be("Article");
@@ -738,7 +738,7 @@ public class MetadataExtractorTests
         </html>";
 
         // Act
-        var metadata = await _extractor.ExtractMetadataAsync(htmlContent, "https://example.com");
+        var metadata = await _extractor.ExtractMetadataAsync(htmlContent, "https://example.com", TestContext.Current.CancellationToken);
 
         // Assert
         metadata.Accessibility.ImageAltTextCoverage.Should().Be(0.5); // 2 out of 4 have alt text
@@ -774,11 +774,11 @@ public class MetadataExtractorIntegrationTests
             await CreateTestDataFile(htmlFile);
         }
 
-        var htmlContent = await File.ReadAllTextAsync(htmlFile);
+        var htmlContent = await File.ReadAllTextAsync(htmlFile, TestContext.Current.CancellationToken);
         var sourceUrl = "file://" + htmlFile.Replace('\\', '/');
 
         // Act
-        var metadata = await _extractor.ExtractMetadataAsync(htmlContent, sourceUrl);
+        var metadata = await _extractor.ExtractMetadataAsync(htmlContent, sourceUrl, TestContext.Current.CancellationToken);
 
         // Assert - Comprehensive validation
         metadata.Should().NotBeNull();
@@ -824,11 +824,11 @@ public class MetadataExtractorIntegrationTests
             await CreateBlogPostTestFile(htmlFile);
         }
 
-        var htmlContent = await File.ReadAllTextAsync(htmlFile);
+        var htmlContent = await File.ReadAllTextAsync(htmlFile, TestContext.Current.CancellationToken);
         var sourceUrl = "file://" + htmlFile.Replace('\\', '/');
 
         // Act
-        var metadata = await _extractor.ExtractMetadataAsync(htmlContent, sourceUrl);
+        var metadata = await _extractor.ExtractMetadataAsync(htmlContent, sourceUrl, TestContext.Current.CancellationToken);
 
         // Assert
         metadata.Should().NotBeNull();

@@ -57,7 +57,7 @@ public class SmartChunkingStrategyTests
         };
 
         // Act
-        var chunks = await _strategy.ChunkAsync(content);
+        var chunks = await _strategy.ChunkAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         chunks.Should().BeEmpty();
@@ -75,7 +75,7 @@ public class SmartChunkingStrategyTests
         };
 
         // Act
-        var chunks = await _strategy.ChunkAsync(content);
+        var chunks = await _strategy.ChunkAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         chunks.Should().BeEmpty();
@@ -109,7 +109,7 @@ Detailed content for subsection.";
         };
 
         // Act
-        var chunks = await _strategy.ChunkAsync(content);
+        var chunks = await _strategy.ChunkAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         chunks.Should().NotBeEmpty();
@@ -141,7 +141,7 @@ Content for section two";
         };
 
         // Act
-        var chunks = await _strategy.ChunkAsync(content);
+        var chunks = await _strategy.ChunkAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         chunks.Should().NotBeEmpty();
@@ -162,7 +162,7 @@ Content for section two";
         };
 
         // Act
-        var chunks = await _strategy.ChunkAsync(content);
+        var chunks = await _strategy.ChunkAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         chunks.Should().HaveCountGreaterThan(1);
@@ -185,7 +185,7 @@ Content for section two";
         };
 
         // Act
-        var chunks = await _strategy.ChunkAsync(content);
+        var chunks = await _strategy.ChunkAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         chunks.Should().NotBeEmpty();
@@ -205,7 +205,7 @@ Content for section two";
         };
 
         // Act
-        var chunks = await _strategy.ChunkAsync(content);
+        var chunks = await _strategy.ChunkAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         chunks.Should().NotBeEmpty();
@@ -227,7 +227,7 @@ Content for section two";
         };
 
         // Act
-        var chunks = await _strategy.ChunkAsync(content);
+        var chunks = await _strategy.ChunkAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         chunks.Should().HaveCountGreaterThan(1);
@@ -255,7 +255,7 @@ Content for section two";
         var options = new ChunkingOptions { ChunkSize = 500 };
 
         // Act
-        var chunks = await _strategy.ChunkAsync(content, options);
+        var chunks = await _strategy.ChunkAsync(content, options, TestContext.Current.CancellationToken);
 
         // Assert
         chunks.Should().NotBeEmpty();
@@ -279,7 +279,7 @@ Content for section two";
         };
 
         // Act
-        var chunks = await _strategy.ChunkAsync(content);
+        var chunks = await _strategy.ChunkAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         chunks.Should().HaveCountGreaterThan(1);
@@ -306,7 +306,7 @@ Content for section two";
         };
 
         // Act
-        var chunks = await _strategy.ChunkAsync(content);
+        var chunks = await _strategy.ChunkAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         chunks.Should().NotBeEmpty();
@@ -328,7 +328,7 @@ Content for section two";
         };
 
         // Act
-        var chunks = await _strategy.ChunkAsync(content);
+        var chunks = await _strategy.ChunkAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         chunks.Should().NotBeEmpty();
@@ -351,7 +351,7 @@ More content here";
         };
 
         // Act
-        var chunks = await _strategy.ChunkAsync(content);
+        var chunks = await _strategy.ChunkAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         chunks.Should().NotBeEmpty();
@@ -377,7 +377,7 @@ More content here";
         };
 
         // Act
-        var chunks = await _strategy.ChunkAsync(content);
+        var chunks = await _strategy.ChunkAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         for (int i = 0; i < chunks.Count; i++)
@@ -399,7 +399,7 @@ More content here";
         };
 
         // Act
-        var chunks = await _strategy.ChunkAsync(content);
+        var chunks = await _strategy.ChunkAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         chunks.Should().AllSatisfy(chunk =>
@@ -428,7 +428,7 @@ More content here";
         };
 
         // Act
-        var chunks = await _strategy.ChunkAsync(content);
+        var chunks = await _strategy.ChunkAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         var ids = chunks.Select(c => c.Id).ToList();
@@ -454,7 +454,7 @@ More content here";
         };
 
         // Act
-        var chunks = await _strategy.ChunkAsync(content);
+        var chunks = await _strategy.ChunkAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         chunks[0].Content.Should().Contain("Main");
@@ -510,7 +510,7 @@ Content 3";
         };
 
         // Act
-        var chunks = await _strategy.ChunkAsync(content);
+        var chunks = await _strategy.ChunkAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         chunks.Should().NotBeEmpty();
@@ -533,7 +533,7 @@ Content 3";
         };
 
         // Act
-        var chunks = await _strategy.ChunkAsync(content);
+        var chunks = await _strategy.ChunkAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         chunks.Should().NotBeEmpty();
@@ -556,7 +556,7 @@ Content 3";
         };
 
         // Act
-        var chunks = await _strategy.ChunkAsync(content);
+        var chunks = await _strategy.ChunkAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         chunks.Should().HaveCountGreaterThan(1);
@@ -580,7 +580,7 @@ Content 3";
             Headings = ["First", "Second", "Third"]
         };
 
-        var chunks = await _strategy.ChunkAsync(content);
+        var chunks = await _strategy.ChunkAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         chunks.Should().HaveCount(3, "each heading opens a section regardless of how short it is");
         chunks[0].Content.Should().Contain("Alpha");
@@ -602,7 +602,7 @@ Content 3";
             Headings = ["Only section"]
         };
 
-        var chunks = await _strategy.ChunkAsync(content, new ChunkingOptions { MaxChunkSize = 512 });
+        var chunks = await _strategy.ChunkAsync(content, new ChunkingOptions { MaxChunkSize = 512 }, TestContext.Current.CancellationToken);
 
         chunks.Should().ContainSingle("512 is a token budget, not a character budget");
     }

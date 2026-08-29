@@ -28,7 +28,7 @@ public class IntelligentCrawlerTests
         var url = "https://example.com";
 
         // Act
-        var result = await _crawler.CrawlAsync(url);
+        var result = await _crawler.CrawlAsync(url, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();
@@ -45,7 +45,7 @@ public class IntelligentCrawlerTests
         var url = "https://test.com/page";
 
         // Act
-        var result = await _crawler.CrawlAsync(url);
+        var result = await _crawler.CrawlAsync(url, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Content.Should().Contain(url);
@@ -64,7 +64,7 @@ public class IntelligentCrawlerTests
         };
 
         // Act
-        var result = await _crawler.CrawlAsync(url, options);
+        var result = await _crawler.CrawlAsync(url, options, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();
@@ -93,8 +93,8 @@ public class IntelligentCrawlerTests
         var url = "https://example.com";
 
         // Act
-        var result1 = await _crawler.CrawlAsync(url);
-        var result2 = await _crawler.CrawlAsync(url);
+        var result1 = await _crawler.CrawlAsync(url, cancellationToken: TestContext.Current.CancellationToken);
+        var result2 = await _crawler.CrawlAsync(url, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result1.Url.Should().Be(result2.Url);
@@ -114,7 +114,7 @@ public class IntelligentCrawlerTests
         var results = new List<CrawlResult>();
 
         // Act
-        await foreach (var result in _crawler.CrawlWebsiteAsync(url))
+        await foreach (var result in _crawler.CrawlWebsiteAsync(url, cancellationToken: TestContext.Current.CancellationToken))
         {
             results.Add(result);
         }
@@ -134,7 +134,7 @@ public class IntelligentCrawlerTests
         var results = new List<CrawlResult>();
 
         // Act
-        await foreach (var result in _crawler.CrawlWebsiteAsync(url, options))
+        await foreach (var result in _crawler.CrawlWebsiteAsync(url, options, TestContext.Current.CancellationToken))
         {
             results.Add(result);
         }
@@ -172,7 +172,7 @@ public class IntelligentCrawlerTests
         var results = new List<CrawlResult>();
 
         // Act
-        await foreach (var result in _crawler.CrawlSitemapAsync(sitemapUrl))
+        await foreach (var result in _crawler.CrawlSitemapAsync(sitemapUrl, cancellationToken: TestContext.Current.CancellationToken))
         {
             results.Add(result);
         }
@@ -192,7 +192,7 @@ public class IntelligentCrawlerTests
         var results = new List<CrawlResult>();
 
         // Act
-        await foreach (var result in _crawler.CrawlSitemapAsync(sitemapUrl, options))
+        await foreach (var result in _crawler.CrawlSitemapAsync(sitemapUrl, options, TestContext.Current.CancellationToken))
         {
             results.Add(result);
         }
@@ -231,7 +231,7 @@ public class IntelligentCrawlerTests
         var userAgent = "TestBot";
 
         // Act
-        var result = await _crawler.GetRobotsTxtAsync(baseUrl, userAgent);
+        var result = await _crawler.GetRobotsTxtAsync(baseUrl, userAgent, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();
@@ -248,8 +248,8 @@ public class IntelligentCrawlerTests
         var userAgent = "TestBot";
 
         // Act
-        var result1 = await _crawler.GetRobotsTxtAsync(baseUrl1, userAgent);
-        var result2 = await _crawler.GetRobotsTxtAsync(baseUrl2, userAgent);
+        var result1 = await _crawler.GetRobotsTxtAsync(baseUrl1, userAgent, TestContext.Current.CancellationToken);
+        var result2 = await _crawler.GetRobotsTxtAsync(baseUrl2, userAgent, TestContext.Current.CancellationToken);
 
         // Assert
         result1.Content.Should().Be(result2.Content);
@@ -388,8 +388,8 @@ public class IntelligentCrawlerTests
     public async Task GetStatistics_AfterMultipleCrawls_ShouldStillReturnZero()
     {
         // Arrange - crawl multiple times
-        _ = await _crawler.CrawlAsync("https://example.com");
-        _ = await _crawler.CrawlAsync("https://test.com");
+        _ = await _crawler.CrawlAsync("https://example.com", cancellationToken: TestContext.Current.CancellationToken);
+        _ = await _crawler.CrawlAsync("https://test.com", cancellationToken: TestContext.Current.CancellationToken);
 
         // Act
         var stats = _crawler.GetStatistics();
@@ -415,8 +415,8 @@ public class IntelligentCrawlerTests
     public async Task IntelligentCrawler_ShouldProvideBasicStubImplementation()
     {
         // Act
-        var crawlResult = await _crawler.CrawlAsync("https://example.com");
-        var robotsInfo = await _crawler.GetRobotsTxtAsync("https://example.com", "Bot");
+        var crawlResult = await _crawler.CrawlAsync("https://example.com", cancellationToken: TestContext.Current.CancellationToken);
+        var robotsInfo = await _crawler.GetRobotsTxtAsync("https://example.com", "Bot", TestContext.Current.CancellationToken);
         var isAllowed = await _crawler.IsUrlAllowedAsync("https://example.com", "Bot");
         var links = _crawler.ExtractLinks("<html></html>", "https://example.com");
         var stats = _crawler.GetStatistics();

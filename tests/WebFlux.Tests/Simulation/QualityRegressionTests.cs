@@ -4,7 +4,6 @@ using AwesomeAssertions;
 using WebFlux.Services.ContentExtractors;
 using WebFlux.Tests.Fixtures;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace WebFlux.Tests.Simulation;
 
@@ -49,20 +48,20 @@ public class QualityRegressionTests
         var goldenFilePath = Path.Combine(GoldenFilesDirectory, goldenFileName);
 
         // Act
-        var result = await _extractor.ExtractFromHtmlAsync(html, $"https://test.example.com/{name}");
+        var result = await _extractor.ExtractFromHtmlAsync(html, $"https://test.example.com/{name}", cancellationToken: TestContext.Current.CancellationToken);
         var currentMarkdown = result.Text;
 
         // 골든 파일이 없으면 생성
         if (!File.Exists(goldenFilePath))
         {
             Directory.CreateDirectory(GoldenFilesDirectory);
-            await File.WriteAllTextAsync(goldenFilePath, currentMarkdown);
+            await File.WriteAllTextAsync(goldenFilePath, currentMarkdown, TestContext.Current.CancellationToken);
             _output.WriteLine($"[{category}/{name}] Golden file created: {goldenFileName} ({currentMarkdown.Length} chars)");
             return;
         }
 
         // 골든 파일과 비교
-        var goldenMarkdown = await File.ReadAllTextAsync(goldenFilePath);
+        var goldenMarkdown = await File.ReadAllTextAsync(goldenFilePath, TestContext.Current.CancellationToken);
         var similarity = CalculateSimilarity(goldenMarkdown, currentMarkdown);
 
         _output.WriteLine($"[{category}/{name}] Similarity with golden file: {similarity:F3}");
@@ -88,8 +87,7 @@ public class QualityRegressionTests
     {
         foreach (var (category, name, html) in HtmlSnapshotLoader.LoadAll())
         {
-            var result = await _extractor.ExtractFromHtmlAsync(
-                html, $"https://test.example.com/{name}");
+            var result = await _extractor.ExtractFromHtmlAsync(html, $"https://test.example.com/{name}", cancellationToken: TestContext.Current.CancellationToken);
 
             _output.WriteLine($"[{category}/{name}] Title: \"{result.Title}\"");
 

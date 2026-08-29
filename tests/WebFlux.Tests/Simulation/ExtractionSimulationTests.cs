@@ -2,7 +2,6 @@ using AwesomeAssertions;
 using WebFlux.Services.ContentExtractors;
 using WebFlux.Tests.Fixtures;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace WebFlux.Tests.Simulation;
 
@@ -42,7 +41,7 @@ public class ExtractionSimulationTests
         var url = $"https://test.example.com/{name}";
 
         // Act
-        var result = await _extractor.ExtractFromHtmlAsync(html, url);
+        var result = await _extractor.ExtractFromHtmlAsync(html, url, cancellationToken: TestContext.Current.CancellationToken);
         var metrics = QualityMeasurer.Measure(result, html);
 
         // Output
@@ -76,7 +75,7 @@ public class ExtractionSimulationTests
         var html = HtmlSnapshotLoader.Load(category, name);
 
         // Act
-        var result = await _extractor.ExtractFromHtmlAsync(html, $"https://test.example.com/{name}");
+        var result = await _extractor.ExtractFromHtmlAsync(html, $"https://test.example.com/{name}", cancellationToken: TestContext.Current.CancellationToken);
         var metrics = QualityMeasurer.Measure(result, html);
 
         // Assert - 뉴스/블로그는 핵심 콘텐츠 보존율이 높아야 함
@@ -94,7 +93,7 @@ public class ExtractionSimulationTests
         var html = HtmlSnapshotLoader.Load(category, name);
 
         // Act
-        var result = await _extractor.ExtractFromHtmlAsync(html, $"https://test.example.com/{name}");
+        var result = await _extractor.ExtractFromHtmlAsync(html, $"https://test.example.com/{name}", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert - 기술 문서/포럼은 코드 블록이 보존되어야 함
         result.Text.Should().MatchRegex(@"```[\s\S]*?```|    .+",
@@ -110,7 +109,7 @@ public class ExtractionSimulationTests
         var html = HtmlSnapshotLoader.Load(category, name);
 
         // Act
-        var result = await _extractor.ExtractFromHtmlAsync(html, $"https://test.example.com/{name}");
+        var result = await _extractor.ExtractFromHtmlAsync(html, $"https://test.example.com/{name}", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert - 테이블이 Markdown 테이블로 보존되어야 함
         result.Text.Should().Contain("|",
@@ -127,7 +126,7 @@ public class ExtractionSimulationTests
         var html = HtmlSnapshotLoader.Load(category, name);
 
         // Act
-        var result = await _extractor.ExtractFromHtmlAsync(html, $"https://test.example.com/{name}");
+        var result = await _extractor.ExtractFromHtmlAsync(html, $"https://test.example.com/{name}", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert - 한국어 텍스트가 포함되어야 함
         result.Text.Should().MatchRegex(@"[\uAC00-\uD7A3]",
@@ -141,7 +140,7 @@ public class ExtractionSimulationTests
         var html = HtmlSnapshotLoader.Load("Edge", "edge-minimal");
 
         // Act
-        var result = await _extractor.ExtractFromHtmlAsync(html, "https://test.example.com/edge-minimal");
+        var result = await _extractor.ExtractFromHtmlAsync(html, "https://test.example.com/edge-minimal", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Text.Should().Contain("minimal HTML page");

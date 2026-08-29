@@ -7,7 +7,6 @@ using WebFlux.Extensions;
 using WebFlux.Services.Crawlers;
 using WebFlux.Tests.Fixtures;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace WebFlux.Tests.Integration;
 
@@ -31,7 +30,7 @@ public class RealWorldCrawlerTests : IAsyncLifetime
         _output = output;
     }
 
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         var services = new ServiceCollection();
         services.AddWebFlux();
@@ -41,12 +40,13 @@ public class RealWorldCrawlerTests : IAsyncLifetime
         await Task.CompletedTask;
     }
 
-    public async Task DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         if (_serviceProvider != null)
         {
             await _serviceProvider.DisposeAsync();
         }
+        GC.SuppressFinalize(this);
     }
 
     #region 기본 크롤링 연결성 테스트 (Crawler 직접 사용)
@@ -58,7 +58,7 @@ public class RealWorldCrawlerTests : IAsyncLifetime
         var url = TestSites.ExampleCom;
 
         // Act
-        var result = await _crawler.CrawlAsync(url);
+        var result = await _crawler.CrawlAsync(url, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();
@@ -75,7 +75,7 @@ public class RealWorldCrawlerTests : IAsyncLifetime
         var url = TestSites.HtmlUrl;
 
         // Act
-        var result = await _crawler.CrawlAsync(url);
+        var result = await _crawler.CrawlAsync(url, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();
@@ -91,7 +91,7 @@ public class RealWorldCrawlerTests : IAsyncLifetime
         var url = TestSites.QuotesToScrape;
 
         // Act
-        var result = await _crawler.CrawlAsync(url);
+        var result = await _crawler.CrawlAsync(url, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();
@@ -116,7 +116,7 @@ public class RealWorldCrawlerTests : IAsyncLifetime
         var options = new CrawlOptions { MaxRetries = 0 }; // 테스트 속도를 위해 재시도 비활성화
 
         // Act
-        var result = await _crawler.CrawlAsync(url, options);
+        var result = await _crawler.CrawlAsync(url, options, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();
@@ -137,7 +137,7 @@ public class RealWorldCrawlerTests : IAsyncLifetime
         var options = new CrawlOptions { MaxRetries = 2, TimeoutMs = 10000 };
 
         // Act
-        var result = await _crawler.CrawlAsync(url, options);
+        var result = await _crawler.CrawlAsync(url, options, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();
@@ -163,7 +163,7 @@ public class RealWorldCrawlerTests : IAsyncLifetime
 
         // Act
         var results = new List<CrawlResult>();
-        await foreach (var result in _crawler.CrawlWebsiteAsync(url, crawlOptions))
+        await foreach (var result in _crawler.CrawlWebsiteAsync(url, crawlOptions, TestContext.Current.CancellationToken))
         {
             results.Add(result);
             _output.WriteLine($"Crawled: {result.Url} (Depth: {result.Depth}, Links: {result.DiscoveredLinks.Count})");
@@ -191,7 +191,7 @@ public class RealWorldCrawlerTests : IAsyncLifetime
 
         // Act
         var visitedUrls = new HashSet<string>();
-        await foreach (var result in _crawler.CrawlWebsiteAsync(url, crawlOptions))
+        await foreach (var result in _crawler.CrawlWebsiteAsync(url, crawlOptions, TestContext.Current.CancellationToken))
         {
             visitedUrls.Add(result.Url);
             _output.WriteLine($"Visited: {result.Url}");
@@ -213,7 +213,7 @@ public class RealWorldCrawlerTests : IAsyncLifetime
         var url = TestSites.GetRandomBytesUrl(102400);
 
         // Act
-        var result = await _crawler.CrawlAsync(url);
+        var result = await _crawler.CrawlAsync(url, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();
@@ -248,7 +248,7 @@ public class RealWorldCrawlerTests : IAsyncLifetime
         var baseUrl = TestSites.QuotesToScrape;
 
         // Act
-        var robotsInfo = await _crawler.GetRobotsTxtAsync(baseUrl, "*");
+        var robotsInfo = await _crawler.GetRobotsTxtAsync(baseUrl, "*", TestContext.Current.CancellationToken);
 
         // Assert
         robotsInfo.Should().NotBeNull();
@@ -266,7 +266,7 @@ public class RealWorldCrawlerTests : IAsyncLifetime
         var url = TestSites.QuotesToScrape;
 
         // Act
-        var result = await _crawler.CrawlAsync(url);
+        var result = await _crawler.CrawlAsync(url, cancellationToken: TestContext.Current.CancellationToken);
         var links = result.DiscoveredLinks;
 
         // Assert
@@ -291,7 +291,7 @@ public class RealWorldCrawlerTests : IAsyncLifetime
         // Act
         foreach (var url in urls)
         {
-            await _crawler.CrawlAsync(url);
+            await _crawler.CrawlAsync(url, cancellationToken: TestContext.Current.CancellationToken);
         }
         var stats = _crawler.GetStatistics();
 

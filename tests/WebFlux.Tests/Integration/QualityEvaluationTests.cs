@@ -7,7 +7,6 @@ using WebFlux.Extensions;
 using WebFlux.Services.Crawlers;
 using WebFlux.Tests.Fixtures;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace WebFlux.Tests.Integration;
 
@@ -29,7 +28,7 @@ public class QualityEvaluationTests : IAsyncLifetime
         _output = output;
     }
 
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         var services = new ServiceCollection();
         services.AddWebFlux();
@@ -39,12 +38,13 @@ public class QualityEvaluationTests : IAsyncLifetime
         await Task.CompletedTask;
     }
 
-    public async Task DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         if (_serviceProvider != null)
         {
             await _serviceProvider.DisposeAsync();
         }
+        GC.SuppressFinalize(this);
     }
 
     #region HTML 콘텐츠 품질 테스트
@@ -55,7 +55,7 @@ public class QualityEvaluationTests : IAsyncLifetime
     public async Task CrawlContent_RealWebsite_ShouldHaveValidHtml(string url)
     {
         // Act
-        var result = await _crawler.CrawlAsync(url);
+        var result = await _crawler.CrawlAsync(url, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();
@@ -74,7 +74,7 @@ public class QualityEvaluationTests : IAsyncLifetime
     public async Task EvaluateHtmlQuality_ShouldMeetThreshold(string url, double minScore)
     {
         // Arrange
-        var result = await _crawler.CrawlAsync(url);
+        var result = await _crawler.CrawlAsync(url, cancellationToken: TestContext.Current.CancellationToken);
 
         // Skip if no quality evaluator available
         if (_qualityEvaluator == null)
@@ -84,7 +84,7 @@ public class QualityEvaluationTests : IAsyncLifetime
         }
 
         // Act
-        var quality = await _qualityEvaluator.EvaluateHtmlAsync(result.HtmlContent!, url);
+        var quality = await _qualityEvaluator.EvaluateHtmlAsync(result.HtmlContent!, url, TestContext.Current.CancellationToken);
 
         // Assert
         quality.Should().NotBeNull();
@@ -106,7 +106,7 @@ public class QualityEvaluationTests : IAsyncLifetime
         var url = TestSites.QuotesToScrape;
 
         // Act
-        var result = await _crawler.CrawlAsync(url);
+        var result = await _crawler.CrawlAsync(url, cancellationToken: TestContext.Current.CancellationToken);
         var links = result.DiscoveredLinks;
 
         // Assert
@@ -134,7 +134,7 @@ public class QualityEvaluationTests : IAsyncLifetime
         var url = TestSites.QuotesToScrape;
 
         // Act
-        var result = await _crawler.CrawlAsync(url);
+        var result = await _crawler.CrawlAsync(url, cancellationToken: TestContext.Current.CancellationToken);
         var links = result.DiscoveredLinks;
 
         // Assert
@@ -154,7 +154,7 @@ public class QualityEvaluationTests : IAsyncLifetime
     public async Task CrawlMetadata_ShouldHaveBasicInfo(string url)
     {
         // Act
-        var result = await _crawler.CrawlAsync(url);
+        var result = await _crawler.CrawlAsync(url, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Url.Should().Be(url);
@@ -179,7 +179,7 @@ public class QualityEvaluationTests : IAsyncLifetime
     public async Task HtmlContent_ShouldHaveProperStructure(string url)
     {
         // Act
-        var result = await _crawler.CrawlAsync(url);
+        var result = await _crawler.CrawlAsync(url, cancellationToken: TestContext.Current.CancellationToken);
         var html = result.HtmlContent!;
 
         // Assert
@@ -199,7 +199,7 @@ public class QualityEvaluationTests : IAsyncLifetime
         var url = TestSites.QuotesToScrape;
 
         // Act
-        var result = await _crawler.CrawlAsync(url);
+        var result = await _crawler.CrawlAsync(url, cancellationToken: TestContext.Current.CancellationToken);
         var html = result.HtmlContent!.ToLowerInvariant();
 
         // Assert - quotes.toscrape.com 특성
@@ -220,7 +220,7 @@ public class QualityEvaluationTests : IAsyncLifetime
         var url = $"{TestSites.QuotesToScrape}/nonexistent-page-12345";
 
         // Act
-        var result = await _crawler.CrawlAsync(url);
+        var result = await _crawler.CrawlAsync(url, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();
@@ -240,7 +240,7 @@ public class QualityEvaluationTests : IAsyncLifetime
         var options = new CrawlOptions { MaxRetries = 0 };
 
         // Act
-        var result = await _crawler.CrawlAsync(url, options);
+        var result = await _crawler.CrawlAsync(url, options, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();

@@ -30,7 +30,7 @@ public class HtmlContentCleanerTests
         </body></html>";
 
         // Act
-        var result = await _cleaner.CleanAsync(html);
+        var result = await _cleaner.CleanAsync(html, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().Contain("Content");
@@ -48,7 +48,7 @@ public class HtmlContentCleanerTests
         </body></html>";
 
         // Act
-        var result = await _cleaner.CleanAsync(html);
+        var result = await _cleaner.CleanAsync(html, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().Contain("Visible content");
@@ -65,7 +65,7 @@ public class HtmlContentCleanerTests
         </body></html>";
 
         // Act
-        var result = await _cleaner.CleanAsync(html);
+        var result = await _cleaner.CleanAsync(html, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().Contain("Content");
@@ -87,7 +87,7 @@ public class HtmlContentCleanerTests
         var options = new HtmlCleaningOptions { OnlyMainContent = true };
 
         // Act
-        var result = await _cleaner.CleanAsync(html, options: options);
+        var result = await _cleaner.CleanAsync(html, options: options, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().Contain("Main content here");
@@ -105,7 +105,7 @@ public class HtmlContentCleanerTests
         var options = new HtmlCleaningOptions { OnlyMainContent = true };
 
         // Act
-        var result = await _cleaner.CleanAsync(html, options: options);
+        var result = await _cleaner.CleanAsync(html, options: options, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().Contain("Article content");
@@ -123,7 +123,7 @@ public class HtmlContentCleanerTests
         var options = new HtmlCleaningOptions { OnlyMainContent = true };
 
         // Act
-        var result = await _cleaner.CleanAsync(html, options: options);
+        var result = await _cleaner.CleanAsync(html, options: options, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().Contain("Content");
@@ -141,7 +141,7 @@ public class HtmlContentCleanerTests
         var options = new HtmlCleaningOptions { OnlyMainContent = false };
 
         // Act
-        var result = await _cleaner.CleanAsync(html, options: options);
+        var result = await _cleaner.CleanAsync(html, options: options, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().Contain("Home");
@@ -161,7 +161,7 @@ public class HtmlContentCleanerTests
         </body></html>";
 
         // Act
-        var result = await _cleaner.CleanAsync(html);
+        var result = await _cleaner.CleanAsync(html, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().Contain("Real content");
@@ -178,7 +178,7 @@ public class HtmlContentCleanerTests
         </body></html>";
 
         // Act
-        var result = await _cleaner.CleanAsync(html);
+        var result = await _cleaner.CleanAsync(html, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().Contain("Page content");
@@ -195,7 +195,7 @@ public class HtmlContentCleanerTests
         </body></html>";
 
         // Act
-        var result = await _cleaner.CleanAsync(html);
+        var result = await _cleaner.CleanAsync(html, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().Contain("Article text");
@@ -212,7 +212,7 @@ public class HtmlContentCleanerTests
         </body></html>";
 
         // Act
-        var result = await _cleaner.CleanAsync(html);
+        var result = await _cleaner.CleanAsync(html, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().Contain("Main article");
@@ -233,7 +233,7 @@ public class HtmlContentCleanerTests
         var sourceUrl = "https://example.com/page";
 
         // Act
-        var result = await _cleaner.CleanAsync(html, sourceUrl);
+        var result = await _cleaner.CleanAsync(html, sourceUrl, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().Contain("https://example.com/about");
@@ -249,7 +249,7 @@ public class HtmlContentCleanerTests
         var sourceUrl = "https://example.com/page";
 
         // Act
-        var result = await _cleaner.CleanAsync(html, sourceUrl);
+        var result = await _cleaner.CleanAsync(html, sourceUrl, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().Contain("https://example.com/images/photo.jpg");
@@ -265,7 +265,7 @@ public class HtmlContentCleanerTests
         var sourceUrl = "https://example.com";
 
         // Act
-        var result = await _cleaner.CleanAsync(html, sourceUrl);
+        var result = await _cleaner.CleanAsync(html, sourceUrl, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().Contain("https://other.com/page");
@@ -281,7 +281,7 @@ public class HtmlContentCleanerTests
         var options = new HtmlCleaningOptions { ConvertRelativeUrls = false };
 
         // Act
-        var result = await _cleaner.CleanAsync(html, "https://example.com", options);
+        var result = await _cleaner.CleanAsync(html, "https://example.com", options, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().Contain("/about");
@@ -300,7 +300,7 @@ public class HtmlContentCleanerTests
         </body></html>";
 
         // Act
-        var result = await _cleaner.CleanAsync(html);
+        var result = await _cleaner.CleanAsync(html, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         // 최적 이미지 (가장 큰 해상도)가 src에 설정되어야 함
@@ -327,7 +327,7 @@ public class HtmlContentCleanerTests
         };
 
         // Act
-        var result = await _cleaner.CleanAsync(html, options: options);
+        var result = await _cleaner.CleanAsync(html, options: options, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().Contain("Section 1");
@@ -351,7 +351,7 @@ public class HtmlContentCleanerTests
         };
 
         // Act
-        var result = await _cleaner.CleanAsync(html, options: options);
+        var result = await _cleaner.CleanAsync(html, options: options, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().Contain("Content");
@@ -366,7 +366,7 @@ public class HtmlContentCleanerTests
     public async Task CleanAsync_WithEmptyInput_ShouldReturnEmpty()
     {
         // Act
-        var result = await _cleaner.CleanAsync("");
+        var result = await _cleaner.CleanAsync("", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().BeEmpty();
@@ -376,7 +376,7 @@ public class HtmlContentCleanerTests
     public async Task CleanAsync_WithWhitespace_ShouldReturnEmpty()
     {
         // Act
-        var result = await _cleaner.CleanAsync("   ");
+        var result = await _cleaner.CleanAsync("   ", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().BeEmpty();
@@ -392,7 +392,7 @@ public class HtmlContentCleanerTests
         </body></html>";
 
         // Act
-        var result = await _cleaner.CleanAsync(html);
+        var result = await _cleaner.CleanAsync(html, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().Contain("Content");
@@ -412,7 +412,7 @@ public class HtmlContentCleanerTests
         </body></html>";
 
         // Act
-        var result = await _cleaner.CleanAsync(html);
+        var result = await _cleaner.CleanAsync(html, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().Contain("<h1>");
