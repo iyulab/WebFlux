@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.1] - 2026-09-11
+
+### Changed
+- SourceLink 을 취약 권고(CVE-2026-62900, `Microsoft.Build.Tasks.Git`)가 걸린 라인에서 패치된
+  라인으로 옮겼다. 빌드 시점 도구라 패키지 의존성·공개 API 는 바뀌지 않는다.
+  옮기기 전에는 경고가 error 로 승격돼 **빌드 자체가 실패**했다.
+
 ## [0.7.0] - 2026-08-07
 
 ### Changed (Breaking) — 동적 렌더링이 별도 패키지 `WebFlux.Playwright` 로 분리됐다
