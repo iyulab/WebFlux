@@ -76,7 +76,7 @@ jobs:
         run: dotnet build WebFlux.slnx --configuration ${{ env.BUILD_CONFIGURATION }} --no-restore
 
       - name: 🧪 Run Fast Tests (excluding Integration, Performance and LongRunning)
-        run: dotnet test tests/WebFlux.Tests/WebFlux.Tests.csproj --configuration ${{ env.BUILD_CONFIGURATION }} --no-build --verbosity normal --filter-not-trait "Category=Integration" --filter-not-trait "Category=Performance" --filter-not-trait "Category=LongRunning" --hangdump --hangdump-timeout 5m
+        run: dotnet test --project tests/WebFlux.Tests/WebFlux.Tests.csproj --configuration ${{ env.BUILD_CONFIGURATION }} --no-build --verbosity normal --filter-not-trait "Category=Integration" --filter-not-trait "Category=Performance" --filter-not-trait "Category=LongRunning" --hangdump --hangdump-timeout 5m
 
       - name: ℹ️ Test Execution Info
         run: |
