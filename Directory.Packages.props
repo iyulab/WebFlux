@@ -54,7 +54,7 @@
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <!-- 🔗 Source Link -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.112" />
+    <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.401" />
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <!-- 🧪 Testing (xUnit v3 / Microsoft.Testing.Platform — BD-20260829-xunit-v3-pilot rollout) -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
