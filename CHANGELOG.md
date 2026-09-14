@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.2] - 2026-09-15
+
+### Changed
+- Re-pinned sibling package(s) `Flux.Abstractions` 0.24.0 -> 0.25.0, `FluxCurator` 0.8.1 -> 0.8.2, `FluxCurator.Core` 0.8.1 -> 0.8.2 — re-consumption of already-consumed iyulab packages via `check-pin-drift.ps1 -Fix`. No source changes.
+- Raised `Microsoft.Extensions.*` package references to 10.0.12 (latest servicing release). `FluxCurator` 0.8.2 declares `Microsoft.Extensions.DependencyInjection.Abstractions >= 10.0.11`, so the previous 10.0.8 references failed restore with a package-downgrade error.
+
 ## [0.7.1] - 2026-09-11
 
 ### Changed
