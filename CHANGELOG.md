@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.3] - 2026-09-17
+
+### Changed
+- Re-pinned sibling package(s) `FluxCurator` 0.8.2 -> 0.8.3, `FluxCurator.Core` 0.8.2 -> 0.8.3 — re-consumption of already-consumed iyulab packages via `check-pin-drift.ps1 -Fix`. No source changes.
+
 ## [0.7.2] - 2026-09-15
 
 ### Changed
