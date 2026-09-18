@@ -35,7 +35,7 @@ public partial class ChunkingStrategyFactory : IChunkingStrategyFactory
 
         if (string.IsNullOrWhiteSpace(strategyName))
         {
-            throw new ArgumentException("전략 이름이 필요합니다.", nameof(strategyName));
+            throw new ArgumentException("A strategy name is required.", nameof(strategyName));
         }
 
         if (!_strategyCreators.TryGetValue(strategyName, out var creator))
@@ -53,7 +53,7 @@ public partial class ChunkingStrategyFactory : IChunkingStrategyFactory
         catch (Exception ex)
         {
             LogStrategyCreationFailed(_logger, ex, strategyName);
-            throw new InvalidOperationException($"청킹 전략 '{strategyName}' 생성에 실패했습니다.", ex);
+            throw new InvalidOperationException($"Failed to create chunking strategy '{strategyName}'.", ex);
         }
     }
 
@@ -72,7 +72,7 @@ public partial class ChunkingStrategyFactory : IChunkingStrategyFactory
             return info;
         }
 
-        throw new ArgumentException($"알 수 없는 전략: {strategyName}");
+        throw new ArgumentException($"Unknown strategy: {strategyName}");
     }
 
     public async Task<string> RecommendStrategyAsync(ExtractedContent content, ChunkingOptions? options = null)

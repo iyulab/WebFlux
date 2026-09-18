@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.4] - 2026-09-19
+
+### Fixed
+- Exception messages thrown by `ChunkingStrategyFactory` (missing strategy name, unknown strategy, strategy creation failure) were not in English, unlike the library's log messages. They are now English with unchanged meaning.
+
 ## [0.7.3] - 2026-09-17
 
 ### Changed
