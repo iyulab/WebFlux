@@ -17,6 +17,9 @@ WebFlux processes web content into chunks optimized for RAG systems. It handles 
 dotnet add package WebFlux
 ```
 
+`WebFlux` itself is browser-free. For pages that only render with JavaScript, add **WebFlux.Playwright** as well
+(`dotnet add package WebFlux.Playwright`). It provides Playwright-backed dynamic rendering.
+
 ## Quick Start
 
 ```csharp
