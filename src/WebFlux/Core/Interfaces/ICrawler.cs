@@ -146,6 +146,12 @@ public class CrawlResult
     /// <summary>발견된 링크 목록</summary>
     public IReadOnlyList<string> DiscoveredLinks { get; init; } = Array.Empty<string>();
 
+    /// <summary>
+    /// True when the URL was not fetched because robots.txt disallows it and
+    /// <c>CrawlOptions.RespectRobotsTxt</c> is on. Distinguishes a policy skip from a failed request.
+    /// </summary>
+    public bool DisallowedByRobotsTxt { get; init; }
+
     /// <summary>오류 메시지 (실패한 경우)</summary>
     public string? ErrorMessage { get; init; }
 

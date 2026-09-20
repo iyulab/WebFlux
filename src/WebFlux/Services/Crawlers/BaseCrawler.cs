@@ -64,6 +64,11 @@ public abstract class BaseCrawler : ICrawler
         if (string.IsNullOrWhiteSpace(url))
             throw new ArgumentException("URL cannot be null or empty", nameof(url));
 
+        // The single-URL entry point honours robots.txt too: a caller that fetches pages one at a
+        // time never goes through the crawl loop, so a gate that lives only there never sees them.
+        if (!await IsAllowedByRobotsAsync(url, options, cancellationToken))
+            return CreateDisallowedByRobotsResult(url);
+
         var maxRetries = options?.MaxRetries ?? 3;
         var startTime = DateTimeOffset.UtcNow;
         Exception? lastException = null;
@@ -520,7 +525,7 @@ public abstract class BaseCrawler : ICrawler
     {
         try
         {
-            var baseUrl = $"{new Uri(url).Scheme}://{new Uri(url).Host}";
+            var baseUrl = new Uri(url).GetLeftPart(UriPartial.Authority);
             return IsPathAllowed(await GetRobotsTxtAsync(baseUrl, userAgent), url, userAgent);
         }
         catch
@@ -553,7 +558,8 @@ public abstract class BaseCrawler : ICrawler
     }
 
     /// <summary>
-    /// The crawl loop's robots.txt gate, honouring <see cref="CrawlOptions.RespectRobotsTxt"/>.
+    /// The robots.txt gate, honouring <see cref="CrawlOptions.RespectRobotsTxt"/>. Both
+    /// <see cref="CrawlAsync"/> and the crawl loop go through it.
     /// </summary>
     /// <remarks>
     /// <para>
@@ -573,17 +579,20 @@ public abstract class BaseCrawler : ICrawler
         CrawlOptions? options,
         CancellationToken cancellationToken = default)
     {
-        if (options?.RespectRobotsTxt != true)
+        // No options means the defaults, and the default is to respect robots.txt.
+        if (options is { RespectRobotsTxt: false })
             return true;
 
         try
         {
             var uri = new Uri(url);
-            var userAgent = string.IsNullOrWhiteSpace(options.UserAgent) ? "*" : options.UserAgent;
-            var key = $"{uri.Scheme}://{uri.Host}|{userAgent}";
+            var userAgent = string.IsNullOrWhiteSpace(options?.UserAgent) ? "*" : options.UserAgent;
+            // Authority, not Host: robots.txt belongs to scheme + host + port (RFC 9309 section 2.3).
+            var origin = uri.GetLeftPart(UriPartial.Authority);
+            var key = $"{origin}|{userAgent}";
             var robotsInfo = await _robotsCache.GetOrAdd(
                 key,
-                _ => GetRobotsTxtAsync($"{uri.Scheme}://{uri.Host}", userAgent, cancellationToken));
+                _ => GetRobotsTxtAsync(origin, userAgent, cancellationToken));
 
             return IsPathAllowed(robotsInfo, url, userAgent);
         }
@@ -592,6 +601,23 @@ public abstract class BaseCrawler : ICrawler
             return true; // robots.txt 를 읽을 수 없으면 허용 (IsUrlAllowedAsync 와 같은 정책)
         }
     }
+
+    /// <summary>
+    /// The result <see cref="CrawlAsync"/> returns for a URL robots.txt disallows: nothing was
+    /// fetched, and <see cref="CrawlResult.DisallowedByRobotsTxt"/> says why.
+    /// </summary>
+    protected static CrawlResult CreateDisallowedByRobotsResult(string url) => new()
+    {
+        Url = url,
+        FinalUrl = url,
+        StatusCode = 0,
+        IsSuccess = false,
+        DisallowedByRobotsTxt = true,
+        CrawledAt = DateTimeOffset.UtcNow,
+        Depth = 0,
+        DiscoveredLinks = Array.Empty<string>(),
+        ErrorMessage = "Disallowed by robots.txt"
+    };
 
     /// <summary>
     /// 링크를 추출합니다.

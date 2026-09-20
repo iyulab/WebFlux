@@ -44,6 +44,10 @@ public partial class PlaywrightCrawler : BaseCrawler, IAsyncDisposable
         CrawlOptions? options = null,
         CancellationToken cancellationToken = default)
     {
+        // Same gate as the HTTP crawler: this override replaces the base fetch entirely.
+        if (!await IsAllowedByRobotsAsync(url, options, cancellationToken))
+            return CreateDisallowedByRobotsResult(url);
+
         var startTime = DateTimeOffset.UtcNow;
 
         try

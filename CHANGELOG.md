@@ -15,6 +15,17 @@ All notable changes to this project will be documented in this file.
   disallowed path will now skip it. Set `RespectRobotsTxt = false` for the previous behaviour.
   robots.txt is fetched once per host per crawl, not once per URL; the public `IsUrlAllowedAsync`
   keeps its per-call fetch. Both share one implementation of what the rules mean.
+- **The single-URL `CrawlAsync` honours robots.txt too**, on the HTTP crawlers and on
+  `PlaywrightCrawler`. A caller that fetches pages one at a time never goes through the crawl loop,
+  so a gate that lived only there never saw those requests. A disallowed URL is not fetched; the
+  result has `IsSuccess = false` and the new `CrawlResult.DisallowedByRobotsTxt = true`, which tells
+  a policy skip from a failed request. **Behaviour change:** passing no options means the defaults,
+  so `CrawlAsync(url)` respects robots.txt as well; pass `RespectRobotsTxt = false` to opt out.
+- **robots.txt is read from the URL's own port.** The lookup dropped the port, so a site on
+  `:8080` was judged by the rules of whatever answers on the default port of that host.
+
+### Added
+- `CrawlResult.DisallowedByRobotsTxt`.
 
 ## [0.7.4] - 2026-09-19
 

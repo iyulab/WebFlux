@@ -804,6 +804,69 @@ Disallow: /admin/
             "https://example.com/robots.txt", null, Arg.Any<CancellationToken>());
     }
 
+    // The loop was gated first and the single-URL entry point was not -- and the single-URL entry
+    // point is what a caller fetching pages one at a time (a research agent, say) actually uses.
+
+    [Fact]
+    public async Task CrawlAsync_WhenRespectRobotsTxt_DoesNotFetchADisallowedUrl()
+    {
+        SetupSuccessfulHttpResponse("https://example.com/robots.txt", "User-agent: *\nDisallow: /admin/\n");
+        SetupSuccessfulHttpResponse("https://example.com/admin/secret", "<html><body>secret</body></html>");
+
+        var result = await _crawler.CrawlAsync(
+            "https://example.com/admin/secret",
+            new CrawlOptions { RespectRobotsTxt = true, UserAgent = "*" },
+            TestContext.Current.CancellationToken);
+
+        result.IsSuccess.Should().BeFalse();
+        result.DisallowedByRobotsTxt.Should().BeTrue();
+        result.HtmlContent.Should().BeNull();
+        await _mockHttpClient.DidNotReceive().GetAsync(
+            "https://example.com/admin/secret", null, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task CrawlAsync_WithNoOptions_RespectsRobotsTxtBecauseThatIsTheDefault()
+    {
+        SetupSuccessfulHttpResponse("https://example.com/robots.txt", "User-agent: *\nDisallow: /admin/\n");
+        SetupSuccessfulHttpResponse("https://example.com/admin/secret", "<html><body>secret</body></html>");
+
+        var result = await _crawler.CrawlAsync(
+            "https://example.com/admin/secret", null, TestContext.Current.CancellationToken);
+
+        result.DisallowedByRobotsTxt.Should().BeTrue("CrawlOptions.RespectRobotsTxt defaults to true, and no options means the defaults");
+    }
+
+    [Fact]
+    public async Task CrawlAsync_WhenNotRespectRobotsTxt_FetchesTheSameUrl()
+    {
+        SetupSuccessfulHttpResponse("https://example.com/robots.txt", "User-agent: *\nDisallow: /admin/\n");
+        SetupSuccessfulHttpResponse("https://example.com/admin/secret", "<html><body>secret</body></html>");
+
+        var result = await _crawler.CrawlAsync(
+            "https://example.com/admin/secret",
+            new CrawlOptions { RespectRobotsTxt = false, UserAgent = "*" },
+            TestContext.Current.CancellationToken);
+
+        // The counterpart: without it the facts above could pass on a crawler that fetches nothing.
+        result.IsSuccess.Should().BeTrue();
+        result.DisallowedByRobotsTxt.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task CrawlAsync_ReadsRobotsTxtFromTheUrlsOwnPort()
+    {
+        SetupSuccessfulHttpResponse("http://example.com:8080/robots.txt", "User-agent: *\nDisallow: /admin/\n");
+        SetupSuccessfulHttpResponse("http://example.com:8080/admin/secret", "<html><body>secret</body></html>");
+
+        var result = await _crawler.CrawlAsync(
+            "http://example.com:8080/admin/secret",
+            new CrawlOptions { RespectRobotsTxt = true, UserAgent = "*" },
+            TestContext.Current.CancellationToken);
+
+        result.DisallowedByRobotsTxt.Should().BeTrue("robots.txt belongs to scheme + host + port; dropping the port reads another site's rules");
+    }
+
     #endregion
 
     private void SetupSuccessfulHttpResponse(string url, string content)
