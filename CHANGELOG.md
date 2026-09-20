@@ -2,6 +2,50 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.9.0] - 2026-09-20
+
+### Fixed
+- **robots.txt rules are applied per [RFC 9309](https://www.rfc-editor.org/rfc/rfc9309.html).** The
+  matcher behind the gate connected in 0.8.0 had never run before that release, and it got three
+  things wrong on first contact with real files:
+  - **An empty value is not a rule.** `Disallow:` with no value was stored as a pattern, and every
+    path starts with the empty string, so `User-agent: *` + `Disallow:` — the canonical "everything
+    is allowed" file — refused every page of the site. An empty `Allow:` had the mirror problem.
+    **This is the one that reaches ordinary sites**, and it is why 0.8.0 should be skipped.
+  - **A group spans consecutive `User-agent` lines**, and groups repeated for the same product
+    token are combined rather than replaced (section 2.2.1). The parser stored the rules collected
+    so far under the *previous* agent, so a file opening with two agent lines left the first agent
+    with no rules at all.
+  - **The most specific match wins**, measured in octets, with an allow winning a tie
+    (section 2.2.2). Any matching `Allow` prefix used to return before `Disallow` was looked at,
+    whatever the lengths.
+  `*` and `$` are interpreted now (section 2.2.3), and product tokens match case-insensitively.
+  Percent-encoding normalisation of the compared operands (the table in section 2.2.2) is **not**
+  implemented: a pattern written `/foo/%62%61%7A` does not match the path `/foo/baz`.
+- **A robots.txt refusal is not retried.** On the single-URL extract path it went round the
+  `MaxRetries` backoff loop, so a decision that takes 29 ms on `CrawlAsync` took three seconds on
+  `ExtractContentAsync`.
+- **A robots.txt refusal carries its own error code.** `CrawlResult.DisallowedByRobotsTxt` did not
+  survive into `ProcessingResult`: a refusal arrived as `Error.Code = "Unknown"` (derived from
+  status code 0), indistinguishable from a network failure. It is now
+  `ExtractErrorCodes.DisallowedByRobotsTxt`.
+
+### Added
+- **`ExtractOptions.RespectRobotsTxt`** (default `true`). 0.8.0's note told callers to pass
+  `RespectRobotsTxt = false`, but `ExtractOptions` had no such field, so the opt-out it described
+  was unreachable from the extract API. The default does not change the posture.
+- **`RobotsTxtInfo.Access`** (`RobotsTxtAccess`: `Unavailable` / `Parsed` / `Unreachable`) — a file
+  that said nothing and a file that could not be read used to be the same value.
+- **`WebFlux.Core.Utilities.RobotsTxt`** — parsing and matching as one directly testable unit.
+
+### Changed
+- **A robots.txt that answers 5xx is now a complete disallow** (section 2.3.1.4); a 4xx allows
+  everything (section 2.3.1.3). Previously every non-2xx meant "no rules", so a server erroring on
+  `/robots.txt` was read as permission. A transport failure (DNS, TLS, timeout) is still treated as
+  *unavailable* rather than unreachable: section 2.3.1.4 lets a crawler that has been unable to
+  reach the file fall back to that, and this library holds no state across calls, so it cannot tell
+  a first failure from a persistent one.
+
 ## [0.8.0] - 2026-09-20
 
 ### Fixed

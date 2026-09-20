@@ -57,7 +57,12 @@ await foreach (var chunk in processor.ProcessWebsiteAsync("https://example.com")
 - **Interface-Based Design**: Bring your own AI services (OpenAI, Anthropic, Azure, local models)
 - **Multiple Chunking Strategies**: Auto, Smart, Semantic, Intelligent, MemoryOptimized, Paragraph, FixedSize, DomStructure
 - **Content Formats**: HTML, Markdown, JSON, XML, PDF
-- **Web Standards**: robots.txt (honoured on every crawl entry point; `CrawlOptions.RespectRobotsTxt`, on by default) and sitemap.xml (`CrawlStrategy.Sitemap`)
+- **Web Standards**: robots.txt, matched per [RFC 9309](https://www.rfc-editor.org/rfc/rfc9309.html)
+  — groups, longest-match with `Allow` winning ties, `*` and `$`. Honoured on every crawl entry
+  point and on the extract API; turn it off per call with `CrawlOptions.RespectRobotsTxt` or
+  `ExtractOptions.RespectRobotsTxt` (both default to on). A refusal is reported as
+  `CrawlResult.DisallowedByRobotsTxt` / `ExtractErrorCodes.DisallowedByRobotsTxt` rather than as a
+  failed request. Also sitemap.xml (`CrawlStrategy.Sitemap`).
 - **Streaming**: Process large websites with AsyncEnumerable
 - **Parallel Processing**: Concurrent crawling and processing
 - **Rich Metadata**: Web document metadata extraction (SEO, Open Graph, Schema.org, Twitter Cards)
