@@ -737,6 +737,75 @@ Disallow: /admin/
 
     #region Helper Methods
 
+    #region RespectRobotsTxt Tests
+
+    // The option existed, the README promised it in its feature list and set it in its usage
+    // example, and nothing in the crawl path read it: ShouldCrawlUrl is synchronous and the
+    // robots.txt check is not, so IsUrlAllowedAsync was only ever reachable by a caller who knew to
+    // call it. These drive CrawlWebsiteAsync -- the loop itself -- because a test of the gate alone
+    // would have passed while the loop never called it.
+
+    [Fact]
+    public async Task CrawlWebsiteAsync_WhenRespectRobotsTxt_SkipsADisallowedUrl()
+    {
+        SetupSuccessfulHttpResponse("https://example.com/robots.txt", "User-agent: *\nDisallow: /admin/\n");
+        SetupSuccessfulHttpResponse("https://example.com/admin/secret", "<html><body>secret</body></html>");
+
+        var results = new List<CrawlResult>();
+        await foreach (var result in _crawler.CrawlWebsiteAsync(
+            "https://example.com/admin/secret",
+            new CrawlOptions { RespectRobotsTxt = true, UserAgent = "*", MaxPages = 5 },
+            TestContext.Current.CancellationToken))
+        {
+            results.Add(result);
+        }
+
+        results.Should().BeEmpty("robots.txt disallows /admin/ and the option asks the crawler to respect it");
+    }
+
+    [Fact]
+    public async Task CrawlWebsiteAsync_WhenNotRespectRobotsTxt_CrawlsTheSameUrl()
+    {
+        SetupSuccessfulHttpResponse("https://example.com/robots.txt", "User-agent: *\nDisallow: /admin/\n");
+        SetupSuccessfulHttpResponse("https://example.com/admin/secret", "<html><body>secret</body></html>");
+
+        var results = new List<CrawlResult>();
+        await foreach (var result in _crawler.CrawlWebsiteAsync(
+            "https://example.com/admin/secret",
+            new CrawlOptions { RespectRobotsTxt = false, UserAgent = "*", MaxPages = 5 },
+            TestContext.Current.CancellationToken))
+        {
+            results.Add(result);
+        }
+
+        // The counterpart: without it the fact above could pass on a crawler that fetches nothing at all.
+        results.Should().ContainSingle("the option is off, so robots.txt must not hold the crawl back");
+    }
+
+    [Fact]
+    public async Task CrawlWebsiteAsync_FetchesRobotsTxtOncePerHost_NotOncePerUrl()
+    {
+        SetupSuccessfulHttpResponse("https://example.com/robots.txt", "User-agent: *\nDisallow: /admin/\n");
+        SetupSuccessfulHttpResponse("https://example.com/a",
+            "<html><body><a href=\"https://example.com/b\">b</a></body></html>");
+        SetupSuccessfulHttpResponse("https://example.com/b", "<html><body>b</body></html>");
+
+        var results = new List<CrawlResult>();
+        await foreach (var result in _crawler.CrawlWebsiteAsync(
+            "https://example.com/a",
+            new CrawlOptions { RespectRobotsTxt = true, UserAgent = "*", MaxPages = 5 },
+            TestContext.Current.CancellationToken))
+        {
+            results.Add(result);
+        }
+
+        results.Should().HaveCountGreaterThan(1, "the crawl needs to visit more than one URL for this to mean anything");
+        await _mockHttpClient.Received(1).GetAsync(
+            "https://example.com/robots.txt", null, Arg.Any<CancellationToken>());
+    }
+
+    #endregion
+
     private void SetupSuccessfulHttpResponse(string url, string content)
     {
         // HttpResponseMessage는 mock 불가능한 프로퍼티들이 있으므로 실제 객체 생성

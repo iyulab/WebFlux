@@ -18,6 +18,13 @@ namespace WebFlux.Services.Crawlers;
 /// </summary>
 public abstract class BaseCrawler : ICrawler
 {
+    /// <summary>
+    /// robots.txt per host and user agent, so honouring the option costs one fetch per host rather
+    /// than one per URL. Keyed by scheme+host+user-agent; the task is cached so concurrent workers
+    /// share a single fetch.
+    /// </summary>
+    private readonly ConcurrentDictionary<string, Task<RobotsTxtInfo>> _robotsCache = new(StringComparer.OrdinalIgnoreCase);
+
     protected IHttpClientService HttpClient { get; }
     protected IEventPublisher EventPublisher { get; }
     protected ConcurrentQueue<string> UrlQueue { get; } = new();
@@ -213,6 +220,9 @@ public abstract class BaseCrawler : ICrawler
 
             visited.Add(UrlNormalizer.Normalize(currentUrl));
 
+            if (!await IsAllowedByRobotsAsync(currentUrl, options, cancellationToken))
+                continue;
+
             var originalResult = await CrawlAsync(currentUrl, options, cancellationToken);
             var result = new CrawlResult
             {
@@ -329,6 +339,12 @@ public abstract class BaseCrawler : ICrawler
 
                     // 깊이 제한 확인
                     if (depth > maxDepth)
+                    {
+                        continue;
+                    }
+
+                    // robots.txt 확인 (RespectRobotsTxt 가 켜진 경우)
+                    if (!await IsAllowedByRobotsAsync(url, options, cancellationToken))
                     {
                         continue;
                     }
@@ -505,27 +521,75 @@ public abstract class BaseCrawler : ICrawler
         try
         {
             var baseUrl = $"{new Uri(url).Scheme}://{new Uri(url).Host}";
-            var robotsInfo = await GetRobotsTxtAsync(baseUrl, userAgent);
-
-            if (robotsInfo.Rules.TryGetValue(userAgent, out var rules) ||
-                robotsInfo.Rules.TryGetValue("*", out rules))
-            {
-                var path = new Uri(url).PathAndQuery;
-
-                // 허용된 경로 확인
-                if (rules.AllowedPaths.Any(pattern => path.StartsWith(pattern, StringComparison.Ordinal)))
-                    return true;
-
-                // 금지된 경로 확인
-                if (rules.DisallowedPaths.Any(pattern => path.StartsWith(pattern, StringComparison.Ordinal)))
-                    return false;
-            }
-
-            return true;
+            return IsPathAllowed(await GetRobotsTxtAsync(baseUrl, userAgent), url, userAgent);
         }
         catch
         {
             return true; // robots.txt 파싱 실패 시 허용
+        }
+    }
+
+    /// <summary>
+    /// Applies a fetched robots.txt to one URL. Split out so the public per-call check and the
+    /// crawl loop's cached check cannot drift on what the rules mean — only on when they are fetched.
+    /// </summary>
+    private static bool IsPathAllowed(RobotsTxtInfo robotsInfo, string url, string userAgent)
+    {
+        if (robotsInfo.Rules.TryGetValue(userAgent, out var rules) ||
+            robotsInfo.Rules.TryGetValue("*", out rules))
+        {
+            var path = new Uri(url).PathAndQuery;
+
+            // 허용된 경로 확인
+            if (rules.AllowedPaths.Any(pattern => path.StartsWith(pattern, StringComparison.Ordinal)))
+                return true;
+
+            // 금지된 경로 확인
+            if (rules.DisallowedPaths.Any(pattern => path.StartsWith(pattern, StringComparison.Ordinal)))
+                return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// The crawl loop's robots.txt gate, honouring <see cref="CrawlOptions.RespectRobotsTxt"/>.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <c>ShouldCrawlUrl</c> is synchronous and robots.txt needs a fetch, which is why the option
+    /// went unwired: the library shipped <c>IsUrlAllowedAsync</c>, the README promised robots.txt
+    /// handling and set <c>RespectRobotsTxt = true</c> in its example, and nothing in the crawl path
+    /// ever called it.
+    /// </para>
+    /// <para>
+    /// robots.txt is fetched once per host per crawl rather than once per URL — the public
+    /// <see cref="IsUrlAllowedAsync"/> keeps its per-call fetch, since a caller asking about a single
+    /// URL is not in a loop.
+    /// </para>
+    /// </remarks>
+    protected virtual async Task<bool> IsAllowedByRobotsAsync(
+        string url,
+        CrawlOptions? options,
+        CancellationToken cancellationToken = default)
+    {
+        if (options?.RespectRobotsTxt != true)
+            return true;
+
+        try
+        {
+            var uri = new Uri(url);
+            var userAgent = string.IsNullOrWhiteSpace(options.UserAgent) ? "*" : options.UserAgent;
+            var key = $"{uri.Scheme}://{uri.Host}|{userAgent}";
+            var robotsInfo = await _robotsCache.GetOrAdd(
+                key,
+                _ => GetRobotsTxtAsync($"{uri.Scheme}://{uri.Host}", userAgent, cancellationToken));
+
+            return IsPathAllowed(robotsInfo, url, userAgent);
+        }
+        catch
+        {
+            return true; // robots.txt 를 읽을 수 없으면 허용 (IsUrlAllowedAsync 와 같은 정책)
         }
     }
 

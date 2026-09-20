@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.8.0] - 2026-09-20
+
+### Fixed
+- **`CrawlOptions.RespectRobotsTxt` now reaches the crawler.** The option shipped with a default of
+  `true`, the README promised robots.txt handling in its feature list and set the option in its usage
+  example, and nothing in the crawl path read it: `IsUrlAllowedAsync` existed but was only reachable
+  by a caller who knew to call it, because the crawl loop's admission check (`ShouldCrawlUrl`) is
+  synchronous and fetching robots.txt is not. `CrawlWebsiteAsync` now applies the check before each
+  URL is fetched, on both its sequential and its parallel path.
+  **Behaviour change:** because the option defaults to `true`, a crawl that previously reached a
+  disallowed path will now skip it. Set `RespectRobotsTxt = false` for the previous behaviour.
+  robots.txt is fetched once per host per crawl, not once per URL; the public `IsUrlAllowedAsync`
+  keeps its per-call fetch. Both share one implementation of what the rules mean.
+
 ## [0.7.4] - 2026-09-19
 
 ### Fixed

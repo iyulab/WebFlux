@@ -26,6 +26,13 @@ public class OptionsReachabilityRosterTests
     /// failure instead of silently joining a crowd. Working through them is tracked in the umbrella's
     /// issue draft.
     /// </para>
+    /// <para>
+    /// Two are already gone: <c>CrawlOptions.RespectRobotsTxt</c> is read by the crawl loop as of
+    /// 0.8.0 — the README promised it twice and nothing read it — and wiring it also made
+    /// <c>CrawlOptions.UserAgent</c> reachable, which the roster caught in the other direction
+    /// (listed as unread, now read). The roster fails both ways, so leaving either listed here would
+    /// itself be the failure.
+    /// </para>
     /// </summary>
     private static readonly Dictionary<string, string[]> KnownUnread = new()
     {
@@ -89,8 +96,8 @@ public class OptionsReachabilityRosterTests
             "AllowedContentTypes", "AllowedDomains", "CacheExpirationMinutes", "CustomHeaders",
             "CustomMetadataPrompt", "DelayBetweenRequests", "DownloadImages", "EnableMetadataExtraction",
             "EnableScrolling", "FollowExternalLinks", "Headers", "MaxConcurrency", "MaxImageSizeBytes",
-            "MetadataExtractionMaxChars", "MetadataSchema", "PriorityUrls", "RespectRobotsTxt", "StartUrls",
-            "Timeout", "TimeoutMs", "UseCache", "UseHtmlMetadata", "UserAgent", "WaitForSelector",
+            "MetadataExtractionMaxChars", "MetadataSchema", "PriorityUrls", "StartUrls",
+            "Timeout", "TimeoutMs", "UseCache", "UseHtmlMetadata", "WaitForSelector",
         ],
         ["WebFlux.Core.Options.EnhancementOptions"] = ["TimeoutMs"],
         ["WebFlux.Core.Options.ExtractOptions"] = ["IncludeLinks"],
