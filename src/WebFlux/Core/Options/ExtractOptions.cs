@@ -38,6 +38,17 @@ public class ExtractOptions : IValidatable
     /// </summary>
     public Dictionary<string, string> CustomHeaders { get; set; } = new();
 
+    /// <summary>
+    /// Whether to consult the site's robots.txt before fetching. Defaults to <c>true</c>, matching
+    /// <see cref="CrawlOptions.RespectRobotsTxt"/>.
+    /// </summary>
+    /// <remarks>
+    /// Whether a user-directed fetch of a single page should obey a file written for bulk crawlers
+    /// is a policy call, so it is the caller's to make. The default does not change the posture:
+    /// robots.txt is respected unless you say otherwise.
+    /// </remarks>
+    public bool RespectRobotsTxt { get; set; } = true;
+
     #endregion
 
     #region 캐싱 설정

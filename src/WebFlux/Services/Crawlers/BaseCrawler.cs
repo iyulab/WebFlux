@@ -501,9 +501,17 @@ public abstract class BaseCrawler : ICrawler
         {
             using var response = await HttpClient.GetAsync(robotsUrl, cancellationToken: cancellationToken);
 
+            // RFC 9309 section 2.3.1.4: a 5xx means the file is undefined, and an undefined
+            // robots.txt is a complete disallow — not the same as a site that has no rules.
+            if ((int)response.StatusCode >= 500)
+            {
+                return new RobotsTxtInfo { Access = RobotsTxtAccess.Unreachable };
+            }
+
+            // Section 2.3.1.3: any 4xx means the file is unavailable, and every resource is allowed.
             if (!response.IsSuccessStatusCode)
             {
-                return new RobotsTxtInfo();
+                return new RobotsTxtInfo { Access = RobotsTxtAccess.Unavailable };
             }
 
             var content = await response.Content.ReadAsStringAsync(cancellationToken);
@@ -511,7 +519,12 @@ public abstract class BaseCrawler : ICrawler
         }
         catch
         {
-            return new RobotsTxtInfo();
+            // A transport failure (DNS, TLS, timeout) is treated as unavailable rather than
+            // unreachable. Section 2.3.1.4 lets a crawler that has been unable to reach the file
+            // for a long time fall back to "unavailable"; this library holds no state across calls,
+            // so it cannot tell a first failure from a persistent one, and refusing every page of a
+            // site because its robots.txt timed out once is the worse of the two errors.
+            return new RobotsTxtInfo { Access = RobotsTxtAccess.Unavailable };
         }
     }
 
@@ -539,23 +552,7 @@ public abstract class BaseCrawler : ICrawler
     /// crawl loop's cached check cannot drift on what the rules mean — only on when they are fetched.
     /// </summary>
     private static bool IsPathAllowed(RobotsTxtInfo robotsInfo, string url, string userAgent)
-    {
-        if (robotsInfo.Rules.TryGetValue(userAgent, out var rules) ||
-            robotsInfo.Rules.TryGetValue("*", out rules))
-        {
-            var path = new Uri(url).PathAndQuery;
-
-            // 허용된 경로 확인
-            if (rules.AllowedPaths.Any(pattern => path.StartsWith(pattern, StringComparison.Ordinal)))
-                return true;
-
-            // 금지된 경로 확인
-            if (rules.DisallowedPaths.Any(pattern => path.StartsWith(pattern, StringComparison.Ordinal)))
-                return false;
-        }
-
-        return true;
-    }
+        => RobotsTxt.IsAllowed(robotsInfo, url, userAgent);
 
     /// <summary>
     /// The robots.txt gate, honouring <see cref="CrawlOptions.RespectRobotsTxt"/>. Both
@@ -798,86 +795,7 @@ public abstract class BaseCrawler : ICrawler
     /// <param name="content">robots.txt 내용</param>
     /// <returns>파싱된 robots.txt 정보</returns>
     protected virtual RobotsTxtInfo ParseRobotsTxt(string content)
-    {
-        var rules = new Dictionary<string, RobotRules>();
-        var sitemaps = new List<string>();
-        var lines = content.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-
-        string? currentUserAgent = null;
-        var allowedPaths = new List<string>();
-        var disallowedPaths = new List<string>();
-        int? crawlDelay = null;
-
-        foreach (var line in lines)
-        {
-            var cleanLine = line.Trim();
-            if (string.IsNullOrEmpty(cleanLine) || cleanLine.StartsWith('#'))
-                continue;
-
-            var colonIndex = cleanLine.IndexOf(':');
-            if (colonIndex == -1) continue;
-
-            var directive = cleanLine.Substring(0, colonIndex).Trim().ToLowerInvariant();
-            var value = cleanLine.Substring(colonIndex + 1).Trim();
-
-            switch (directive)
-            {
-                case "user-agent":
-                    // 이전 user-agent 규칙 저장
-                    if (currentUserAgent != null)
-                    {
-                        rules[currentUserAgent] = new RobotRules
-                        {
-                            AllowedPaths = allowedPaths.AsReadOnly(),
-                            DisallowedPaths = disallowedPaths.AsReadOnly(),
-                            CrawlDelay = crawlDelay
-                        };
-                    }
-
-                    currentUserAgent = value;
-                    allowedPaths = new List<string>();
-                    disallowedPaths = new List<string>();
-                    crawlDelay = null;
-                    break;
-
-                case "allow":
-                    allowedPaths.Add(value);
-                    break;
-
-                case "disallow":
-                    disallowedPaths.Add(value);
-                    break;
-
-                case "crawl-delay":
-                    if (int.TryParse(value, out var delay))
-                        crawlDelay = delay;
-                    break;
-
-                case "sitemap":
-                    sitemaps.Add(value);
-                    break;
-            }
-        }
-
-        // 마지막 user-agent 규칙 저장
-        if (currentUserAgent != null)
-        {
-            rules[currentUserAgent] = new RobotRules
-            {
-                AllowedPaths = allowedPaths.AsReadOnly(),
-                DisallowedPaths = disallowedPaths.AsReadOnly(),
-                CrawlDelay = crawlDelay
-            };
-        }
-
-        return new RobotsTxtInfo
-        {
-            Content = content,
-            Rules = rules.AsReadOnly(),
-            Sitemaps = sitemaps.AsReadOnly(),
-            CrawlDelay = crawlDelay
-        };
-    }
+        => RobotsTxt.Parse(content);
 
     /// <summary>
     /// 통계 업데이트

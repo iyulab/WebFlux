@@ -225,6 +225,9 @@ public static class ExtractErrorCodes
     /// <summary>너무 많은 리다이렉트</summary>
     public const string TooManyRedirects = "TooManyRedirects";
 
+    /// <summary>robots.txt가 이 URL의 수집을 금지함 (요청 실패가 아니라 정책 판정)</summary>
+    public const string DisallowedByRobotsTxt = "DisallowedByRobotsTxt";
+
     /// <summary>알 수 없는 오류</summary>
     public const string Unknown = "Unknown";
 

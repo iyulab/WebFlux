@@ -170,10 +170,41 @@ public class CrawlResult
 }
 
 /// <summary>
+/// How the fetch of a robots.txt file turned out (RFC 9309 section 2.3.1).
+/// </summary>
+/// <remarks>
+/// The distinction matters because "the file said nothing" and "we could not read the file" call
+/// for opposite answers, and a model that cannot tell them apart has to guess.
+/// </remarks>
+public enum RobotsTxtAccess
+{
+    /// <summary>
+    /// No file was read, or the server said it has none (a 4xx status). RFC 9309 section 2.3.1.3:
+    /// the crawler MAY access any resource.
+    /// </summary>
+    Unavailable = 0,
+
+    /// <summary>The file was fetched and parsed; <see cref="RobotsTxtInfo.Rules"/> decide.</summary>
+    Parsed = 1,
+
+    /// <summary>
+    /// The server answered with a 5xx status. RFC 9309 section 2.3.1.4: the crawler MUST assume
+    /// complete disallow.
+    /// </summary>
+    Unreachable = 2
+}
+
+/// <summary>
 /// robots.txt 정보
 /// </summary>
 public class RobotsTxtInfo
 {
+    /// <summary>
+    /// How the fetch turned out. Defaults to <see cref="RobotsTxtAccess.Unavailable"/>, so a
+    /// default-constructed instance means "no rules apply" rather than "everything is forbidden".
+    /// </summary>
+    public RobotsTxtAccess Access { get; init; } = RobotsTxtAccess.Unavailable;
+
     /// <summary>robots.txt 내용</summary>
     public string? Content { get; init; }
 

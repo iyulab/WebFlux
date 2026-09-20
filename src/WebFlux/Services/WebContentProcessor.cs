@@ -951,7 +951,8 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
                 UserAgent = options.UserAgent,
                 WaitForSelector = options.WaitForSelector,
                 UseDynamicRendering = options.UseDynamicRendering,
-                CustomHeaders = options.CustomHeaders
+                CustomHeaders = options.CustomHeaders,
+                RespectRobotsTxt = options.RespectRobotsTxt
             };
 
             // 크롤링 실행 (재시도 로직 포함)
@@ -965,6 +966,13 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
                     crawlResult = await crawler.CrawlAsync(url, crawlOptions, cancellationToken).ConfigureAwait(false);
 
                     if (crawlResult.IsSuccess)
+                    {
+                        break;
+                    }
+
+                    // A robots.txt refusal is a policy answer, not a failed request: retrying it
+                    // cannot change the outcome and only spends the backoff budget.
+                    if (crawlResult.DisallowedByRobotsTxt)
                     {
                         break;
                     }
@@ -985,9 +993,14 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
 
             if (crawlResult == null || !crawlResult.IsSuccess)
             {
-                var errorCode = crawlResult?.StatusCode != null
-                    ? ExtractErrorCodes.FromHttpStatusCode(crawlResult.StatusCode)
-                    : ExtractErrorCodes.NetworkError;
+                // Carry the policy refusal across the boundary: CrawlResult knows the difference
+                // between "robots.txt says no" and "the request failed", and the caller needs it
+                // too — a StatusCode of 0 would otherwise arrive as the catch-all Unknown.
+                var errorCode = crawlResult?.DisallowedByRobotsTxt == true
+                    ? ExtractErrorCodes.DisallowedByRobotsTxt
+                    : crawlResult?.StatusCode != null
+                        ? ExtractErrorCodes.FromHttpStatusCode(crawlResult.StatusCode)
+                        : ExtractErrorCodes.NetworkError;
 
                 return ProcessingResult.FromError<ExtractedContent>(
                     crawlResult?.ErrorMessage ?? "Failed to crawl URL",
