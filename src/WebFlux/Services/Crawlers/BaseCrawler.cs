@@ -861,13 +861,16 @@ public abstract class BaseCrawler : ICrawler
         if (!IsValidUrl(url))
             return false;
 
-        // 같은 도메인만 크롤링 (기본 정책)
-        if (!string.IsNullOrEmpty(baseUrl))
+        // 호스트 범위. 기본값은 시작 URL 과 같은 호스트만이고, 소비자가 그것을 넓히는 길이 둘 있다:
+        // AllowedDomains 에 호스트를 나열하거나, FollowExternalLinks 로 제한을 푸는 것.
+        // 둘 다 기본값에서는 아무 효과가 없으므로 이 배선은 기존 동작을 바꾸지 않는다.
+        if (!string.IsNullOrEmpty(baseUrl) && !(options?.FollowExternalLinks ?? false))
         {
             var urlDomain = new Uri(url).Host;
             var baseDomain = new Uri(baseUrl).Host;
 
-            if (!urlDomain.Equals(baseDomain, StringComparison.OrdinalIgnoreCase))
+            if (!urlDomain.Equals(baseDomain, StringComparison.OrdinalIgnoreCase)
+                && !IsAllowedDomain(urlDomain, options))
                 return false;
         }
 
@@ -895,6 +898,31 @@ public abstract class BaseCrawler : ICrawler
         }
 
         return true;
+    }
+
+    /// <summary>
+    /// <see cref="CrawlOptions.AllowedDomains"/> 가 <paramref name="host"/> 를 덮는지 본다.
+    /// 목록이 비어 있으면(기본값) 아무것도 넓히지 않는다 - 판정은 호출자의 같은-호스트 규칙에 맡긴다.
+    /// 항목은 호스트 그 자체이거나 그 하위 도메인을 매치한다(<c>example.com</c> 이 <c>docs.example.com</c> 을 덮는다).
+    /// </summary>
+    private static bool IsAllowedDomain(string host, CrawlOptions? options)
+    {
+        if (options?.AllowedDomains is not { Count: > 0 } allowed)
+            return false;
+
+        foreach (var domain in allowed)
+        {
+            if (string.IsNullOrWhiteSpace(domain))
+                continue;
+
+            var candidate = domain.Trim().TrimStart('.');
+
+            if (host.Equals(candidate, StringComparison.OrdinalIgnoreCase)
+                || host.EndsWith("." + candidate, StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+
+        return false;
     }
 
 

@@ -33,11 +33,6 @@ public class CrawlOptions : IValidatable
     }
 
     /// <summary>
-    /// 요청 간 지연 시간 (TimeSpan, llms.txt 최적화용)
-    /// </summary>
-    public TimeSpan? DelayBetweenRequests { get; set; }
-
-    /// <summary>
     /// 동시 요청 수 (기본값: 3)
     /// </summary>
     public int ConcurrentRequests { get; set; } = 3;
@@ -56,19 +51,6 @@ public class CrawlOptions : IValidatable
     /// User-Agent 문자열
     /// </summary>
     public string UserAgent { get; set; } = "WebFlux/1.0 (+https://github.com/webflux/webflux)";
-
-    /// <summary>
-    /// 허용할 콘텐츠 타입 목록
-    /// </summary>
-    public ISet<string> AllowedContentTypes { get; set; } = new HashSet<string>
-    {
-        "text/html",
-        "application/xhtml+xml",
-        "text/plain",
-        "application/json",
-        "application/xml",
-        "text/xml"
-    };
 
     /// <summary>
     /// 제외할 파일 확장자 목록
@@ -93,13 +75,14 @@ public class CrawlOptions : IValidatable
     public IList<string> ExcludeUrlPatterns { get; set; } = new List<string>();
 
     /// <summary>
-    /// 시작 URL 목록
+    /// 시작 URL 의 호스트에 더해 크롤을 허용할 호스트. 항목은 그 호스트 자체와 하위 도메인을
+    /// 덮는다(<c>example.com</c> 이 <c>docs.example.com</c> 을 덮는다).
     /// </summary>
-    public IList<string> StartUrls { get; set; } = new List<string>();
-
-    /// <summary>
-    /// 허용할 도메인 목록 (비어있으면 모든 도메인 허용)
-    /// </summary>
+    /// <remarks>
+    /// 비어 있으면(기본값) 아무것도 넓히지 않는다 - 시작 URL 과 같은 호스트만 크롤한다.
+    /// 「비어 있으면 모든 도메인 허용」이라고 적혀 있던 종전 문구는 구현과 반대였다.
+    /// 모든 호스트를 원하면 <see cref="FollowExternalLinks"/> 를 쓴다.
+    /// </remarks>
     public ISet<string> AllowedDomains { get; set; } = new HashSet<string>();
 
     /// <summary>
@@ -108,49 +91,14 @@ public class CrawlOptions : IValidatable
     public CrawlStrategy Strategy { get; set; } = CrawlStrategy.BreadthFirst;
 
     /// <summary>
-    /// 외부 링크 따라가기 여부 (기본값: false)
+    /// 시작 URL 과 다른 호스트의 링크도 따라간다 (기본값: <c>false</c>).
     /// </summary>
+    /// <remarks>
+    /// <c>true</c> 면 호스트 제한이 사라진다 - <see cref="ExcludeUrlPatterns"/> 나
+    /// <see cref="MaxPages"/> 같은 다른 제한이 없으면 크롤이 넓게 퍼질 수 있다.
+    /// 특정 호스트만 더하려면 <see cref="AllowedDomains"/> 쪽이 맞다.
+    /// </remarks>
     public bool FollowExternalLinks { get; set; }
-
-    /// <summary>
-    /// 요청 타임아웃 (TimeSpan)
-    /// </summary>
-    public TimeSpan Timeout { get; set; } = TimeSpan.FromSeconds(30);
-
-    /// <summary>
-    /// 추가 헤더
-    /// </summary>
-    public Dictionary<string, string> Headers { get; set; } = new();
-
-    /// <summary>
-    /// 최대 동시 연결 수 (llms.txt 최적화용)
-    /// </summary>
-    public int MaxConcurrency { get; set; } = 3;
-
-    /// <summary>
-    /// 우선순위 URL 목록
-    /// </summary>
-    public List<string> PriorityUrls { get; set; } = new();
-
-    /// <summary>
-    /// 이미지 다운로드 여부 (기본값: false)
-    /// </summary>
-    public bool DownloadImages { get; set; }
-
-    /// <summary>
-    /// 최대 이미지 크기 (바이트, 기본값: 5MB)
-    /// </summary>
-    public long MaxImageSizeBytes { get; set; } = 5 * 1024 * 1024;
-
-    /// <summary>
-    /// 캐시 사용 여부 (기본값: true)
-    /// </summary>
-    public bool UseCache { get; set; } = true;
-
-    /// <summary>
-    /// 캐시 만료 시간 (분, 기본값: 60)
-    /// </summary>
-    public int CacheExpirationMinutes { get; set; } = 60;
 
     /// <summary>
     /// 재시도 횟수 (기본값: 3)
@@ -158,8 +106,15 @@ public class CrawlOptions : IValidatable
     public int MaxRetries { get; set; } = 3;
 
     /// <summary>
-    /// 커스텀 헤더
+    /// 요청에 실을 커스텀 헤더.
     /// </summary>
+    /// <remarks>
+    /// ⚠ <b>아직 전송되지 않는다.</b> 정적 크롤러는 <c>HttpClient.GetAsync(url)</c> 로 가져오고 그
+    /// 호출에 헤더를 싣지 않으며, Playwright 경로는 User-Agent 만 설정한다. 이것을 실어 보내려면
+    /// 요청마다 <c>HttpRequestMessage</c> 를 만들지, 공유 <c>HttpClient</c> 의 기본 헤더를 바꿀지를
+    /// 정해야 한다(후자는 동시 크롤 사이로 값이 샌다). 그 판단 전까지는 설정해도 효과가 없고,
+    /// 이 주석이 그 사실을 말하는 자리다.
+    /// </remarks>
     public IDictionary<string, string> CustomHeaders { get; set; } = new Dictionary<string, string>();
 
     /// <summary>

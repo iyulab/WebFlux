@@ -86,12 +86,29 @@ public class OptionsReachabilityRosterTests
             "EnableParallelProcessing", "IncludeImageDescriptions", "IncludeMetadata", "MultimodalOptions",
             "PreserveHeaders", "SplitCodeBlocks", "SplitTables", "UseMemoryOptimization", "UseStreaming",
         ],
+        // Was 19. Two were wired (FollowExternalLinks, AllowedDomains - the host scope was hardcoded
+        // and both options were read by nothing, so FollowExternalLinks = true was silently ignored).
+        // Eleven were removed: five described a feature that does not exist anywhere in src/
+        // (StartUrls - every entry point takes the URL positionally, so no code path could consult
+        // it; PriorityUrls - the frontier is a plain FIFO; DownloadImages and MaxImageSizeBytes -
+        // nothing fetches image bytes, the multimodal port takes a URL; AllowedContentTypes - there
+        // is no content-type gate, ExcludedExtensions is the filter), two configured a cache that
+        // only exists on the ExtractOptions path (UseCache, CacheExpirationMinutes), and four were a
+        // second spelling of a knob already wired on this same class (Timeout vs TimeoutMs,
+        // MaxConcurrency vs ConcurrentRequests, DelayBetweenRequests vs DelayMs, Headers vs
+        // CustomHeaders).
+        //
+        // The six below are the residue, and each has a reason rather than a shrug:
+        // - CustomHeaders: nothing sends request headers yet. Wiring it needs a decision between a
+        //   per-request HttpRequestMessage and mutating the shared HttpClient's defaults (which
+        //   leaks across concurrent crawls). Said so in its XML doc rather than leaving the promise.
+        // - The five metadata options: AIWebMetadataExtractor and HtmlMetadataExtractor implement
+        //   all of this, but neither is DI-registered and neither has a call site, so the subsystem
+        //   has no front door. Wiring it is a feature decision, not a knob decision.
         ["WebFlux.Core.Options.CrawlOptions"] =
         [
-            "AllowedContentTypes", "AllowedDomains", "CacheExpirationMinutes", "CustomHeaders",
-            "CustomMetadataPrompt", "DelayBetweenRequests", "DownloadImages", "EnableMetadataExtraction",
-            "FollowExternalLinks", "Headers", "MaxConcurrency", "MaxImageSizeBytes", "MetadataExtractionMaxChars",
-            "MetadataSchema", "PriorityUrls", "StartUrls", "Timeout", "UseCache", "UseHtmlMetadata",
+            "CustomHeaders", "CustomMetadataPrompt", "EnableMetadataExtraction",
+            "MetadataExtractionMaxChars", "MetadataSchema", "UseHtmlMetadata",
         ],
         ["WebFlux.Core.Options.EnhancementOptions"] = ["TimeoutMs"],
         ["WebFlux.Core.Options.ExtractOptions"] = ["IncludeLinks"],

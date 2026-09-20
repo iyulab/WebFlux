@@ -2,6 +2,45 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.10.0] - 2026-09-21
+
+### Fixed
+- **`CrawlOptions.FollowExternalLinks` and `.AllowedDomains` now decide the crawl's host scope.**
+  The scope was hardcoded to "same host as the start URL" and both options were read by nothing, so
+  `FollowExternalLinks = true` was silently ignored — the permissive direction, where a consumer
+  asks for a wider crawl and quietly gets a narrow one. `AllowedDomains` additionally documented the
+  opposite of what happened ("empty allows every domain"; empty meant same-host only). Now:
+  `FollowExternalLinks = true` removes the host restriction, and `AllowedDomains` entries widen it
+  to those hosts and their subdomains (`example.com` covers `docs.example.com`). **Defaults are
+  unchanged** — `false` and an empty set both mean same-host, which is what the crawler already did.
+  Widening the host scope does not bypass the other filters (`ExcludedExtensions`,
+  `IncludeUrlPatterns`, `ExcludeUrlPatterns`, robots.txt).
+
+### Removed
+- **Breaking: twelve `CrawlOptions` properties that nothing read.** Each was declared and
+  documented, several carried non-default values, and setting any of them changed nothing and
+  reported nothing. Migration for every item: delete the assignment; it never had an effect.
+  - **Described a feature this library does not have** — `StartUrls` (every entry point takes the
+    URL as a parameter, so no code path could consult it), `PriorityUrls` (the frontier is a plain
+    FIFO queue), `DownloadImages` and `MaxImageSizeBytes` (nothing fetches image bytes; the
+    multimodal port takes an image *URL* and the consumer's model fetches it), `AllowedContentTypes`
+    (there is no content-type gate — `ExcludedExtensions` and the URL pattern lists are the filter).
+  - **Configured a cache that exists only on the other API** — `UseCache` (defaulted to `true`) and
+    `CacheExpirationMinutes`. Caching lives on the `ExtractContentAsync` path and reads
+    `ExtractOptions`; the crawl path has no cache at any point. Use `ExtractOptions.UseCache` /
+    `.CacheExpirationMinutes`, which are read.
+  - **A second spelling of a knob already wired on this same class** — `Timeout` (use `TimeoutMs`),
+    `MaxConcurrency` (use `ConcurrentRequests`), `DelayBetweenRequests` (use `DelayMs`, itself an
+    alias of `DelayBetweenRequestsMs`), and `Headers` (a same-type duplicate of `CustomHeaders`).
+    Two of these were documented "llms.txt 최적화용"; there is no llms.txt handling in this library.
+
+### Changed
+- **`CrawlOptions.CustomHeaders` now says that it is not sent.** Nothing puts request headers on the
+  wire: the static crawlers call `HttpClient.GetAsync(url)` without them, and the Playwright path
+  sets only User-Agent. Wiring it needs a decision between a per-request `HttpRequestMessage` and
+  mutating the shared `HttpClient`'s defaults (which leaks between concurrent crawls), so until that
+  is made the XML doc states the limitation rather than leaving the promise standing.
+
 ## [0.9.0] - 2026-09-20
 
 ### Fixed

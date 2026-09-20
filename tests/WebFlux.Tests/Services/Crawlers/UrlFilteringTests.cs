@@ -74,4 +74,58 @@ public class UrlFilteringTests
     {
         _crawler.TestShouldCrawlUrl("https://other.com/page", "https://example.com").Should().BeFalse();
     }
+
+    // The host scope was hardcoded to "same host as the start URL" and the two options that say
+    // otherwise were read by nothing: FollowExternalLinks = true was silently ignored, and
+    // AllowedDomains documented the opposite of what happened ("empty allows every domain").
+    // Each option gets both directions, and the default is asserted from a fresh CrawlOptions so
+    // that moving a declared default turns these red rather than shipping quietly.
+
+    [Fact]
+    public void ShouldCrawlUrl_DefaultOptions_KeepTheSameHostRule()
+    {
+        var options = new CrawlOptions();
+
+        options.FollowExternalLinks.Should().BeFalse("widening the crawl must stay opt-in");
+        options.AllowedDomains.Should().BeEmpty("an empty list must not widen anything");
+
+        _crawler.TestShouldCrawlUrl("https://other.com/page", "https://example.com", options).Should().BeFalse();
+        _crawler.TestShouldCrawlUrl("https://example.com/page", "https://example.com", options).Should().BeTrue();
+    }
+
+    [Fact]
+    public void ShouldCrawlUrl_FollowExternalLinks_AllowsAnotherHost()
+    {
+        var options = new CrawlOptions { FollowExternalLinks = true };
+
+        _crawler.TestShouldCrawlUrl("https://other.com/page", "https://example.com", options).Should().BeTrue();
+    }
+
+    [Fact]
+    public void ShouldCrawlUrl_AllowedDomains_AllowsListedHostsAndTheirSubdomains()
+    {
+        var options = new CrawlOptions { AllowedDomains = new HashSet<string> { "partner.com" } };
+
+        _crawler.TestShouldCrawlUrl("https://partner.com/page", "https://example.com", options).Should().BeTrue();
+        _crawler.TestShouldCrawlUrl("https://docs.partner.com/page", "https://example.com", options).Should().BeTrue();
+
+        // Still a list, not a switch: a host nobody named stays out.
+        _crawler.TestShouldCrawlUrl("https://other.com/page", "https://example.com", options).Should().BeFalse();
+
+        // And a suffix that merely ends the same way is not a subdomain.
+        _crawler.TestShouldCrawlUrl("https://notpartner.com/page", "https://example.com", options).Should().BeFalse();
+    }
+
+    [Fact]
+    public void ShouldCrawlUrl_WideningHostScope_DoesNotBypassTheOtherFilters()
+    {
+        var options = new CrawlOptions
+        {
+            FollowExternalLinks = true,
+            ExcludeUrlPatterns = new List<string> { @"/private/.*" }
+        };
+
+        _crawler.TestShouldCrawlUrl("https://other.com/private/page", "https://example.com", options).Should().BeFalse();
+        _crawler.TestShouldCrawlUrl("https://other.com/public/page", "https://example.com", options).Should().BeTrue();
+    }
 }
