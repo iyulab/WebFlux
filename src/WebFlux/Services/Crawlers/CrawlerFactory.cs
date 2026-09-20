@@ -36,7 +36,6 @@ public class CrawlerFactory : ICrawlerFactory
         {
             CrawlStrategy.BreadthFirst => (ICrawler)_serviceProvider.GetService(typeof(BreadthFirstCrawler))!,
             CrawlStrategy.DepthFirst => (ICrawler)_serviceProvider.GetService(typeof(DepthFirstCrawler))!,
-            CrawlStrategy.Intelligent => (ICrawler)_serviceProvider.GetService(typeof(IntelligentCrawler))!,
             CrawlStrategy.Sitemap => (ICrawler)_serviceProvider.GetService(typeof(SitemapCrawler))!,
             CrawlStrategy.Dynamic => DynamicCrawlerResolver.Resolve(_serviceProvider),
             _ => throw new ArgumentException($"Unknown crawl strategy: {strategy}")

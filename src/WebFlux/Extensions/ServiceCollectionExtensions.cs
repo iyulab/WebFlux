@@ -144,7 +144,6 @@ public static class ServiceCollectionExtensions
         services.TryAddTransient<BreadthFirstCrawler>();
         services.TryAddTransient<DepthFirstCrawler>();
         services.TryAddTransient<SitemapCrawler>();
-        services.TryAddTransient<IntelligentCrawler>();
 
         // 키드 서비스로 크롤러 등록.
         // CrawlerKeys.Dynamic 은 의도적으로 비어 있다 — 동적 렌더링은 브라우저 런타임을 끌어오므로
@@ -153,7 +152,6 @@ public static class ServiceCollectionExtensions
         services.AddKeyedTransient<ICrawler, BreadthFirstCrawler>(CrawlerKeys.BreadthFirst);
         services.AddKeyedTransient<ICrawler, DepthFirstCrawler>(CrawlerKeys.DepthFirst);
         services.AddKeyedTransient<ICrawler, SitemapCrawler>(CrawlerKeys.Sitemap);
-        services.AddKeyedTransient<ICrawler, IntelligentCrawler>(CrawlerKeys.Intelligent);
 
         // 크롤러 팩토리 등록
         services.TryAddSingleton<ICrawlerFactory, CrawlerFactory>();

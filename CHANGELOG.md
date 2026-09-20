@@ -27,6 +27,22 @@ All notable changes to this project will be documented in this file.
 ### Added
 - `CrawlResult.DisallowedByRobotsTxt`.
 
+### Removed
+- **Breaking: `CrawlStrategy.Intelligent` and `IntelligentCrawler`.** The crawler never made a
+  request: it returned `IsSuccess = true` with the placeholder text
+  `"Basic Intelligent crawl result for {url}"` as the page content, so a consumer that chose the
+  strategy indexed that sentence instead of the page. Use `BreadthFirst` (or `Dynamic` for rendered
+  pages). `CrawlerKeys.Intelligent` is removed with it; code that resolves the keyed crawler
+  `"Intelligent"` now gets `null` and should fall back to `CrawlerKeys.BreadthFirst`.
+- **Breaking: `CrawlStrategy.Priority`.** No crawler implemented it; requesting it threw
+  `ArgumentException`.
+- The remaining `CrawlStrategy` members keep their numeric values (`BreadthFirst = 0`,
+  `DepthFirst = 1`, `Sitemap = 2`, `Dynamic = 5`); 3 and 4 stay unassigned.
+- **Breaking: `IAiTxtParser`, `ILlmsParser`, `IManifestParser`, `ISitemapAnalyzer` and their model
+  types** (`AiTxt*`, `Llms*`, `WebManifest*`, sitemap-analysis models). Nothing implemented or used
+  them, and the README listed ai.txt, llms.txt and manifest.json as supported on their strength.
+  `ChangeFrequency` stays. The README now lists only what the library does.
+
 ## [0.7.4] - 2026-09-19
 
 ### Fixed

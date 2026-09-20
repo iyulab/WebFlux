@@ -40,7 +40,6 @@ public class ServiceFactory : IServiceFactory
         {
             CrawlStrategy.BreadthFirst => _serviceProvider.GetRequiredKeyedService<ICrawler>("BreadthFirst"),
             CrawlStrategy.DepthFirst => _serviceProvider.GetRequiredKeyedService<ICrawler>("DepthFirst"),
-            CrawlStrategy.Intelligent => _serviceProvider.GetRequiredKeyedService<ICrawler>("Intelligent"),
             CrawlStrategy.Sitemap => _serviceProvider.GetRequiredKeyedService<ICrawler>("Sitemap"),
             CrawlStrategy.Dynamic => DynamicCrawlerResolver.Resolve(_serviceProvider),
             _ => throw new ArgumentException($"Unknown crawl strategy: {strategy}")

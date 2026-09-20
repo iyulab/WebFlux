@@ -87,22 +87,6 @@ public class CrawlerFactoryTests
     }
 
     [Fact]
-    public void CreateCrawler_WithIntelligentStrategy_ShouldReturnIntelligentCrawler()
-    {
-        // Arrange
-        var mockCrawler = Substitute.For<ICrawler>();
-        _mockServiceProvider.GetService(typeof(IntelligentCrawler))
-            .Returns(mockCrawler);
-
-        // Act
-        var crawler = _factory.CreateCrawler(CrawlStrategy.Intelligent);
-
-        // Assert
-        crawler.Should().NotBeNull();
-        _mockServiceProvider.Received(1).GetService(typeof(IntelligentCrawler));
-    }
-
-    [Fact]
     public void CreateCrawler_WithDynamicStrategy_ShouldReturnTheRegisteredDynamicCrawler()
     {
         // Arrange - the dynamic renderer arrives from a separate package under a known key, so the
@@ -119,15 +103,41 @@ public class CrawlerFactoryTests
         crawler.Should().BeSameAs(mockCrawler);
     }
 
-    [Fact]
-    public void CreateCrawler_WithUnsupportedStrategy_ShouldThrowArgumentException()
+    // Every public member of the enum must be a strategy the factory can build. Two members used to
+    // exist that it could not: one threw, the other returned a stub that fetched nothing and
+    // reported success. Registering every crawler here means a member without a switch arm fails.
+    [Theory]
+    [MemberData(nameof(EveryStrategy))]
+    public void CreateCrawler_HandlesEveryPublicStrategy(CrawlStrategy strategy)
     {
-        // Arrange
-        var unsupportedStrategy = CrawlStrategy.Priority; // Priority is not implemented in factory
+        var provider = new ServiceCollection()
+            .AddSingleton(new BreadthFirstCrawler(Substitute.For<IHttpClientService>(), Substitute.For<IEventPublisher>()))
+            .AddSingleton(new DepthFirstCrawler(Substitute.For<IHttpClientService>(), Substitute.For<IEventPublisher>()))
+            .AddSingleton(new SitemapCrawler(Substitute.For<IHttpClientService>(), Substitute.For<IEventPublisher>()))
+            .AddKeyedTransient(CrawlerKeys.Dynamic, (_, _) => Substitute.For<ICrawler>())
+            .BuildServiceProvider();
 
-        // Act & Assert
-        var exception = Assert.Throws<ArgumentException>(() => _factory.CreateCrawler(unsupportedStrategy));
-        exception.Message.Should().Contain("Unknown crawl strategy");
+        new CrawlerFactory(provider).CreateCrawler(strategy).Should().NotBeNull();
+    }
+
+    public static TheoryData<CrawlStrategy> EveryStrategy()
+    {
+        var data = new TheoryData<CrawlStrategy>();
+        foreach (var strategy in Enum.GetValues<CrawlStrategy>())
+            data.Add(strategy);
+        return data;
+    }
+
+    // The numbers are part of the contract: a configuration may store the strategy as a number, and
+    // 3 and 4 stay empty so that removing members did not renumber the ones that remain.
+    [Fact]
+    public void CrawlStrategy_KeepsItsNumericValues()
+    {
+        ((int)CrawlStrategy.BreadthFirst).Should().Be(0);
+        ((int)CrawlStrategy.DepthFirst).Should().Be(1);
+        ((int)CrawlStrategy.Sitemap).Should().Be(2);
+        ((int)CrawlStrategy.Dynamic).Should().Be(5);
+        Enum.GetValues<CrawlStrategy>().Should().HaveCount(4);
     }
 
     [Fact]

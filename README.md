@@ -57,7 +57,7 @@ await foreach (var chunk in processor.ProcessWebsiteAsync("https://example.com")
 - **Interface-Based Design**: Bring your own AI services (OpenAI, Anthropic, Azure, local models)
 - **Multiple Chunking Strategies**: Auto, Smart, Semantic, Intelligent, MemoryOptimized, Paragraph, FixedSize, DomStructure
 - **Content Formats**: HTML, Markdown, JSON, XML, PDF
-- **Web Standards**: robots.txt, sitemap.xml, ai.txt, llms.txt, manifest.json
+- **Web Standards**: robots.txt (honoured on every crawl entry point; `CrawlOptions.RespectRobotsTxt`, on by default) and sitemap.xml (`CrawlStrategy.Sitemap`)
 - **Streaming**: Process large websites with AsyncEnumerable
 - **Parallel Processing**: Concurrent crawling and processing
 - **Rich Metadata**: Web document metadata extraction (SEO, Open Graph, Schema.org, Twitter Cards)

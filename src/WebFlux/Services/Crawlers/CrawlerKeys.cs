@@ -19,9 +19,6 @@ public static class CrawlerKeys
     /// <summary>Sitemap 기반 크롤러 키</summary>
     public const string Sitemap = "Sitemap";
 
-    /// <summary>llms.txt 기반 지능형 크롤러 키</summary>
-    public const string Intelligent = "Intelligent";
-
     /// <summary>
     /// 동적 렌더링 크롤러 키. WebFlux 본체는 이 키의 구현을 제공하지 않는다 —
     /// <c>WebFlux.Playwright</c> 패키지가 등록한다.

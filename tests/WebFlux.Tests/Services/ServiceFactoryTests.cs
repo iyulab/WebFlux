@@ -172,24 +172,6 @@ public class ServiceFactoryTests
     }
 
     [Fact]
-    public void CreateCrawler_WithIntelligent_ShouldReturnKeyedCrawler()
-    {
-        // Arrange
-        var mockCrawler = Substitute.For<ICrawler>();
-        var services = new ServiceCollection();
-        services.AddKeyedSingleton<ICrawler>("Intelligent", mockCrawler);
-        var serviceProvider = services.BuildServiceProvider();
-        var factory = new ServiceFactory(serviceProvider);
-
-        // Act
-        var crawler = factory.CreateCrawler(CrawlStrategy.Intelligent);
-
-        // Assert
-        crawler.Should().NotBeNull();
-        crawler.Should().BeSameAs(mockCrawler);
-    }
-
-    [Fact]
     public void CreateCrawler_WithSitemap_ShouldReturnKeyedCrawler()
     {
         // Arrange
@@ -235,7 +217,7 @@ public class ServiceFactoryTests
 
         // Act & Assert
         var exception = Assert.Throws<ArgumentException>(() =>
-            factory.CreateCrawler(CrawlStrategy.Priority));
+            factory.CreateCrawler((CrawlStrategy)3)); // 3 was a removed member; it must stay unassigned
         exception.Message.Should().Contain("Unknown crawl strategy");
     }
 

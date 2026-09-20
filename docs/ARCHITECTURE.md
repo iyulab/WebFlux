@@ -65,7 +65,6 @@ CrawlResult   ExtractedContent  Metadata    WebContentChunk
 ### 3. Analyze
 - 문서 구조 분석
 - 품질 메트릭 계산
-- 웹 표준 메타데이터 파싱 (ai.txt, llms.txt 등)
 
 ### 4. Chunk
 - 청킹 전략에 따라 콘텐츠 분할
@@ -200,11 +199,6 @@ WebFlux가 분석하는 웹 표준:
 |------|------|
 | robots.txt | 크롤링 규칙 |
 | sitemap.xml | URL 디스커버리 |
-| ai.txt | AI 사용 정책 |
-| llms.txt | 사이트 구조 정보 |
-| manifest.json | PWA 메타데이터 |
-| security.txt | 보안 정책 |
-| .well-known/* | 표준 메타데이터 |
 
 ## Performance Optimization
 
