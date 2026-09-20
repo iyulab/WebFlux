@@ -14,24 +14,19 @@ public class OptionsReachabilityRosterTests
     private static readonly Assembly[] Libraries =
     [
         Assembly.Load("WebFlux"),
+        Assembly.Load("WebFlux.Playwright"),
     ];
 
     /// <summary>
     /// Options accepted as unread today. Shrink this list; never grow it silently.
     /// <para>
-    /// Everything below is the roster's opening baseline (2026-09-20), recorded as found rather than as
-    /// judged: this library had no reachability roster, and its first run reported 138 unread public
-    /// options across 25 types. None has been investigated, so none carries a reason of its own —
-    /// recording them here is what makes the gate start green and makes the *next* unread option a
-    /// failure instead of silently joining a crowd. Working through them is tracked in the umbrella's
-    /// issue draft.
+    /// Opening baseline (2026-09-20): 133 unread public options across 25 types, recorded as found rather than
+    /// as judged - none has been investigated, so none carries a reason of its own. Recording them is what makes
+    /// the gate start green and makes the *next* unread option a failure instead of silently joining a crowd.
     /// </para>
     /// <para>
-    /// Two are already gone: <c>CrawlOptions.RespectRobotsTxt</c> is read by the crawl loop as of
-    /// 0.8.0 — the README promised it twice and nothing read it — and wiring it also made
-    /// <c>CrawlOptions.UserAgent</c> reachable, which the roster caught in the other direction
-    /// (listed as unread, now read). The roster fails both ways, so leaving either listed here would
-    /// itself be the failure.
+    /// The assembly list above must cover every assembly this repository ships. Scanning only the main one
+    /// reports options that a sibling assembly reads as unread - that mistake inflated an early baseline elsewhere threefold.
     /// </para>
     /// </summary>
     private static readonly Dictionary<string, string[]> KnownUnread = new()
@@ -95,9 +90,8 @@ public class OptionsReachabilityRosterTests
         [
             "AllowedContentTypes", "AllowedDomains", "CacheExpirationMinutes", "CustomHeaders",
             "CustomMetadataPrompt", "DelayBetweenRequests", "DownloadImages", "EnableMetadataExtraction",
-            "EnableScrolling", "FollowExternalLinks", "Headers", "MaxConcurrency", "MaxImageSizeBytes",
-            "MetadataExtractionMaxChars", "MetadataSchema", "PriorityUrls", "StartUrls",
-            "Timeout", "TimeoutMs", "UseCache", "UseHtmlMetadata", "WaitForSelector",
+            "FollowExternalLinks", "Headers", "MaxConcurrency", "MaxImageSizeBytes", "MetadataExtractionMaxChars",
+            "MetadataSchema", "PriorityUrls", "StartUrls", "Timeout", "UseCache", "UseHtmlMetadata",
         ],
         ["WebFlux.Core.Options.EnhancementOptions"] = ["TimeoutMs"],
         ["WebFlux.Core.Options.ExtractOptions"] = ["IncludeLinks"],
