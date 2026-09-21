@@ -6,6 +6,8 @@ using WebFlux.Core.Models.Events;
 using WebFlux.Core.Options;
 using System.Collections.Concurrent;
 
+using WebFlux.Services.Crawlers;
+
 namespace WebFlux.Services;
 
 /// <summary>
@@ -952,7 +954,11 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
                 WaitForSelector = options.WaitForSelector,
                 UseDynamicRendering = options.UseDynamicRendering,
                 CustomHeaders = options.CustomHeaders,
-                RespectRobotsTxt = options.RespectRobotsTxt
+                RespectRobotsTxt = options.RespectRobotsTxt,
+                // This path owns the retries (the loop below), for every kind of crawler. Left at
+                // its default the crawler would retry inside each of our attempts and the two
+                // counts would multiply.
+                MaxRetries = 0
             };
 
             // 크롤링 실행 (재시도 로직 포함)
@@ -980,6 +986,12 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
                     // Nor is a timeout: TimeoutSeconds is the caller's bound on this URL, and
                     // retrying would multiply it by MaxRetries + 1.
                     if (crawlResult.TimedOut)
+                    {
+                        break;
+                    }
+
+                    // Nor is an answer that a second request cannot change (404, 403, 410 ...).
+                    if (!CrawlRetryPolicy.IsRetryable(crawlResult))
                     {
                         break;
                     }

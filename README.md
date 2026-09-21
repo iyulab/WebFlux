@@ -71,6 +71,9 @@ await foreach (var chunk in processor.ProcessWebsiteAsync("https://example.com")
   (default 15) bound every request a call makes — the page, its robots.txt, a sitemap — on the HTTP
   and the Playwright crawlers alike. A timeout is **not retried**, whatever `MaxRetries` says: it
   arrives as `CrawlResult.TimedOut` / `ExtractErrorCodes.Timeout` after about the time you asked for.
+- **Retries**: `MaxRetries` (on `CrawlOptions` for a crawl, on `ExtractOptions` for a single URL)
+  counts attempts once, never nested. Transport errors, 408, 429 and 5xx are retried with backoff;
+  a 404/403/410, a robots.txt refusal and a timeout are final.
 - **Streaming**: Process large websites with AsyncEnumerable
 - **Parallel Processing**: Concurrent crawling and processing
 - **Rich Metadata**: Web document metadata extraction (SEO, Open Graph, Schema.org, Twitter Cards)

@@ -98,6 +98,13 @@ public abstract class BaseCrawler : ICrawler
                     continue;
                 }
 
+                // 408 and 5xx can change on a second request; a 404 cannot, and is returned as it is.
+                if (CrawlRetryPolicy.IsRetryableStatus((int)response.StatusCode) && attempt < maxRetries)
+                {
+                    await Task.Delay(CrawlRetryPolicy.Backoff(attempt), cancellationToken);
+                    continue;
+                }
+
                 var content = await response.Content.ReadAsStringAsync(cancellationToken);
                 var responseTime = (long)(DateTimeOffset.UtcNow - startTime).TotalMilliseconds;
 

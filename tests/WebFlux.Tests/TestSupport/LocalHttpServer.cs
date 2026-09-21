@@ -15,6 +15,8 @@ public sealed class LocalHttpServer : IDisposable
     private readonly HttpListener _listener = new();
     private readonly CancellationTokenSource _stop = new();
     private readonly Dictionary<string, (TimeSpan Delay, string Body, string ContentType)> _routes = new();
+    private readonly Dictionary<string, int> _statuses = new();
+    private readonly HashSet<string> _aborts = new();
     private readonly Dictionary<string, int> _hits = new();
     private readonly Dictionary<string, Dictionary<string, string>> _lastHeaders = new();
     private readonly string _base;
@@ -41,6 +43,18 @@ public sealed class LocalHttpServer : IDisposable
     public void Serve(string path, string body, string contentType = "text/html; charset=utf-8", TimeSpan delay = default)
     {
         lock (_routes) _routes[path] = (delay, body, contentType);
+    }
+
+    /// <summary>그 경로가 본문 없이 이 상태 코드를 답하게 한다.</summary>
+    public void Status(string path, int statusCode)
+    {
+        lock (_routes) _statuses[path] = statusCode;
+    }
+
+    /// <summary>그 경로가 응답 없이 연결을 끊게 한다 (클라이언트에는 전송 오류).</summary>
+    public void Abort(string path)
+    {
+        lock (_routes) _aborts.Add(path);
     }
 
     public int Hits(string path)
@@ -82,11 +96,30 @@ public sealed class LocalHttpServer : IDisposable
         }
 
         (TimeSpan Delay, string Body, string ContentType) route;
-        bool known;
-        lock (_routes) known = _routes.TryGetValue(path, out route);
+        bool known, abort;
+        int status;
+        lock (_routes)
+        {
+            known = _routes.TryGetValue(path, out route);
+            abort = _aborts.Contains(path);
+            _statuses.TryGetValue(path, out status);
+        }
 
         try
         {
+            if (abort)
+            {
+                ctx.Response.Abort();
+                return;
+            }
+
+            if (status != 0)
+            {
+                ctx.Response.StatusCode = status;
+                ctx.Response.Close();
+                return;
+            }
+
             if (!known)
             {
                 ctx.Response.StatusCode = 404;

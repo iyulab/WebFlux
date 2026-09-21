@@ -24,6 +24,15 @@ All notable changes to this project will be documented in this file.
   headers, so concurrent crawls cannot see each other's values), on the HTTP and Playwright crawlers.
   The 0.10.0 note that it "is not sent" is resolved by this.
 
+- **Retries belong to one layer, and only what can change is asked again.** `ExtractContentAsync`
+  wrapped the crawler's retry loop in its own, so a transport error cost
+  `(ExtractOptions.MaxRetries + 1) x (CrawlOptions.MaxRetries + 1)` requests — 12 with the defaults,
+  8 measured with `MaxRetries = 1` — and it retried *every* unsuccessful result, so a 404 was asked
+  three times with backoff in between. The extract path now owns its retries (the crawler is called
+  with `MaxRetries = 0`), and both layers share one rule: transport errors, 408, 429 and 5xx are
+  retried; 404, 403, 410 and the like are an answer. Direct crawls (`CrawlAsync`) gain the 408/5xx
+  retry they did not have; a robots.txt refusal and a timeout stay final.
+
 ### Added
 - `WebFluxUserAgent` (`Default`, `ProductToken`, `ContactUrl`) and `RobotsTxt.ProductToken(string)`.
 
