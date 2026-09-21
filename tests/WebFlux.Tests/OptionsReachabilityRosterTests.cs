@@ -107,7 +107,7 @@ public class OptionsReachabilityRosterTests
         //   has no front door. Wiring it is a feature decision, not a knob decision.
         ["WebFlux.Core.Options.CrawlOptions"] =
         [
-            "CustomHeaders", "CustomMetadataPrompt", "EnableMetadataExtraction",
+            "CustomMetadataPrompt", "EnableMetadataExtraction",
             "MetadataExtractionMaxChars", "MetadataSchema", "UseHtmlMetadata",
         ],
         ["WebFlux.Core.Options.EnhancementOptions"] = ["TimeoutMs"],

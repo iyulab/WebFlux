@@ -456,7 +456,7 @@ public class CrawlOptions
     public int MaxDepth { get; set; } = 3;
     public int MaxPages { get; set; } = 100;
     public bool RespectRobotsTxt { get; set; } = true;
-    public string UserAgent { get; set; } = "WebFlux/1.0";
+    public string UserAgent { get; set; } = WebFluxUserAgent.Default;   // "WebFlux/{version} (+https://github.com/iyulab/WebFlux)" — sent on every request, and its product token picks the robots.txt group
     public int DelayMs { get; set; } = 500;
     public int TimeoutMs { get; set; } = 30000;   // per request; a timeout is not retried
 }

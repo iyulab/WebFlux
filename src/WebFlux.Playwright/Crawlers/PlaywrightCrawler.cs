@@ -60,13 +60,8 @@ public partial class PlaywrightCrawler : BaseCrawler, IAsyncDisposable
             try
             {
                 // User-Agent 설정
-                if (!string.IsNullOrEmpty(options?.UserAgent))
-                {
-                    await page.SetExtraHTTPHeadersAsync(new Dictionary<string, string>
-                    {
-                        ["User-Agent"] = options.UserAgent
-                    });
-                }
+                // Same identity and the same custom headers as the HTTP crawlers send.
+                await page.SetExtraHTTPHeadersAsync(BuildRequestHeaders(options));
 
                 // 네비게이션 옵션 - 성능 최적화: DOMContentLoaded 사용
                 var timeout = options?.TimeoutMs ?? 15000; // 30초 -> 15초로 단축

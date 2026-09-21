@@ -57,8 +57,18 @@ public class HttpClientServiceTests : IDisposable
         var service = new HttpClientService(httpClient);
 
         // Assert
-        httpClient.DefaultRequestHeaders.UserAgent.Should().NotBeNull();
-        httpClient.DefaultRequestHeaders.UserAgent.ToString().Should().Contain("WebFlux-SDK");
+        httpClient.DefaultRequestHeaders.UserAgent.ToString().Should().Be(WebFlux.Core.Utilities.WebFluxUserAgent.Default);
+    }
+
+    [Fact]
+    public void Constructor_KeepsAUserAgentTheHttpClientAlreadyHas_RatherThanAddingASecondToken()
+    {
+        using var httpClient = new HttpClient();
+        httpClient.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", "HostApp/2.0");
+
+        _ = new HttpClientService(httpClient);
+
+        httpClient.DefaultRequestHeaders.UserAgent.ToString().Should().Be("HostApp/2.0");
     }
 
     [Fact]

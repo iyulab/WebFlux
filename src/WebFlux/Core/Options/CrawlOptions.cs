@@ -1,6 +1,8 @@
 using WebFlux.Core.Interfaces;
 using WebFlux.Core.Models;
 
+using WebFlux.Core.Utilities;
+
 namespace WebFlux.Core.Options;
 
 /// <summary>
@@ -43,9 +45,14 @@ public class CrawlOptions : IValidatable
     public bool RespectRobotsTxt { get; set; } = true;
 
     /// <summary>
-    /// User-Agent 문자열
+    /// 이 크롤이 보내는 모든 요청의 <c>User-Agent</c> (기본값: <see cref="WebFluxUserAgent.Default"/>).
     /// </summary>
-    public string UserAgent { get; set; } = "WebFlux/1.0 (+https://github.com/webflux/webflux)";
+    /// <remarks>
+    /// 같은 값이 두 곳에 쓰인다 — 전송되는 헤더, 그리고 robots.txt 그룹 선택. 그룹은 RFC 9309 2.2.1 대로
+    /// <b>제품 토큰</b>으로 고른다: <c>"MyBot/1.0 (+https://…)"</c> 는 <c>User-agent: MyBot</c> 그룹을 따른다.
+    /// 비우면 기본값을 쓴다.
+    /// </remarks>
+    public string UserAgent { get; set; } = WebFluxUserAgent.Default;
 
     /// <summary>
     /// 제외할 파일 확장자 목록
@@ -104,11 +111,9 @@ public class CrawlOptions : IValidatable
     /// 요청에 실을 커스텀 헤더.
     /// </summary>
     /// <remarks>
-    /// ⚠ <b>아직 전송되지 않는다.</b> 정적 크롤러는 <c>HttpClient.GetAsync(url)</c> 로 가져오고 그
-    /// 호출에 헤더를 싣지 않으며, Playwright 경로는 User-Agent 만 설정한다. 이것을 실어 보내려면
-    /// 요청마다 <c>HttpRequestMessage</c> 를 만들지, 공유 <c>HttpClient</c> 의 기본 헤더를 바꿀지를
-    /// 정해야 한다(후자는 동시 크롤 사이로 값이 샌다). 그 판단 전까지는 설정해도 효과가 없고,
-    /// 이 주석이 그 사실을 말하는 자리다.
+    /// 요청마다 실린다(공유 <c>HttpClient</c> 의 기본 헤더를 바꾸지 않으므로 동시에 도는 다른 크롤로
+    /// 새지 않는다) — 페이지, robots.txt, sitemap 요청 모두, 정적 크롤러와 Playwright 크롤러 모두.
+    /// <c>User-Agent</c> 는 여기가 아니라 <see cref="UserAgent"/> 로 준다.
     /// </remarks>
     public IDictionary<string, string> CustomHeaders { get; set; } = new Dictionary<string, string>();
 

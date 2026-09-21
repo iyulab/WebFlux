@@ -43,7 +43,7 @@ public class WebFluxOptions : IValidatable
     /// <summary>
     /// 기본 사용자 에이전트
     /// </summary>
-    public string DefaultUserAgent { get; set; } = "WebFlux/1.0 (+https://github.com/webflux/webflux)";
+    public string DefaultUserAgent { get; set; } = WebFlux.Core.Utilities.WebFluxUserAgent.Default;
 
     /// <summary>
     /// 최대 동시 요청 수

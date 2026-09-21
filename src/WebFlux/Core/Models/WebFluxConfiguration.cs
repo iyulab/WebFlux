@@ -96,7 +96,7 @@ public class CrawlingConfiguration
     /// <summary>
     /// 기본 User-Agent
     /// </summary>
-    public string DefaultUserAgent { get; set; } = "WebFlux/1.0 (+https://github.com/webflux/webflux)";
+    public string DefaultUserAgent { get; set; } = WebFlux.Core.Utilities.WebFluxUserAgent.Default;
 
     /// <summary>
     /// 기본 요청 타임아웃 (초)

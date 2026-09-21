@@ -1,4 +1,5 @@
 using WebFlux.Core.Interfaces;
+using WebFlux.Core.Utilities;
 
 namespace WebFlux.Services;
 
@@ -16,9 +17,11 @@ public class HttpClientService : IHttpClientService
     {
         _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
 
-        // 기본 설정
-        _httpClient.DefaultRequestHeaders.Add("User-Agent",
-            "WebFlux-SDK/1.0 (+https://github.com/webflux/webflux)");
+        // The fallback identity, for requests that do not bring their own User-Agent. Set only when
+        // the HttpClient arrives without one: adding a second product token is how a crawler ends up
+        // announcing itself as two bots.
+        if (_httpClient.DefaultRequestHeaders.UserAgent.Count == 0)
+            _httpClient.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", WebFluxUserAgent.Default);
 
         // Timeouts are per request (see SendAsync). HttpClient.Timeout is one value for every
         // concurrent caller and cannot change after the first request, so it cannot carry a
@@ -165,6 +168,8 @@ public class HttpClientService : IHttpClientService
         {
             foreach (var header in headers)
             {
+                // A per-request value replaces the default of the same name rather than joining it.
+                request.Headers.Remove(header.Key);
                 request.Headers.TryAddWithoutValidation(header.Key, header.Value);
             }
         }

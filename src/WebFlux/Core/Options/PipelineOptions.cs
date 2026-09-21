@@ -127,7 +127,7 @@ public class ExtractionOptions
     /// <summary>
     /// User-Agent 문자열
     /// </summary>
-    public string UserAgent { get; set; } = "WebFlux/1.0 (RAG Preprocessor)";
+    public string UserAgent { get; set; } = WebFlux.Core.Utilities.WebFluxUserAgent.Default;
 
     /// <summary>
     /// 메타데이터 추출 활성화

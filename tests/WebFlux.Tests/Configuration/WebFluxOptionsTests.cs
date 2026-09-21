@@ -25,7 +25,7 @@ public class WebFluxOptionsTests
         options.EnableVerboseLogging.Should().BeFalse();
         options.EnableMetrics.Should().BeTrue();
         options.EnableProfiling.Should().BeFalse();
-        options.DefaultUserAgent.Should().Be("WebFlux/1.0 (+https://github.com/webflux/webflux)");
+        options.DefaultUserAgent.Should().Be(WebFlux.Core.Utilities.WebFluxUserAgent.Default);
         options.MaxConcurrentRequests.Should().Be(5);
         options.DefaultTimeoutSeconds.Should().Be(30);
         options.Configuration.Should().NotBeNull();

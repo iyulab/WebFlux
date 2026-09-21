@@ -153,6 +153,25 @@ public static class RobotsTxt
     }
 
     /// <summary>
+    /// The product token of a User-Agent string: <c>"MyBot/1.0 (+https://…)"</c> is <c>"MyBot"</c>.
+    /// </summary>
+    /// <remarks>
+    /// RFC 9309 section 2.2.1 defines the token as letters, <c>_</c> and <c>-</c>, and has crawlers
+    /// match groups on it. A value with no such prefix (including <c>*</c>) selects the <c>*</c> group.
+    /// </remarks>
+    public static string ProductToken(string? userAgent)
+    {
+        if (string.IsNullOrWhiteSpace(userAgent)) return "*";
+
+        var text = userAgent.AsSpan().TrimStart();
+        var length = 0;
+        while (length < text.Length && (char.IsAsciiLetter(text[length]) || text[length] is '_' or '-'))
+            length++;
+
+        return length == 0 ? "*" : text[..length].ToString();
+    }
+
+    /// <summary>
     /// Applies a parsed robots.txt to one URL.
     /// </summary>
     /// <remarks>
@@ -163,14 +182,14 @@ public static class RobotsTxt
     /// </remarks>
     /// <param name="robotsInfo">The parsed rules.</param>
     /// <param name="url">The absolute URL to test.</param>
-    /// <param name="userAgent">The crawler's product token.</param>
+    /// <param name="userAgent">The crawler's User-Agent string, or just its product token.</param>
     public static bool IsAllowed(RobotsTxtInfo robotsInfo, string url, string userAgent)
     {
         // RFC 9309 section 2.3.1.4: a server that answered 5xx leaves the rules undefined, and an
         // undefined robots.txt is a complete disallow.
         if (robotsInfo.Access == RobotsTxtAccess.Unreachable) return false;
 
-        if (!robotsInfo.Rules.TryGetValue(userAgent, out var rules) &&
+        if (!robotsInfo.Rules.TryGetValue(ProductToken(userAgent), out var rules) &&
             !robotsInfo.Rules.TryGetValue("*", out rules))
         {
             return true;

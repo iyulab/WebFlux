@@ -69,7 +69,7 @@ public class BaseCrawlerTests : IDisposable
             RequestMessage = new HttpRequestMessage { RequestUri = new Uri(url) }
         };
 
-        _mockHttpClient.GetAsync(url, null, Arg.Any<TimeSpan?>(), Arg.Any<CancellationToken>())
+        _mockHttpClient.GetAsync(url, Arg.Any<IDictionary<string, string>?>(), Arg.Any<TimeSpan?>(), Arg.Any<CancellationToken>())
             .Returns(response);
 
         // Act
@@ -106,7 +106,7 @@ public class BaseCrawlerTests : IDisposable
             ReasonPhrase = "Not Found"
         };
 
-        _mockHttpClient.GetAsync(url, null, Arg.Any<TimeSpan?>(), Arg.Any<CancellationToken>())
+        _mockHttpClient.GetAsync(url, Arg.Any<IDictionary<string, string>?>(), Arg.Any<TimeSpan?>(), Arg.Any<CancellationToken>())
             .Returns(response);
 
         // Act
@@ -126,7 +126,7 @@ public class BaseCrawlerTests : IDisposable
         var url = "https://example.com";
         var exceptionMessage = "Network error";
 
-        _mockHttpClient.GetAsync(url, null, Arg.Any<TimeSpan?>(), Arg.Any<CancellationToken>())
+        _mockHttpClient.GetAsync(url, Arg.Any<IDictionary<string, string>?>(), Arg.Any<TimeSpan?>(), Arg.Any<CancellationToken>())
             .Throws(new HttpRequestException(exceptionMessage));
 
         // Act
@@ -465,7 +465,7 @@ Sitemap: https://example.com/sitemap.xml
 
         _mockHttpClient.GetAsync(
             Arg.Is<string>(url => url.Contains("robots.txt")),
-            null,
+            Arg.Any<IDictionary<string, string>?>(),
             Arg.Any<TimeSpan?>(),
             Arg.Any<CancellationToken>())
             .Returns(response);
@@ -560,7 +560,7 @@ Disallow: /admin/
 
         _mockHttpClient.GetAsync(
             Arg.Is<string>(u => u.Contains("robots.txt")),
-            null,
+            Arg.Any<IDictionary<string, string>?>(),
             Arg.Any<TimeSpan?>(),
             Arg.Any<CancellationToken>())
             .Returns(response);
@@ -703,7 +703,7 @@ Disallow: /admin/
     {
         // Arrange
         var url = "https://example.com";
-        _mockHttpClient.GetAsync(url, null, Arg.Any<TimeSpan?>(), Arg.Any<CancellationToken>())
+        _mockHttpClient.GetAsync(url, Arg.Any<IDictionary<string, string>?>(), Arg.Any<TimeSpan?>(), Arg.Any<CancellationToken>())
             .Throws(new HttpRequestException("Network error"));
 
         // Act
@@ -803,7 +803,7 @@ Disallow: /admin/
 
         results.Should().HaveCountGreaterThan(1, "the crawl needs to visit more than one URL for this to mean anything");
         await _mockHttpClient.Received(1).GetAsync(
-            "https://example.com/robots.txt", null, Arg.Any<TimeSpan?>(), Arg.Any<CancellationToken>());
+            "https://example.com/robots.txt", Arg.Any<IDictionary<string, string>?>(), Arg.Any<TimeSpan?>(), Arg.Any<CancellationToken>());
     }
 
     // The loop was gated first and the single-URL entry point was not -- and the single-URL entry
@@ -824,7 +824,7 @@ Disallow: /admin/
         result.DisallowedByRobotsTxt.Should().BeTrue();
         result.HtmlContent.Should().BeNull();
         await _mockHttpClient.DidNotReceive().GetAsync(
-            "https://example.com/admin/secret", null, Arg.Any<TimeSpan?>(), Arg.Any<CancellationToken>());
+            "https://example.com/admin/secret", Arg.Any<IDictionary<string, string>?>(), Arg.Any<TimeSpan?>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -882,7 +882,7 @@ Disallow: /admin/
 
         _mockHttpClient.GetAsync(
             Arg.Is<string>(u => u == url),
-            null,
+            Arg.Any<IDictionary<string, string>?>(),
             Arg.Any<TimeSpan?>(),
             Arg.Any<CancellationToken>())
             .Returns(response);

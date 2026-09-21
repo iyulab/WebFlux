@@ -31,7 +31,7 @@ public class ExtractOptions : IValidatable
     /// <summary>
     /// User-Agent 헤더
     /// </summary>
-    public string UserAgent { get; set; } = "WebFlux/1.0";
+    public string UserAgent { get; set; } = WebFlux.Core.Utilities.WebFluxUserAgent.Default;
 
     /// <summary>
     /// 추가 HTTP 헤더

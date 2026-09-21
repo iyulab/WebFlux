@@ -88,7 +88,7 @@ public abstract class BaseCrawler : ICrawler
                     }, cancellationToken);
                 }
 
-                using var response = await HttpClient.GetAsync(url, timeout: requestTimeout, cancellationToken: cancellationToken);
+                using var response = await HttpClient.GetAsync(url, BuildRequestHeaders(options), requestTimeout, cancellationToken);
 
                 // HTTP 429 Too Many Requests 처리
                 if (response.StatusCode == HttpStatusCode.TooManyRequests && attempt < maxRetries)
@@ -177,6 +177,27 @@ public abstract class BaseCrawler : ICrawler
         TimeSpan.FromMilliseconds(options?.TimeoutMs ?? DefaultRequestTimeoutMs);
 
     private const int DefaultRequestTimeoutMs = 30000;
+
+    /// <summary>The User-Agent this crawl sends, and the one its robots.txt group is chosen by.</summary>
+    protected static string GetUserAgent(CrawlOptions? options) =>
+        string.IsNullOrWhiteSpace(options?.UserAgent) ? WebFluxUserAgent.Default : options.UserAgent;
+
+    /// <summary>
+    /// Headers for one request: <c>CrawlOptions.CustomHeaders</c> plus the User-Agent. Per request
+    /// rather than on the shared HttpClient, so concurrent crawls cannot see each other's values.
+    /// </summary>
+    protected static IDictionary<string, string> BuildRequestHeaders(CrawlOptions? options)
+    {
+        var headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        if (options?.CustomHeaders != null)
+        {
+            foreach (var header in options.CustomHeaders)
+                headers[header.Key] = header.Value;
+        }
+
+        headers["User-Agent"] = GetUserAgent(options);
+        return headers;
+    }
 
     private static bool IsTimeout(Exception ex, CancellationToken callerToken) =>
         ex is TimeoutException ||
@@ -487,7 +508,7 @@ public abstract class BaseCrawler : ICrawler
         if (string.IsNullOrWhiteSpace(sitemapUrl))
             throw new ArgumentException("Sitemap URL cannot be null or empty", nameof(sitemapUrl));
 
-        var urls = await ExtractUrlsFromSitemapAsync(sitemapUrl, GetRequestTimeout(options), cancellationToken);
+        var urls = await ExtractUrlsFromSitemapAsync(sitemapUrl, options, cancellationToken);
 
         foreach (var url in urls)
         {
@@ -514,7 +535,7 @@ public abstract class BaseCrawler : ICrawler
         string baseUrl,
         string userAgent,
         CancellationToken cancellationToken = default) =>
-        FetchRobotsTxtAsync(baseUrl, userAgent, timeout: null, cancellationToken);
+        FetchRobotsTxtAsync(baseUrl, userAgent, headers: null, timeout: null, cancellationToken);
 
     /// <summary>
     /// Fetches and parses robots.txt with an explicit request timeout. The crawl paths come through
@@ -524,6 +545,7 @@ public abstract class BaseCrawler : ICrawler
     protected virtual async Task<RobotsTxtInfo> FetchRobotsTxtAsync(
         string baseUrl,
         string userAgent,
+        IDictionary<string, string>? headers,
         TimeSpan? timeout,
         CancellationToken cancellationToken)
     {
@@ -531,7 +553,10 @@ public abstract class BaseCrawler : ICrawler
 
         try
         {
-            using var response = await HttpClient.GetAsync(robotsUrl, timeout: timeout, cancellationToken: cancellationToken);
+            // The robots.txt request identifies itself the way the page request will: a site may
+            // serve different rules to different agents.
+            headers ??= new Dictionary<string, string> { ["User-Agent"] = userAgent };
+            using var response = await HttpClient.GetAsync(robotsUrl, headers, timeout, cancellationToken);
 
             // RFC 9309 section 2.3.1.4: a 5xx means the file is undefined, and an undefined
             // robots.txt is a complete disallow — not the same as a site that has no rules.
@@ -615,13 +640,13 @@ public abstract class BaseCrawler : ICrawler
         try
         {
             var uri = new Uri(url);
-            var userAgent = string.IsNullOrWhiteSpace(options?.UserAgent) ? "*" : options.UserAgent;
+            var userAgent = GetUserAgent(options);
             // Authority, not Host: robots.txt belongs to scheme + host + port (RFC 9309 section 2.3).
             var origin = uri.GetLeftPart(UriPartial.Authority);
             var key = $"{origin}|{userAgent}";
             var robotsInfo = await _robotsCache.GetOrAdd(
                 key,
-                _ => FetchRobotsTxtAsync(origin, userAgent, GetRequestTimeout(options), cancellationToken));
+                _ => FetchRobotsTxtAsync(origin, userAgent, BuildRequestHeaders(options), GetRequestTimeout(options), cancellationToken));
 
             return IsPathAllowed(robotsInfo, url, userAgent);
         }
@@ -709,17 +734,18 @@ public abstract class BaseCrawler : ICrawler
     /// XDocument 기반 파싱으로 namespace, CDATA를 지원합니다.
     /// </summary>
     /// <param name="sitemapUrl">Sitemap URL</param>
-    /// <param name="timeout">요청 타임아웃</param>
+    /// <param name="options">크롤링 옵션 (요청 타임아웃 · User-Agent · 커스텀 헤더)</param>
     /// <param name="cancellationToken">취소 토큰</param>
     /// <returns>URL 목록</returns>
     protected virtual async Task<IEnumerable<string>> ExtractUrlsFromSitemapAsync(
         string sitemapUrl,
-        TimeSpan timeout,
+        CrawlOptions? options,
         CancellationToken cancellationToken)
     {
         try
         {
-            using var response = await HttpClient.GetAsync(sitemapUrl, timeout: timeout, cancellationToken: cancellationToken);
+            using var response = await HttpClient.GetAsync(
+                sitemapUrl, BuildRequestHeaders(options), GetRequestTimeout(options), cancellationToken);
 
             if (!response.IsSuccessStatusCode)
                 return Array.Empty<string>();

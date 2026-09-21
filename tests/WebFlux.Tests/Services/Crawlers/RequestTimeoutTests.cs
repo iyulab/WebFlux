@@ -1,7 +1,5 @@
 using System.Diagnostics;
 using System.Net;
-using System.Net.Sockets;
-using System.Text;
 using AwesomeAssertions;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
@@ -10,6 +8,7 @@ using WebFlux.Core.Models;
 using WebFlux.Core.Options;
 using WebFlux.Services;
 using WebFlux.Services.Crawlers;
+using WebFlux.Tests.TestSupport;
 
 namespace WebFlux.Tests.Services.Crawlers;
 
@@ -26,7 +25,7 @@ public sealed class RequestTimeoutTests : IDisposable
 {
     private static readonly TimeSpan SlowPage = TimeSpan.FromSeconds(4);
 
-    private readonly DelayedServer _server = new();
+    private readonly LocalHttpServer _server = new();
     private readonly HttpClient _httpClient = new();
     private readonly HttpClientService _http;
     private readonly BreadthFirstCrawler _crawler;
@@ -185,94 +184,5 @@ public sealed class RequestTimeoutTests : IDisposable
     {
         _server.Dispose();
         _httpClient.Dispose();
-    }
-
-    /// <summary>경로별로 정해진 시간만큼 기다렸다가 200 을 답하는 로컬 listener.</summary>
-    private sealed class DelayedServer : IDisposable
-    {
-        private readonly HttpListener _listener = new();
-        private readonly CancellationTokenSource _stop = new();
-        private readonly Dictionary<string, TimeSpan> _delays = new();
-        private readonly Dictionary<string, int> _hits = new();
-        private readonly string _base;
-
-        public DelayedServer()
-        {
-            int port;
-            using (var probe = new TcpListener(IPAddress.Loopback, 0))
-            {
-                probe.Start();
-                port = ((IPEndPoint)probe.LocalEndpoint).Port;
-            }
-
-            _base = $"http://localhost:{port}";
-            _listener.Prefixes.Add(_base + "/");
-            _listener.Start();
-            _ = Task.Run(AcceptLoopAsync);
-        }
-
-        public string Url(string path) => _base + path;
-
-        public void Delay(string path, TimeSpan delay)
-        {
-            lock (_delays) _delays[path] = delay;
-        }
-
-        public int Hits(string path)
-        {
-            lock (_hits) return _hits.GetValueOrDefault(path);
-        }
-
-        private async Task AcceptLoopAsync()
-        {
-            while (!_stop.IsCancellationRequested)
-            {
-                HttpListenerContext ctx;
-                try { ctx = await _listener.GetContextAsync(); }
-                catch { return; }
-
-                _ = Task.Run(() => RespondAsync(ctx));
-            }
-        }
-
-        private async Task RespondAsync(HttpListenerContext ctx)
-        {
-            var path = ctx.Request.Url!.AbsolutePath;
-            lock (_hits) _hits[path] = _hits.GetValueOrDefault(path) + 1;
-
-            TimeSpan delay;
-            bool known;
-            lock (_delays) known = _delays.TryGetValue(path, out delay);
-
-            try
-            {
-                if (!known)
-                {
-                    ctx.Response.StatusCode = 404;
-                    ctx.Response.Close();
-                    return;
-                }
-
-                await Task.Delay(delay, _stop.Token);
-                var body = Encoding.UTF8.GetBytes("<html><head><title>t</title></head><body><p>hello</p></body></html>");
-                ctx.Response.StatusCode = 200;
-                ctx.Response.ContentType = "text/html; charset=utf-8";
-                await ctx.Response.OutputStream.WriteAsync(body, _stop.Token);
-                ctx.Response.Close();
-            }
-            catch
-            {
-                // The client gave up (that is the point of these tests) or the server is stopping.
-                try { ctx.Response.Abort(); } catch { /* already gone */ }
-            }
-        }
-
-        public void Dispose()
-        {
-            _stop.Cancel();
-            try { _listener.Stop(); } catch { /* best effort */ }
-            _listener.Close();
-            _stop.Dispose();
-        }
     }
 }

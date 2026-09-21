@@ -2,6 +2,39 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.12.0] - 2026-09-21
+
+### Fixed
+- **The crawler announces itself as one bot, with this project's contact URL.** Requests carried two
+  product tokens (`WebFlux/1.0 … WebFlux-SDK/1.0 …`, one added by the DI registration and one by
+  `HttpClientService`) and a contact URL that belongs to a different GitHub organisation. The default
+  is now `WebFlux/{major}.{minor} (+https://github.com/iyulab/WebFlux)`, defined once in
+  `WebFluxUserAgent.Default` and used by every option that defaults a User-Agent. A host that hands
+  in an `HttpClient` with its own User-Agent keeps it.
+- **`CrawlOptions.UserAgent` is sent.** It chose the robots.txt group and nothing else — the request
+  went out under the default identity, so a crawl could be *allowed* as `MyBot` and *arrive* as
+  someone else. The same value now goes on the page, robots.txt and sitemap requests.
+- **robots.txt groups are matched on the product token (RFC 9309 §2.2.1).** The group was looked up
+  by the whole User-Agent string, so `UserAgent = "MyBot/1.0"` never matched `User-agent: MyBot` and
+  fell through to `*` — a site's rules for a named bot were ignored. `"MyBot/1.0 (+https://…)"` now
+  follows the `MyBot` group, and the default identity follows a `User-agent: WebFlux` group.
+  **This can turn a crawl that used to succeed into `DisallowedByRobotsTxt`** where a site
+  disallows your bot by name; that is the site's instruction finally being read.
+- **`CrawlOptions.CustomHeaders` is sent**, per request (not through the shared `HttpClient`'s default
+  headers, so concurrent crawls cannot see each other's values), on the HTTP and Playwright crawlers.
+  The 0.10.0 note that it "is not sent" is resolved by this.
+
+### Added
+- `WebFluxUserAgent` (`Default`, `ProductToken`, `ContactUrl`) and `RobotsTxt.ProductToken(string)`.
+
+### Changed
+- **Breaking (subclasses only):** `BaseCrawler.ExtractUrlsFromSitemapAsync` takes the `CrawlOptions`
+  instead of a timeout, and `FetchRobotsTxtAsync` takes the request headers — both so the identity
+  and headers reach every request.
+- Default values of `ExtractOptions.UserAgent`, `PipelineOptions.UserAgent`,
+  `WebFluxOptions.DefaultUserAgent` and `CrawlingConfiguration.DefaultUserAgent` are
+  `WebFluxUserAgent.Default`.
+
 ## [0.11.0] - 2026-09-21
 
 ### Fixed

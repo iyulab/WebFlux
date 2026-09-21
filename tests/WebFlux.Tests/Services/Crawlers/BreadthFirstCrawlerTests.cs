@@ -70,7 +70,7 @@ public class BreadthFirstCrawlerTests : IDisposable
             RequestMessage = new HttpRequestMessage { RequestUri = new Uri(url) }
         };
 
-        _mockHttpClient.GetAsync(url, null, Arg.Any<TimeSpan?>(), Arg.Any<CancellationToken>())
+        _mockHttpClient.GetAsync(url, Arg.Any<IDictionary<string, string>?>(), Arg.Any<TimeSpan?>(), Arg.Any<CancellationToken>())
             .Returns(response);
 
         // Act
@@ -173,7 +173,7 @@ public class BreadthFirstCrawlerTests : IDisposable
             RequestMessage = new HttpRequestMessage { RequestUri = new Uri(url) }
         };
 
-        _mockHttpClient.GetAsync(url, null, Arg.Any<TimeSpan?>(), Arg.Any<CancellationToken>())
+        _mockHttpClient.GetAsync(url, Arg.Any<IDictionary<string, string>?>(), Arg.Any<TimeSpan?>(), Arg.Any<CancellationToken>())
             .Returns(response);
     }
 

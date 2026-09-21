@@ -63,6 +63,10 @@ await foreach (var chunk in processor.ProcessWebsiteAsync("https://example.com")
   `ExtractOptions.RespectRobotsTxt` (both default to on). A refusal is reported as
   `CrawlResult.DisallowedByRobotsTxt` / `ExtractErrorCodes.DisallowedByRobotsTxt` rather than as a
   failed request. Also sitemap.xml (`CrawlStrategy.Sitemap`).
+- **Identity**: every request carries one User-Agent — `CrawlOptions.UserAgent`, default
+  `WebFluxUserAgent.Default` (`WebFlux/{version} (+https://github.com/iyulab/WebFlux)`) — and the
+  robots.txt group is chosen by its product token, so `"MyBot/1.0"` follows `User-agent: MyBot`.
+  `CrawlOptions.CustomHeaders` are sent per request.
 - **Request timeouts**: `CrawlOptions.TimeoutMs` (default 30 000) and `ExtractOptions.TimeoutSeconds`
   (default 15) bound every request a call makes — the page, its robots.txt, a sitemap — on the HTTP
   and the Playwright crawlers alike. A timeout is **not retried**, whatever `MaxRetries` says: it
