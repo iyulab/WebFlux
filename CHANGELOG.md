@@ -2,6 +2,47 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.11.0] - 2026-09-21
+
+### Fixed
+- **`CrawlOptions.TimeoutMs` and `ExtractOptions.TimeoutSeconds` now bound the request on the HTTP
+  crawlers.** Neither was read there: the only timeout in force was a fixed 30 s on the shared
+  `HttpClient`, so a 2-second timeout let an 8-second page through, and any value above 30 s was
+  silently capped. The timeout is now applied per request and covers every request a call makes —
+  the page, its robots.txt (which precedes every page fetch) and a sitemap. Correction to the 0.10.0
+  notes below: they called `Timeout` "a second spelling of a knob already wired on this same class";
+  it was wired in the Playwright package only.
+- **A timeout is no longer retried.** It used to be retried like any other failure — `MaxRetries + 1`
+  attempts in the crawler (four by default), multiplied again by `ExtractOptions.MaxRetries + 1` on
+  the single-URL path — so one slow page could hold a call for minutes whatever the caller asked
+  for. The decision, on purpose: a caller who asked for 2 s hears back in about 2 s; one who can
+  wait longer says so with a larger timeout. Transport errors and HTTP 429 are retried as before.
+- **`IHttpClientService.SetTimeout` works after the first request.** It assigned
+  `HttpClient.Timeout`, which throws once a request has been sent. It now sets the default used by
+  requests that do not pass their own timeout (a default, not a ceiling).
+
+### Added
+- `CrawlResult.TimedOut` — distinguishes a timeout from a failed request, the way
+  `DisallowedByRobotsTxt` distinguishes a policy refusal. On the extract API it maps to
+  `ExtractErrorCodes.Timeout` (it used to arrive as the catch-all network/unknown code).
+- `timeout` parameter on `IHttpClientService.GetAsync` / `GetStringAsync` / `GetBytesAsync` /
+  `HeadAsync`: a per-request timeout covering the whole response. Expiry throws `TimeoutException`;
+  caller cancellation stays `OperationCanceledException`.
+
+### Changed
+- **Breaking: the four `IHttpClientService` request methods take `TimeSpan? timeout` before the
+  cancellation token.** Callers that pass the token by name are unaffected; positional callers and
+  implementers add the parameter.
+- **Breaking: `BaseCrawler.ExtractUrlsFromSitemapAsync` takes the request timeout** (protected; only
+  subclasses that override it are affected).
+- The internal crawl paths that already set `TimeoutMs = 15000` now get 15 s rather than the fixed
+  30 s — the value they asked for.
+
+### Removed
+- **Breaking: `CrawlOptions.TimeoutSeconds`.** A second spelling of `TimeoutMs` that nothing read
+  except its own validation. Migration: `TimeoutMs = seconds * 1000`. Validation now checks
+  `TimeoutMs > 0`. (`ExtractOptions.TimeoutSeconds` is that class's only spelling and stays.)
+
 ## [0.10.0] - 2026-09-21
 
 ### Fixed

@@ -152,6 +152,13 @@ public class CrawlResult
     /// </summary>
     public bool DisallowedByRobotsTxt { get; init; }
 
+    /// <summary>
+    /// True when the request did not answer within <c>CrawlOptions.TimeoutMs</c>. A timeout is not
+    /// retried: a caller who asked for two seconds should hear back in about two seconds, and one
+    /// who can wait longer says so with a larger timeout rather than with more attempts.
+    /// </summary>
+    public bool TimedOut { get; init; }
+
     /// <summary>오류 메시지 (실패한 경우)</summary>
     public string? ErrorMessage { get; init; }
 

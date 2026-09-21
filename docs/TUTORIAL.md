@@ -178,7 +178,7 @@ var crawlOptions = new CrawlOptions
     RespectRobotsTxt = true,        // robots.txt 준수
     UserAgent = "MyApp/1.0",        // User-Agent 설정
     DelayMs = 1000,                 // 요청 간 1초 대기
-    TimeoutSeconds = 30             // 30초 타임아웃
+    TimeoutMs = 30000               // 요청당 30초 타임아웃 (타임아웃은 재시도하지 않는다)
 };
 ```
 

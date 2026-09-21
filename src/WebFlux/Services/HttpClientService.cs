@@ -10,6 +10,7 @@ public class HttpClientService : IHttpClientService
 {
     private readonly HttpClient _httpClient;
     private readonly Dictionary<string, string> _defaultHeaders = new();
+    private long _defaultTimeoutTicks = TimeSpan.FromSeconds(30).Ticks;
 
     public HttpClientService(HttpClient httpClient)
     {
@@ -18,7 +19,11 @@ public class HttpClientService : IHttpClientService
         // 기본 설정
         _httpClient.DefaultRequestHeaders.Add("User-Agent",
             "WebFlux-SDK/1.0 (+https://github.com/webflux/webflux)");
-        _httpClient.Timeout = TimeSpan.FromSeconds(30);
+
+        // Timeouts are per request (see SendAsync). HttpClient.Timeout is one value for every
+        // concurrent caller and cannot change after the first request, so it cannot carry a
+        // per-crawl option; left in place it would also silently cap any longer request timeout.
+        _httpClient.Timeout = Timeout.InfiniteTimeSpan;
     }
 
     /// <summary>
@@ -27,6 +32,7 @@ public class HttpClientService : IHttpClientService
     public async Task<HttpResponseMessage> GetAsync(
         string url,
         IDictionary<string, string>? headers = null,
+        TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, url);
@@ -34,7 +40,7 @@ public class HttpClientService : IHttpClientService
         // 추가 헤더 설정
         AddHeaders(request, headers);
 
-        return await _httpClient.SendAsync(request, cancellationToken);
+        return await SendAsync(request, timeout, cancellationToken);
     }
 
     /// <summary>
@@ -43,9 +49,10 @@ public class HttpClientService : IHttpClientService
     public async Task<string> GetStringAsync(
         string url,
         IDictionary<string, string>? headers = null,
+        TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
-        using var response = await GetAsync(url, headers, cancellationToken);
+        using var response = await GetAsync(url, headers, timeout, cancellationToken);
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadAsStringAsync(cancellationToken);
     }
@@ -56,9 +63,10 @@ public class HttpClientService : IHttpClientService
     public async Task<byte[]> GetBytesAsync(
         string url,
         IDictionary<string, string>? headers = null,
+        TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
-        using var response = await GetAsync(url, headers, cancellationToken);
+        using var response = await GetAsync(url, headers, timeout, cancellationToken);
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadAsByteArrayAsync(cancellationToken);
     }
@@ -69,11 +77,12 @@ public class HttpClientService : IHttpClientService
     public async Task<HttpResponseMessage> HeadAsync(
         string url,
         IDictionary<string, string>? headers = null,
+        TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
         using var request = new HttpRequestMessage(HttpMethod.Head, url);
         AddHeaders(request, headers);
-        return await _httpClient.SendAsync(request, cancellationToken);
+        return await SendAsync(request, timeout, cancellationToken);
     }
 
     /// <summary>
@@ -86,11 +95,45 @@ public class HttpClientService : IHttpClientService
     }
 
     /// <summary>
-    /// 타임아웃을 설정합니다.
+    /// 요청이 자기 타임아웃을 주지 않았을 때 쓰는 기본값을 설정합니다 (상한이 아니다).
     /// </summary>
     public void SetTimeout(TimeSpan timeout)
     {
-        _httpClient.Timeout = timeout;
+        ValidateTimeout(timeout, nameof(timeout));
+        Interlocked.Exchange(ref _defaultTimeoutTicks, timeout.Ticks);
+    }
+
+    private async Task<HttpResponseMessage> SendAsync(
+        HttpRequestMessage request,
+        TimeSpan? timeout,
+        CancellationToken cancellationToken)
+    {
+        var effective = timeout ?? TimeSpan.FromTicks(Interlocked.Read(ref _defaultTimeoutTicks));
+        ValidateTimeout(effective, nameof(timeout));
+
+        if (effective == Timeout.InfiniteTimeSpan)
+            return await _httpClient.SendAsync(request, cancellationToken);
+
+        // The default completion option buffers the body inside SendAsync, so this bounds the
+        // whole response, not just the headers.
+        using var timeoutSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeoutSource.CancelAfter(effective);
+
+        try
+        {
+            return await _httpClient.SendAsync(request, timeoutSource.Token);
+        }
+        catch (OperationCanceledException ex) when (!cancellationToken.IsCancellationRequested)
+        {
+            throw new TimeoutException(
+                $"The request to {request.RequestUri} did not complete within {effective.TotalMilliseconds:0} ms.", ex);
+        }
+    }
+
+    private static void ValidateTimeout(TimeSpan timeout, string paramName)
+    {
+        if (timeout <= TimeSpan.Zero && timeout != Timeout.InfiniteTimeSpan)
+            throw new ArgumentOutOfRangeException(paramName, timeout, "Timeout must be positive or Timeout.InfiniteTimeSpan.");
     }
 
     /// <summary>

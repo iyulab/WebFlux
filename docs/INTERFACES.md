@@ -458,7 +458,7 @@ public class CrawlOptions
     public bool RespectRobotsTxt { get; set; } = true;
     public string UserAgent { get; set; } = "WebFlux/1.0";
     public int DelayMs { get; set; } = 500;
-    public int TimeoutSeconds { get; set; } = 30;
+    public int TimeoutMs { get; set; } = 30000;   // per request; a timeout is not retried
 }
 ```
 

@@ -70,8 +70,10 @@ public abstract class BaseCrawler : ICrawler
             return CreateDisallowedByRobotsResult(url);
 
         var maxRetries = options?.MaxRetries ?? 3;
+        var requestTimeout = GetRequestTimeout(options);
         var startTime = DateTimeOffset.UtcNow;
         Exception? lastException = null;
+        var timedOut = false;
 
         for (int attempt = 0; attempt <= maxRetries; attempt++)
         {
@@ -86,7 +88,7 @@ public abstract class BaseCrawler : ICrawler
                     }, cancellationToken);
                 }
 
-                using var response = await HttpClient.GetAsync(url, cancellationToken: cancellationToken);
+                using var response = await HttpClient.GetAsync(url, timeout: requestTimeout, cancellationToken: cancellationToken);
 
                 // HTTP 429 Too Many Requests 처리
                 if (response.StatusCode == HttpStatusCode.TooManyRequests && attempt < maxRetries)
@@ -129,12 +131,16 @@ public abstract class BaseCrawler : ICrawler
                 var delay = TimeSpan.FromSeconds(Math.Pow(2, attempt));
                 await Task.Delay(delay, cancellationToken);
             }
-            catch (TaskCanceledException ex) when (!cancellationToken.IsCancellationRequested && attempt < maxRetries)
+            catch (Exception ex) when (IsTimeout(ex, cancellationToken))
             {
-                // 타임아웃으로 인한 취소 (사용자 취소가 아닌 경우)
+                // A timeout is not retried. The caller put a bound on this request; repeating it
+                // MaxRetries times turns "give up after 2 s" into "give up after 8 s plus backoff",
+                // and a server that is slow once is usually slow again. A caller who can wait longer
+                // says so with a larger TimeoutMs. (The second shape in IsTimeout covers an
+                // IHttpClientService that enforces its own HttpClient.Timeout instead.)
                 lastException = ex;
-                var delay = TimeSpan.FromSeconds(Math.Pow(2, attempt));
-                await Task.Delay(delay, cancellationToken);
+                timedOut = true;
+                break;
             }
             catch (Exception ex)
             {
@@ -155,12 +161,26 @@ public abstract class BaseCrawler : ICrawler
             Depth = 0,
             DiscoveredLinks = Array.Empty<string>(),
             ErrorMessage = lastException?.Message ?? "Unknown error after retries",
-            Exception = lastException
+            Exception = lastException,
+            TimedOut = timedOut
         };
 
         UpdateStatistics(errorResult);
         return errorResult;
     }
+
+    /// <summary>
+    /// The per-request timeout for every HTTP request this crawler makes on behalf of
+    /// <paramref name="options"/>: the page itself, its robots.txt and a sitemap.
+    /// </summary>
+    protected static TimeSpan GetRequestTimeout(CrawlOptions? options) =>
+        TimeSpan.FromMilliseconds(options?.TimeoutMs ?? DefaultRequestTimeoutMs);
+
+    private const int DefaultRequestTimeoutMs = 30000;
+
+    private static bool IsTimeout(Exception ex, CancellationToken callerToken) =>
+        ex is TimeoutException ||
+        (ex is OperationCanceledException && !callerToken.IsCancellationRequested);
 
     /// <summary>
     /// HTTP 응답에서 Retry-After 헤더를 파싱하여 대기 시간을 반환합니다.
@@ -467,7 +487,7 @@ public abstract class BaseCrawler : ICrawler
         if (string.IsNullOrWhiteSpace(sitemapUrl))
             throw new ArgumentException("Sitemap URL cannot be null or empty", nameof(sitemapUrl));
 
-        var urls = await ExtractUrlsFromSitemapAsync(sitemapUrl, cancellationToken);
+        var urls = await ExtractUrlsFromSitemapAsync(sitemapUrl, GetRequestTimeout(options), cancellationToken);
 
         foreach (var url in urls)
         {
@@ -490,16 +510,28 @@ public abstract class BaseCrawler : ICrawler
     /// <param name="userAgent">User-Agent</param>
     /// <param name="cancellationToken">취소 토큰</param>
     /// <returns>robots.txt 정보</returns>
-    public virtual async Task<RobotsTxtInfo> GetRobotsTxtAsync(
+    public virtual Task<RobotsTxtInfo> GetRobotsTxtAsync(
         string baseUrl,
         string userAgent,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default) =>
+        FetchRobotsTxtAsync(baseUrl, userAgent, timeout: null, cancellationToken);
+
+    /// <summary>
+    /// Fetches and parses robots.txt with an explicit request timeout. The crawl paths come through
+    /// here with <c>CrawlOptions.TimeoutMs</c>: the robots fetch precedes every page fetch, so a
+    /// timeout that reached only the page would leave the caller waiting on a slow robots.txt.
+    /// </summary>
+    protected virtual async Task<RobotsTxtInfo> FetchRobotsTxtAsync(
+        string baseUrl,
+        string userAgent,
+        TimeSpan? timeout,
+        CancellationToken cancellationToken)
     {
         var robotsUrl = new Uri(new Uri(baseUrl), "/robots.txt").ToString();
 
         try
         {
-            using var response = await HttpClient.GetAsync(robotsUrl, cancellationToken: cancellationToken);
+            using var response = await HttpClient.GetAsync(robotsUrl, timeout: timeout, cancellationToken: cancellationToken);
 
             // RFC 9309 section 2.3.1.4: a 5xx means the file is undefined, and an undefined
             // robots.txt is a complete disallow — not the same as a site that has no rules.
@@ -589,7 +621,7 @@ public abstract class BaseCrawler : ICrawler
             var key = $"{origin}|{userAgent}";
             var robotsInfo = await _robotsCache.GetOrAdd(
                 key,
-                _ => GetRobotsTxtAsync(origin, userAgent, cancellationToken));
+                _ => FetchRobotsTxtAsync(origin, userAgent, GetRequestTimeout(options), cancellationToken));
 
             return IsPathAllowed(robotsInfo, url, userAgent);
         }
@@ -677,15 +709,17 @@ public abstract class BaseCrawler : ICrawler
     /// XDocument 기반 파싱으로 namespace, CDATA를 지원합니다.
     /// </summary>
     /// <param name="sitemapUrl">Sitemap URL</param>
+    /// <param name="timeout">요청 타임아웃</param>
     /// <param name="cancellationToken">취소 토큰</param>
     /// <returns>URL 목록</returns>
     protected virtual async Task<IEnumerable<string>> ExtractUrlsFromSitemapAsync(
         string sitemapUrl,
+        TimeSpan timeout,
         CancellationToken cancellationToken)
     {
         try
         {
-            using var response = await HttpClient.GetAsync(sitemapUrl, cancellationToken: cancellationToken);
+            using var response = await HttpClient.GetAsync(sitemapUrl, timeout: timeout, cancellationToken: cancellationToken);
 
             if (!response.IsSuccessStatusCode)
                 return Array.Empty<string>();

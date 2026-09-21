@@ -976,6 +976,13 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
                     {
                         break;
                     }
+
+                    // Nor is a timeout: TimeoutSeconds is the caller's bound on this URL, and
+                    // retrying would multiply it by MaxRetries + 1.
+                    if (crawlResult.TimedOut)
+                    {
+                        break;
+                    }
                 }
                 catch (Exception ex) when (
                     retryCount < options.MaxRetries &&
@@ -998,6 +1005,8 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
                 // too — a StatusCode of 0 would otherwise arrive as the catch-all Unknown.
                 var errorCode = crawlResult?.DisallowedByRobotsTxt == true
                     ? ExtractErrorCodes.DisallowedByRobotsTxt
+                    : crawlResult?.TimedOut == true
+                    ? ExtractErrorCodes.Timeout
                     : crawlResult?.StatusCode != null
                         ? ExtractErrorCodes.FromHttpStatusCode(crawlResult.StatusCode)
                         : ExtractErrorCodes.NetworkError;

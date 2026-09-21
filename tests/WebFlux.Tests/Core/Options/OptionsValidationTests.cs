@@ -133,12 +133,12 @@ public class OptionsValidationTests
     }
 
     [Fact]
-    public void CrawlOptions_ZeroTimeoutSeconds_ShouldFail()
+    public void CrawlOptions_ZeroTimeoutMs_ShouldFail()
     {
-        var options = new CrawlOptions { TimeoutSeconds = 0 };
+        var options = new CrawlOptions { TimeoutMs = 0 };
         var result = options.Validate();
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.Contains("TimeoutSeconds"));
+        result.Errors.Should().Contain(e => e.Contains("TimeoutMs"));
     }
 
     [Fact]

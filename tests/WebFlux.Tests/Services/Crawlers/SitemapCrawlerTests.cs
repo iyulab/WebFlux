@@ -70,7 +70,7 @@ public class SitemapCrawlerTests : IDisposable
             RequestMessage = new HttpRequestMessage { RequestUri = new Uri(url) }
         };
 
-        _mockHttpClient.GetAsync(url, null, Arg.Any<CancellationToken>())
+        _mockHttpClient.GetAsync(url, null, Arg.Any<TimeSpan?>(), Arg.Any<CancellationToken>())
             .Returns(response);
 
         // Act
@@ -217,7 +217,7 @@ public class SitemapCrawlerTests : IDisposable
             response.Content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(contentType);
         }
 
-        _mockHttpClient.GetAsync(url, null, Arg.Any<CancellationToken>())
+        _mockHttpClient.GetAsync(url, null, Arg.Any<TimeSpan?>(), Arg.Any<CancellationToken>())
             .Returns(response);
     }
 

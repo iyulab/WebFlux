@@ -214,6 +214,9 @@ public partial class PlaywrightCrawler : BaseCrawler, IAsyncDisposable
                 StatusCode = 0,
                 ErrorMessage = ex.Message,
                 Exception = ex,
+                // Playwright reports a navigation that outlived PageGotoOptions.Timeout as a
+                // System.TimeoutException; mark it so the extract path does not retry it.
+                TimedOut = ex is TimeoutException,
                 CrawledAt = DateTimeOffset.UtcNow
             };
 

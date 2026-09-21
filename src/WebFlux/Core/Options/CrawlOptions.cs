@@ -38,11 +38,6 @@ public class CrawlOptions : IValidatable
     public int ConcurrentRequests { get; set; } = 3;
 
     /// <summary>
-    /// 요청 타임아웃 (초, 기본값: 30)
-    /// </summary>
-    public int TimeoutSeconds { get; set; } = 30;
-
-    /// <summary>
     /// robots.txt 준수 여부 (기본값: true)
     /// </summary>
     public bool RespectRobotsTxt { get; set; } = true;
@@ -140,8 +135,17 @@ public class CrawlOptions : IValidatable
     public bool EnableScrolling { get; set; } = true;
 
     /// <summary>
-    /// 요청 타임아웃 (밀리초, 기본값: 30000)
+    /// 요청 하나의 타임아웃 (밀리초, 기본값: 30000). 응답 본문 수신까지 포함한다.
     /// </summary>
+    /// <remarks>
+    /// 이 크롤이 보내는 <b>모든</b> 요청에 적용된다 — 페이지, 그 페이지의 robots.txt, sitemap.
+    /// 정적(HTTP) 크롤러와 Playwright 크롤러가 같은 값을 읽는다.
+    /// <para>
+    /// 타임아웃은 <b>재시도하지 않는다</b>(<see cref="MaxRetries"/> 와 무관): 2초를 요청한 호출자는
+    /// 약 2초 뒤에 답을 받아야 하고, 한 번 느린 서버는 대개 다시 느리다. 더 기다릴 수 있으면 이 값을
+    /// 키운다. 결과는 <c>CrawlResult.TimedOut = true</c> 로 도착한다.
+    /// </para>
+    /// </remarks>
     public int TimeoutMs { get; set; } = 30000;
 
     // ===================================================================
@@ -200,8 +204,8 @@ public class CrawlOptions : IValidatable
         if (ConcurrentRequests <= 0)
             errors.Add("ConcurrentRequests must be greater than 0");
 
-        if (TimeoutSeconds <= 0)
-            errors.Add("TimeoutSeconds must be greater than 0");
+        if (TimeoutMs <= 0)
+            errors.Add("TimeoutMs must be greater than 0");
 
         if (MinConfidence < 0 || MinConfidence > 1)
             errors.Add("MinConfidence must be between 0 and 1");

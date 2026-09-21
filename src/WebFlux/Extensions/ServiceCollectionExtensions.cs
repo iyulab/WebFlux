@@ -125,7 +125,7 @@ public static class ServiceCollectionExtensions
         // WebFlux 전용 HTTP 클라이언트 등록
         services.AddHttpClient<IHttpClientService, HttpClientService>(client =>
         {
-            client.Timeout = TimeSpan.FromSeconds(30);
+            // No client.Timeout here: HttpClientService applies timeouts per request.
             client.DefaultRequestHeaders.Add("User-Agent",
                 "WebFlux/1.0 (+https://github.com/webflux/webflux)");
         });

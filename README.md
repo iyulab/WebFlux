@@ -63,6 +63,10 @@ await foreach (var chunk in processor.ProcessWebsiteAsync("https://example.com")
   `ExtractOptions.RespectRobotsTxt` (both default to on). A refusal is reported as
   `CrawlResult.DisallowedByRobotsTxt` / `ExtractErrorCodes.DisallowedByRobotsTxt` rather than as a
   failed request. Also sitemap.xml (`CrawlStrategy.Sitemap`).
+- **Request timeouts**: `CrawlOptions.TimeoutMs` (default 30 000) and `ExtractOptions.TimeoutSeconds`
+  (default 15) bound every request a call makes — the page, its robots.txt, a sitemap — on the HTTP
+  and the Playwright crawlers alike. A timeout is **not retried**, whatever `MaxRetries` says: it
+  arrives as `CrawlResult.TimedOut` / `ExtractErrorCodes.Timeout` after about the time you asked for.
 - **Streaming**: Process large websites with AsyncEnumerable
 - **Parallel Processing**: Concurrent crawling and processing
 - **Rich Metadata**: Web document metadata extraction (SEO, Open Graph, Schema.org, Twitter Cards)
@@ -242,7 +246,8 @@ var options = new CrawlOptions
     MaxDepth = 3,
     MaxPages = 100,
     RespectRobotsTxt = true,
-    UserAgent = "MyBot/1.0"
+    UserAgent = "MyBot/1.0",
+    TimeoutMs = 10_000          // per request; a timeout is not retried
 };
 
 var chunkOptions = new ChunkingOptions

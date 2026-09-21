@@ -62,14 +62,16 @@ public class HttpClientServiceTests : IDisposable
     }
 
     [Fact]
-    public void Constructor_ShouldSetDefaultTimeout()
+    public void Constructor_LeavesTimeoutsToEachRequest_NotToTheSharedHttpClient()
     {
         // Arrange & Act
         using var httpClient = new HttpClient();
         var service = new HttpClientService(httpClient);
 
-        // Assert
-        httpClient.Timeout.Should().Be(TimeSpan.FromSeconds(30));
+        // Assert: HttpClient.Timeout is one value for every concurrent caller and would cap any
+        // longer per-request timeout. The per-request behaviour itself is pinned against a real
+        // socket in RequestTimeoutTests.
+        httpClient.Timeout.Should().Be(Timeout.InfiniteTimeSpan);
     }
 
     #endregion
@@ -106,7 +108,7 @@ public class HttpClientServiceTests : IDisposable
         _mockHandler.SetupResponse(HttpStatusCode.OK, "Success");
 
         // Act
-        var response = await _service.GetAsync(url, headers, TestContext.Current.CancellationToken);
+        var response = await _service.GetAsync(url, headers, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         response.Should().NotBeNull();
@@ -173,7 +175,7 @@ public class HttpClientServiceTests : IDisposable
         _mockHandler.SetupResponse(HttpStatusCode.OK, "HTML");
 
         // Act
-        var content = await _service.GetStringAsync(url, headers, TestContext.Current.CancellationToken);
+        var content = await _service.GetStringAsync(url, headers, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         content.Should().Be("HTML");
@@ -235,7 +237,7 @@ public class HttpClientServiceTests : IDisposable
         _mockHandler.SetupBytesResponse(HttpStatusCode.OK, new byte[] { 0x25, 0x50, 0x44, 0x46 });
 
         // Act
-        var bytes = await _service.GetBytesAsync(url, headers, TestContext.Current.CancellationToken);
+        var bytes = await _service.GetBytesAsync(url, headers, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         bytes.Should().NotBeNull();
@@ -298,7 +300,7 @@ public class HttpClientServiceTests : IDisposable
         _mockHandler.SetupResponse(HttpStatusCode.OK, "");
 
         // Act
-        var response = await _service.HeadAsync(url, headers, TestContext.Current.CancellationToken);
+        var response = await _service.HeadAsync(url, headers, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         response.Should().NotBeNull();
@@ -356,26 +358,26 @@ public class HttpClientServiceTests : IDisposable
     #region SetTimeout Tests
 
     [Fact]
-    public void SetTimeout_WithCustomTimeout_ShouldUpdateTimeout()
+    public void SetTimeout_ChangesTheDefault_WithoutTouchingTheSharedHttpClient()
     {
-        // Arrange
-        var customTimeout = TimeSpan.FromSeconds(60);
-
         // Act
-        _service.SetTimeout(customTimeout);
+        _service.SetTimeout(TimeSpan.FromSeconds(60));
 
-        // Assert
-        _httpClient.Timeout.Should().Be(TimeSpan.FromSeconds(60));
+        // Assert: the default lives in the service (applied per request), so it can change after
+        // the first request has been sent; HttpClient.Timeout cannot.
+        _httpClient.Timeout.Should().Be(Timeout.InfiniteTimeSpan);
     }
 
     [Fact]
-    public void SetTimeout_WithZeroTimeout_ShouldSetInfiniteTimeout()
+    public void SetTimeout_AcceptsInfinite_AndRejectsZeroOrNegative()
     {
-        // Act
-        _service.SetTimeout(Timeout.InfiniteTimeSpan);
+        var infinite = () => _service.SetTimeout(Timeout.InfiniteTimeSpan);
+        var zero = () => _service.SetTimeout(TimeSpan.Zero);
+        var negative = () => _service.SetTimeout(TimeSpan.FromSeconds(-5));
 
-        // Assert
-        _httpClient.Timeout.Should().Be(Timeout.InfiniteTimeSpan);
+        infinite.Should().NotThrow();
+        zero.Should().Throw<ArgumentOutOfRangeException>();
+        negative.Should().Throw<ArgumentOutOfRangeException>();
     }
 
     #endregion
@@ -440,7 +442,7 @@ public class HttpClientServiceTests : IDisposable
         _service.SetDefaultHeaders(defaultHeaders);
 
         // Act
-        await _service.GetAsync("https://example.com", requestHeaders, TestContext.Current.CancellationToken);
+        await _service.GetAsync("https://example.com", requestHeaders, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         _mockHandler.LastRequest!.Headers.Should().Contain(h => h.Key == "X-Default");
