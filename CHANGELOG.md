@@ -40,6 +40,7 @@ All notable changes to this project will be documented in this file.
   sets only User-Agent. Wiring it needs a decision between a per-request `HttpRequestMessage` and
   mutating the shared `HttpClient`'s defaults (which leaks between concurrent crawls), so until that
   is made the XML doc states the limitation rather than leaving the promise standing.
+- Re-pinned sibling package(s) `FluxCurator` 0.8.3 -> 0.9.0, `FluxCurator.Core` 0.8.3 -> 0.9.0 — re-consumption of already-consumed iyulab packages via `check-pin-drift.ps1 -Fix`. No source changes.
 
 ## [0.9.0] - 2026-09-20
 
