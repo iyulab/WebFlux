@@ -70,7 +70,9 @@ await foreach (var chunk in processor.ProcessWebsiteAsync("https://example.com")
 - **Request timeouts**: `CrawlOptions.TimeoutMs` (default 30 000) and `ExtractOptions.TimeoutSeconds`
   (default 15) bound every request a call makes — the page, its robots.txt, a sitemap — on the HTTP
   and the Playwright crawlers alike. A timeout is **not retried**, whatever `MaxRetries` says: it
-  arrives as `CrawlResult.TimedOut` / `ExtractErrorCodes.Timeout` after about the time you asked for.
+  arrives as `CrawlResult.TimedOut` / `ExtractErrorCodes.Timeout` after about the time you asked for,
+  from `CrawlAsync`, `CrawlWebsiteAsync` and `CrawlSitemapAsync` alike. A non-positive value is not
+  "no timeout": the call throws `ArgumentException` naming the option before any request is made.
 - **Retries**: `MaxRetries` (on `CrawlOptions` for a crawl, on `ExtractOptions` for a single URL)
   counts attempts once, never nested. Transport errors, 408, 429 and 5xx are retried with backoff;
   a 404/403/410, a robots.txt refusal and a timeout are final.

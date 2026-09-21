@@ -44,6 +44,10 @@ public partial class PlaywrightCrawler : BaseCrawler, IAsyncDisposable
         CrawlOptions? options = null,
         CancellationToken cancellationToken = default)
     {
+        // Playwright reads a timeout of 0 as "no timeout"; the HTTP crawlers cannot. Rejecting it
+        // here keeps one meaning for the option across both.
+        EnsureValid(options);
+
         // Same gate as the HTTP crawler: this override replaces the base fetch entirely.
         if (!await IsAllowedByRobotsAsync(url, options, cancellationToken))
             return CreateDisallowedByRobotsResult(url);

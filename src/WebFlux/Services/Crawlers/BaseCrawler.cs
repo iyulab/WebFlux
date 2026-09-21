@@ -64,6 +64,8 @@ public abstract class BaseCrawler : ICrawler
         if (string.IsNullOrWhiteSpace(url))
             throw new ArgumentException("URL cannot be null or empty", nameof(url));
 
+        EnsureValid(options);
+
         // The single-URL entry point honours robots.txt too: a caller that fetches pages one at a
         // time never goes through the crawl loop, so a gate that lives only there never sees them.
         if (!await IsAllowedByRobotsAsync(url, options, cancellationToken))
@@ -177,6 +179,23 @@ public abstract class BaseCrawler : ICrawler
     }
 
     /// <summary>
+    /// Rejects options that <see cref="CrawlOptions.Validate"/> calls invalid, once, before any request
+    /// is made — every crawl entry point comes through here. Without it an out-of-range value travels
+    /// to wherever it is first used and fails there, per page, under that API's parameter name
+    /// (<c>TimeoutMs = 0</c> surfaced as "Timeout must be positive … (Parameter 'timeout')").
+    /// </summary>
+    /// <exception cref="ArgumentException">The options are invalid; the message names each option.</exception>
+    protected static void EnsureValid(CrawlOptions? options)
+    {
+        if (options == null)
+            return;
+
+        var validation = options.Validate();
+        if (!validation.IsValid)
+            throw new ArgumentException($"Invalid crawl options: {string.Join(", ", validation.Errors)}", nameof(options));
+    }
+
+    /// <summary>
     /// The per-request timeout for every HTTP request this crawler makes on behalf of
     /// <paramref name="options"/>: the page itself, its robots.txt and a sitemap.
     /// </summary>
@@ -256,6 +275,8 @@ public abstract class BaseCrawler : ICrawler
         if (string.IsNullOrWhiteSpace(startUrl))
             throw new ArgumentException("Start URL cannot be null or empty", nameof(startUrl));
 
+        EnsureValid(options);
+
         StartTime = DateTimeOffset.UtcNow;
         var queue = new Queue<(string url, int depth)>();
         var visited = new HashSet<string>();
@@ -277,28 +298,8 @@ public abstract class BaseCrawler : ICrawler
                 continue;
 
             var originalResult = await CrawlAsync(currentUrl, options, cancellationToken);
-            var result = new CrawlResult
-            {
-                Url = originalResult.Url,
-                FinalUrl = originalResult.FinalUrl,
-                StatusCode = originalResult.StatusCode,
-                IsSuccess = originalResult.IsSuccess,
-                HtmlContent = originalResult.HtmlContent,
-                Headers = originalResult.Headers,
-                ContentType = originalResult.ContentType,
-                Encoding = originalResult.Encoding,
-                ContentLength = originalResult.ContentLength,
-                ResponseTimeMs = originalResult.ResponseTimeMs,
-                CrawledAt = originalResult.CrawledAt,
-                Depth = depth, // Set the desired depth
-                ParentUrl = originalResult.ParentUrl,
-                DiscoveredLinks = originalResult.DiscoveredLinks,
-                ErrorMessage = originalResult.ErrorMessage,
-                Exception = originalResult.Exception,
-                ImageUrls = originalResult.ImageUrls,
-                Metadata = originalResult.Metadata,
-                WebMetadata = originalResult.WebMetadata
-            };
+            // Derived, not re-listed: a field added to CrawlResult reaches this path without being named here.
+            var result = originalResult with { Depth = depth };
 
             yield return result;
 
@@ -336,6 +337,8 @@ public abstract class BaseCrawler : ICrawler
     {
         if (string.IsNullOrWhiteSpace(startUrl))
             throw new ArgumentException("Start URL cannot be null or empty", nameof(startUrl));
+
+        EnsureValid(options);
 
         StartTime = DateTimeOffset.UtcNow;
 
@@ -412,28 +415,8 @@ public abstract class BaseCrawler : ICrawler
                         try
                         {
                             var originalResult = await CrawlAsync(url, options, cancellationToken);
-                            var result = new CrawlResult
-                            {
-                                Url = originalResult.Url,
-                                FinalUrl = originalResult.FinalUrl,
-                                StatusCode = originalResult.StatusCode,
-                                IsSuccess = originalResult.IsSuccess,
-                                HtmlContent = originalResult.HtmlContent,
-                                Headers = originalResult.Headers,
-                                ContentType = originalResult.ContentType,
-                                Encoding = originalResult.Encoding,
-                                ContentLength = originalResult.ContentLength,
-                                ResponseTimeMs = originalResult.ResponseTimeMs,
-                                CrawledAt = originalResult.CrawledAt,
-                                Depth = depth,
-                                ParentUrl = originalResult.ParentUrl,
-                                DiscoveredLinks = originalResult.DiscoveredLinks,
-                                ErrorMessage = originalResult.ErrorMessage,
-                                Exception = originalResult.Exception,
-                                ImageUrls = originalResult.ImageUrls,
-                                Metadata = originalResult.Metadata,
-                                WebMetadata = originalResult.WebMetadata
-                            };
+                            // Derived, not re-listed: a field added to CrawlResult reaches this path without being named here.
+            var result = originalResult with { Depth = depth };
 
                             // 채널에 결과 쓰기
                             await channel.Writer.WriteAsync(result, cancellationToken);
@@ -514,6 +497,8 @@ public abstract class BaseCrawler : ICrawler
     {
         if (string.IsNullOrWhiteSpace(sitemapUrl))
             throw new ArgumentException("Sitemap URL cannot be null or empty", nameof(sitemapUrl));
+
+        EnsureValid(options);
 
         var urls = await ExtractUrlsFromSitemapAsync(sitemapUrl, options, cancellationToken);
 

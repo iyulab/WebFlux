@@ -29,6 +29,8 @@ public class DepthFirstCrawler : BaseCrawler
         if (string.IsNullOrWhiteSpace(startUrl))
             throw new ArgumentException("Start URL cannot be null or empty", nameof(startUrl));
 
+        EnsureValid(options);
+
         var stack = new Stack<(string url, int depth)>();
         var visited = new HashSet<string>();
         var maxDepth = options?.MaxDepth ?? 3;
@@ -45,29 +47,12 @@ public class DepthFirstCrawler : BaseCrawler
 
             visited.Add(UrlNormalizer.Normalize(currentUrl));
 
+            // Same as the breadth-first loop: a disallowed URL is skipped, not reported as a failure.
+            if (!await IsAllowedByRobotsAsync(currentUrl, options, cancellationToken))
+                continue;
+
             var originalResult = await CrawlAsync(currentUrl, options, cancellationToken);
-            var result = new CrawlResult
-            {
-                Url = originalResult.Url,
-                FinalUrl = originalResult.FinalUrl,
-                StatusCode = originalResult.StatusCode,
-                IsSuccess = originalResult.IsSuccess,
-                HtmlContent = originalResult.HtmlContent,
-                Headers = originalResult.Headers,
-                ContentType = originalResult.ContentType,
-                Encoding = originalResult.Encoding,
-                ContentLength = originalResult.ContentLength,
-                ResponseTimeMs = originalResult.ResponseTimeMs,
-                CrawledAt = originalResult.CrawledAt,
-                Depth = depth,
-                ParentUrl = originalResult.ParentUrl,
-                DiscoveredLinks = originalResult.DiscoveredLinks,
-                ErrorMessage = originalResult.ErrorMessage,
-                Exception = originalResult.Exception,
-                ImageUrls = originalResult.ImageUrls,
-                Metadata = originalResult.Metadata,
-                WebMetadata = originalResult.WebMetadata
-            };
+            var result = originalResult with { Depth = depth };
 
             yield return result;
 

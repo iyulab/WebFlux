@@ -32,11 +32,30 @@ All notable changes to this project will be documented in this file.
   with `MaxRetries = 0`), and both layers share one rule: transport errors, 408, 429 and 5xx are
   retried; 404, 403, 410 and the like are an answer. Direct crawls (`CrawlAsync`) gain the 408/5xx
   retry they did not have; a robots.txt refusal and a timeout stay final.
+- **`CrawlResult.TimedOut` is set on the site crawl, not only on `CrawlAsync`.** `CrawlWebsiteAsync`
+  (breadth-first and depth-first) and `CrawlWebsiteParallelAsync` re-emitted each page's result by
+  listing its members, and the list predated `TimedOut` — so in 0.11.0 a page that timed out inside a
+  site crawl came back with `TimedOut = false` and only the message said why. The depth-first crawl
+  lost `DisallowedByRobotsTxt` the same way, and reported a disallowed URL as a plain failure where
+  the breadth-first crawl skips it; it now skips it too. The result is derived
+  (`result with { Depth = depth }`), so a member added later cannot be dropped there again.
+- **A non-positive `CrawlOptions.TimeoutMs` is rejected once, by name.** Since 0.11.0 reads the
+  option, `TimeoutMs = 0` failed *every page* with "Timeout must be positive … (Parameter 'timeout')".
+  `CrawlOptions.Validate()` already called the value invalid, but only `ProcessWebsiteAsync` asked it;
+  every crawler entry point now does, before any request: `ArgumentException` —
+  "Invalid crawl options: TimeoutMs must be greater than 0". `0` does not mean "no timeout".
+  **Behaviour change: this applies to everything `Validate()` rejects** (`MaxPages <= 0`, `MaxDepth < 0`,
+  `ConcurrentRequests <= 0`, `MaxRetries < 0`, a negative delay, `MinConfidence` outside 0..1) — values
+  a direct crawler call used to accept. `ExtractOptions.TimeoutSeconds = 0` was already rejected this way.
 
 ### Added
 - `WebFluxUserAgent` (`Default`, `ProductToken`, `ContactUrl`) and `RobotsTxt.ProductToken(string)`.
 
 ### Changed
+- **Breaking (binary; source-compatible unless you derived from it): `CrawlResult` is a `record`**
+  (it was a class with `init` members). Object initialisers and member reads compile unchanged —
+  rebuild against 0.12.0. Equality is now by value, `ToString()` prints the members, and `with`
+  works on it. A class that derived from `CrawlResult` becomes a record too.
 - **Breaking (subclasses only):** `BaseCrawler.ExtractUrlsFromSitemapAsync` takes the `CrawlOptions`
   instead of a timeout, and `FetchRobotsTxtAsync` takes the request headers — both so the identity
   and headers reach every request.

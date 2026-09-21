@@ -83,7 +83,11 @@ public interface ICrawler
 /// <summary>
 /// 크롤링 결과
 /// </summary>
-public class CrawlResult
+/// <remarks>
+/// A record so that a path which re-emits a result can derive it (<c>result with { Depth = depth }</c>)
+/// instead of listing its members: a member added here then reaches every path that returns one.
+/// </remarks>
+public record CrawlResult
 {
     /// <summary>요청 URL</summary>
 #if NET8_0_OR_GREATER
