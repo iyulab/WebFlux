@@ -55,12 +55,8 @@ public class OptionsReachabilityRosterTests
         [
             "Branch", "CustomDomain", "Folder",
         ],
-        ["WebFlux.Core.Models.MarkdownConversionOptions"] =
-        [
-            "EnableAutoLinks", "EnableEmojis", "EnableExtensions",
-            "EnableFootnotes", "EnableMath", "EnableTables", "EnableTaskLists", "ExtractImageInfo",
-            "GenerateAnchorIds", "GenerateTableOfContents", "ValidateLinks",
-        ],
+        // MarkdownConversionOptions: all eleven remaining members wired in 0.14.0 (per-call Markdig pipeline, TOC/image gates,
+        // syntactic link validation); EnableCodeHighlighting and CustomSettings removed in 0.14.0.
         ["WebFlux.Core.Models.NetlifyConfig"] =
         [
             "BuildCommand", "Environment", "PublishDirectory",

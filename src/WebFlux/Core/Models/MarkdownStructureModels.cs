@@ -512,41 +512,44 @@ public class MarkdownConversionResult
 }
 
 /// <summary>
-/// 마크다운 변환 옵션
+/// 마크다운 변환 옵션 (<c>ConvertToHtmlWithStructureAsync</c>). 0.14.0 부터 모든 멤버가 변환 파이프라인·구조 추출에 실제로
+/// 닿는다 — 그 전에는 전부 선언만 있었고 파이프라인은 생성자에서 <c>UseAdvancedExtensions()</c> 로 고정돼 있었다. 기본값은
+/// 그 고정 파이프라인과 byte 단위로 같은 HTML 을 낸다.
 /// </summary>
 public class MarkdownConversionOptions
 {
-    /// <summary>확장 기능 활성화</summary>
+    /// <summary>확장 기능 활성화. <c>false</c> 면 순수 CommonMark — 아래 개별 플래그와 무관하게 확장 0.</summary>
     public bool EnableExtensions { get; init; } = true;
 
-    /// <summary>목차 생성</summary>
+    /// <summary>목차 생성. <c>false</c> 면 결과의 <c>TableOfContents</c> 가 비어 있다.</summary>
     public bool GenerateTableOfContents { get; init; } = true;
 
-    /// <summary>수식 지원</summary>
+    /// <summary>수식 지원 (Markdig <c>MathExtension</c>). <c>false</c> 면 <c>$…$</c> 가 텍스트로 남는다.</summary>
     public bool EnableMath { get; init; } = true;
 
-    /// <summary>각주 지원</summary>
+    /// <summary>각주 지원 (<c>FootnoteExtension</c>). <c>false</c> 면 <c>[^1]</c> 이 텍스트로 남는다.</summary>
     public bool EnableFootnotes { get; init; } = true;
 
-    /// <summary>작업 목록 지원</summary>
+    /// <summary>작업 목록 지원 (<c>TaskListExtension</c>). <c>false</c> 면 <c>- [ ]</c> 가 체크박스가 되지 않는다.</summary>
     public bool EnableTaskLists { get; init; } = true;
 
-    /// <summary>테이블 지원</summary>
+    /// <summary>테이블 지원 (pipe·grid <c>TableExtension</c>). <c>false</c> 면 <c>&lt;table&gt;</c> 이 생성되지 않는다.</summary>
     public bool EnableTables { get; init; } = true;
 
-    /// <summary>자동 링크</summary>
+    /// <summary>자동 링크 (<c>AutoLinkExtension</c>). <c>false</c> 면 맨 URL 이 <c>&lt;a&gt;</c> 로 바뀌지 않는다.</summary>
     public bool EnableAutoLinks { get; init; } = true;
 
-    /// <summary>이모지 변환</summary>
+    /// <summary>이모지 변환 (<c>UseEmojiAndSmiley</c>). 기본 파이프라인에는 없어 <c>true</c> 가 추가한다.</summary>
     public bool EnableEmojis { get; init; }
 
-    /// <summary>링크 검증</summary>
+    /// <summary>링크 검증 — 구문만(<c>Uri.IsWellFormedUriString</c>). <c>true</c> 면 각 <c>MarkdownLink.ValidationResult</c> 가 채워진다;
+    /// 요청은 보내지 않으므로 <c>StatusCode</c> 는 항상 null.</summary>
     public bool ValidateLinks { get; init; }
 
-    /// <summary>이미지 정보 추출</summary>
+    /// <summary>이미지 정보 추출. <c>false</c> 면 결과의 <c>Images</c> 가 비어 있다.</summary>
     public bool ExtractImageInfo { get; init; } = true;
 
-    /// <summary>앵커 ID 생성</summary>
+    /// <summary>앵커 ID 생성 (<c>AutoIdentifierExtension</c>). <c>false</c> 면 헤딩에 <c>id</c> 가 붙지 않는다.</summary>
     public bool GenerateAnchorIds { get; init; } = true;
 }
 

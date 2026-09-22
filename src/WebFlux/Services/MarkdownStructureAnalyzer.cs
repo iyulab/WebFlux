@@ -9,6 +9,7 @@ using Markdig.Extensions.Citations;
 using Markdig.Extensions.DefinitionLists;
 using Markdig.Extensions.Figures;
 using Markdig.Extensions.MediaLinks;
+using Markdig.Extensions.AutoIdentifiers;
 using Markdig.Syntax;
 using Markdig.Syntax.Inlines;
 using System.Text.RegularExpressions;
@@ -39,10 +40,18 @@ public class MarkdownStructureAnalyzer : IMarkdownStructureAnalyzer
     /// <summary>
     /// 마크다운 콘텐츠에서 구조 정보를 추출합니다
     /// </summary>
-    public async Task<MarkdownStructureInfo> AnalyzeStructureAsync(
+    public Task<MarkdownStructureInfo> AnalyzeStructureAsync(
         string markdownContent,
         string sourceUrl,
         CancellationToken cancellationToken = default)
+        => AnalyzeStructureCoreAsync(markdownContent, sourceUrl, _pipeline, options: null, cancellationToken);
+
+    private async Task<MarkdownStructureInfo> AnalyzeStructureCoreAsync(
+        string markdownContent,
+        string sourceUrl,
+        MarkdownPipeline pipeline,
+        MarkdownConversionOptions? options,
+        CancellationToken cancellationToken)
     {
         var stopwatch = Stopwatch.StartNew();
 
@@ -52,16 +61,17 @@ public class MarkdownStructureAnalyzer : IMarkdownStructureAnalyzer
             var (content, frontMatter) = ExtractFrontMatter(markdownContent);
 
             // Markdig로 문서 파싱
-            var document = Markdown.Parse(content, _pipeline);
+            var document = Markdown.Parse(content, pipeline);
 
             // 구조 정보 추출
-            var structureInfo = await ExtractStructureInfoAsync(document, content, sourceUrl, frontMatter, cancellationToken);
+            var structureInfo = await ExtractStructureInfoAsync(document, content, sourceUrl, frontMatter, options, cancellationToken);
 
             // 정확도 및 품질 점수 계산
             var accuracy = ValidateStructureAccuracy(structureInfo);
             var quality = AssessQuality(structureInfo);
 
-            // 정확도 및 품질 점수 설정
+            // 정확도 및 품질 점수 설정. Until 0.14.0 this copy dropped Lists, Quotes, MathExpressions, Footnotes and Embeds —
+            // the public result never carried them although the extraction produced them.
             return new MarkdownStructureInfo
             {
                 SourceUrl = structureInfo.SourceUrl,
@@ -71,6 +81,11 @@ public class MarkdownStructureAnalyzer : IMarkdownStructureAnalyzer
                 Links = structureInfo.Links,
                 Images = structureInfo.Images,
                 Tables = structureInfo.Tables,
+                Lists = structureInfo.Lists,
+                Quotes = structureInfo.Quotes,
+                MathExpressions = structureInfo.MathExpressions,
+                Footnotes = structureInfo.Footnotes,
+                Embeds = structureInfo.Embeds,
                 TableOfContents = structureInfo.TableOfContents,
                 Statistics = structureInfo.Statistics,
                 StructureAccuracy = accuracy,
@@ -81,6 +96,40 @@ public class MarkdownStructureAnalyzer : IMarkdownStructureAnalyzer
         {
             stopwatch.Stop();
         }
+    }
+
+    /// <summary>
+    /// The Markdig pipeline <see cref="MarkdownConversionOptions"/> describes. Defaults reproduce the pipeline this
+    /// analyzer always used (<c>UseAdvancedExtensions()</c>) byte for byte; a flag set to <c>false</c> removes that
+    /// extension from it, <see cref="MarkdownConversionOptions.EnableEmojis"/> adds one, and
+    /// <see cref="MarkdownConversionOptions.EnableExtensions"/> <c>false</c> is plain CommonMark. Until 0.14.0 every
+    /// flag was declared and the pipeline was fixed in the constructor.
+    /// </summary>
+    internal static MarkdownPipeline BuildPipeline(MarkdownConversionOptions options)
+    {
+        var builder = new MarkdownPipelineBuilder();
+        if (!options.EnableExtensions)
+            return builder.Build();
+
+        builder.UseAdvancedExtensions();
+        if (!options.EnableTables)
+        {
+            builder.Extensions.TryRemove<PipeTableExtension>();
+            builder.Extensions.TryRemove<GridTableExtension>();
+        }
+        if (!options.EnableTaskLists)
+            builder.Extensions.TryRemove<TaskListExtension>();
+        if (!options.EnableAutoLinks)
+            builder.Extensions.TryRemove<AutoLinkExtension>();
+        if (!options.EnableFootnotes)
+            builder.Extensions.TryRemove<FootnoteExtension>();
+        if (!options.EnableMath)
+            builder.Extensions.TryRemove<MathExtension>();
+        if (!options.GenerateAnchorIds)
+            builder.Extensions.TryRemove<AutoIdentifierExtension>();
+        if (options.EnableEmojis)
+            builder.UseEmojiAndSmiley();
+        return builder.Build();
     }
 
     /// <summary>
@@ -97,13 +146,16 @@ public class MarkdownStructureAnalyzer : IMarkdownStructureAnalyzer
 
         try
         {
+            // The options decide the pipeline (0.14.0); structure and HTML come from the same one.
+            var pipeline = BuildPipeline(options);
+
             // 구조 분석
-            var structureInfo = await AnalyzeStructureAsync(markdownContent, "conversion", cancellationToken);
+            var structureInfo = await AnalyzeStructureCoreAsync(markdownContent, "conversion", pipeline, options, cancellationToken);
 
             var parseStart = stopwatch.ElapsedMilliseconds;
 
             // HTML 변환
-            var html = Markdown.ToHtml(markdownContent, _pipeline);
+            var html = Markdown.ToHtml(markdownContent, pipeline);
 
             var conversionTime = stopwatch.ElapsedMilliseconds - parseStart;
             var memoryAfter = GC.GetTotalMemory(false);
@@ -241,16 +293,21 @@ public class MarkdownStructureAnalyzer : IMarkdownStructureAnalyzer
         string content,
         string sourceUrl,
         Dictionary<string, object> frontMatter,
+        MarkdownConversionOptions? options,
         CancellationToken cancellationToken)
     {
         var lines = content.Split('\n');
 
-        // 각 구조 요소 추출
+        // 각 구조 요소 추출. The three conversion-option gates (0.14.0): a table of contents and image info are only
+        // built when asked for (the analysis entry point, which has no options, always builds them), and links get a
+        // syntactic validation result when ValidateLinks is set — well-formedness only, no request is made.
         var headings = ExtractHeadings(document, lines);
-        var toc = GenerateTableOfContents(headings);
+        var toc = options?.GenerateTableOfContents == false ? new TableOfContents() : GenerateTableOfContents(headings);
         var codeBlocks = ExtractCodeBlocks(document, lines);
         var links = ExtractLinks(document);
-        var images = ExtractImages(document);
+        if (options?.ValidateLinks == true)
+            links = links.Select(ValidateLink).ToList();
+        var images = options?.ExtractImageInfo == false ? new List<MarkdownImage>() : ExtractImages(document);
         var tables = ExtractTables(document, lines);
         var lists = ExtractLists(document, lines);
         var quotes = ExtractQuotes(document, lines);
@@ -720,6 +777,30 @@ public class MarkdownStructureAnalyzer : IMarkdownStructureAnalyzer
         }
 
         return Math.Max(0.0, score);
+    }
+
+    /// <summary>
+    /// The syntactic validation <see cref="MarkdownConversionOptions.ValidateLinks"/> asks for: a well-formed relative
+    /// or absolute URL is valid; nothing is fetched (a <c>StatusCode</c> would need a request, which this analyzer
+    /// never makes).
+    /// </summary>
+    private static MarkdownLink ValidateLink(MarkdownLink link)
+    {
+        var wellFormed = !string.IsNullOrEmpty(link.Url) && Uri.IsWellFormedUriString(link.Url, UriKind.RelativeOrAbsolute);
+        return new MarkdownLink
+        {
+            Text = link.Text,
+            Url = link.Url,
+            Title = link.Title,
+            LineNumber = link.LineNumber,
+            Type = link.Type,
+            ReferenceLabel = link.ReferenceLabel,
+            ValidationResult = new LinkValidationResult
+            {
+                IsValid = wellFormed,
+                ErrorMessage = wellFormed ? null : "The URL is empty or not a well-formed relative or absolute URI."
+            }
+        };
     }
 
     private static double ValidateLinks(IReadOnlyList<MarkdownLink> links)

@@ -32,6 +32,15 @@ All notable changes to this project will be documented in this file.
   summary prompt; `RewriteOptions.AddExamples` becomes one in the rewrite prompt; `ChunkingOptions.PreserveHeaders`
   reaches FluxCurator's `PreserveSectionHeaders`, so `false` now stops section headers from being prepended to
   chunks (hierarchical chunking). Defaults are unchanged.
+- **`MarkdownConversionOptions` decides the conversion pipeline.** Its eleven remaining flags were declared while
+  the Markdig pipeline was fixed in the constructor. `ConvertToHtmlWithStructureAsync` now builds the pipeline from
+  the options — defaults reproduce the fixed pipeline byte for byte; a flag set to `false` removes that extension
+  (`EnableTables`, `EnableTaskLists`, `EnableAutoLinks`, `EnableFootnotes`, `EnableMath`, `GenerateAnchorIds`),
+  `EnableEmojis = true` adds one, `EnableExtensions = false` is plain CommonMark; `GenerateTableOfContents` /
+  `ExtractImageInfo` gate those parts of the structure result; `ValidateLinks` fills each link's
+  `ValidationResult` with a syntactic check (well-formed URI, no request).
+- **`AnalyzeStructureAsync` returns the lists, quotes, math, footnotes and embeds it extracted.** The public result
+  was reassembled without those five collections, so they were always empty to a caller.
 - **The crawl path reads `AiEnhancementConfiguration.EnableRewrite`, `EnableParallelProcessing` and `TimeoutMs`.**
   It hard-coded `EnableRewrite = false` and parallel on, and dropped the timeout, so those three configuration
   members had no effect on crawled content. A consumer who set `EnableRewrite = true` in configuration starts
