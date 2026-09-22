@@ -158,8 +158,11 @@ public class CrawlOptions : IValidatable
     // ===================================================================
 
     /// <summary>
-    /// AI 메타데이터 추출 활성화 (기본값: false)
-    /// true일 경우 IWebMetadataExtractor를 사용하여 콘텐츠에서 메타데이터를 추출합니다
+    /// AI 메타데이터 추출 활성화 (기본값: false).
+    /// true 면 크롤 경로(<c>ProcessWebsiteAsync</c>)에서 컨테이너의 <c>IWebMetadataExtractor</c> — 없으면
+    /// 등록된 <c>ITextCompletionService</c> 로 만든 기본 추출기 — 가 <see cref="MetadataSchema"/> 에 따라
+    /// 메타데이터를 추출해 결과의 <c>Metadata</c> 에 병합합니다. 둘 다 없으면 경고 한 번을 찍고 HTML
+    /// 메타데이터만 실립니다(무음 no-op 아님). <see cref="MinConfidence"/> 미만의 AI 결과는 병합하지 않습니다.
     /// </summary>
     public bool EnableMetadataExtraction { get; set; }
 
@@ -171,14 +174,16 @@ public class CrawlOptions : IValidatable
     public MetadataSchema MetadataSchema { get; set; } = MetadataSchema.General;
 
     /// <summary>
-    /// 커스텀 추출 프롬프트 (MetadataSchema.Custom 사용 시 필수)
-    /// 특정 도메인에 맞는 메타데이터 추출을 위한 사용자 정의 프롬프트
+    /// 커스텀 추출 프롬프트 (<c>MetadataSchema.Custom</c> 사용 시 필수 — 없으면
+    /// <see cref="Validate"/> 가 거부합니다). 특정 도메인에 맞는 메타데이터 추출을 위한 사용자 정의 프롬프트.
     /// </summary>
     public string? CustomMetadataPrompt { get; set; }
 
     /// <summary>
-    /// HTML 메타데이터 사용 여부 (기본값: true)
-    /// true일 경우 HTML meta 태그, OpenGraph, Twitter Card를 AI 프롬프트 힌트로 사용합니다
+    /// HTML 메타데이터 사용 여부 (기본값: true).
+    /// true 면 HTML 페이지의 meta 태그 · OpenGraph · Twitter Card · JSON-LD 를 읽어 결과 <c>Metadata.HtmlMetadata</c>
+    /// 에 싣고(AI 불필요), 추출기가 비워 둔 제목·설명만 OpenGraph 로 채웁니다 — 이미 있는 값은 덮지 않습니다.
+    /// AI 추출이 켜져 있으면 같은 스냅숏이 프롬프트 힌트로도 쓰입니다.
     /// </summary>
     public bool UseHtmlMetadata { get; set; } = true;
 
@@ -189,9 +194,9 @@ public class CrawlOptions : IValidatable
     public float MinConfidence { get; set; } = 0.6f;
 
     /// <summary>
-    /// 메타데이터 추출용 최대 문자 수 (기본값: 8000)
-    /// 토큰 최적화를 위해 콘텐츠를 샘플링할 최대 문자 수
-    /// 긴 문서의 경우 제목 + 헤딩 + 첫 N자를 사용합니다
+    /// AI 메타데이터 추출에 보내는 콘텐츠의 최대 문자 수 (기본값: 8000; 0 이하 = 자르지 않음).
+    /// 긴 문서는 제목 + 헤딩 + 본문 첫 N자로 샘플링돼 그 길이 안에서만 프롬프트에 실립니다
+    /// (<c>MetadataContentSampler</c>). 0.13.0 이전에는 이 값을 읽는 코드가 없어 본문 전체가 갔습니다.
     /// </summary>
     public int MetadataExtractionMaxChars { get; set; } = 8000;
 
@@ -220,6 +225,9 @@ public class CrawlOptions : IValidatable
 
         if (DelayBetweenRequestsMs < 0)
             errors.Add("DelayBetweenRequestsMs must be greater than or equal to 0");
+
+        if (MetadataSchema == MetadataSchema.Custom && string.IsNullOrWhiteSpace(CustomMetadataPrompt))
+            errors.Add("CustomMetadataPrompt is required when MetadataSchema is Custom");
 
         return new ValidationResult
         {

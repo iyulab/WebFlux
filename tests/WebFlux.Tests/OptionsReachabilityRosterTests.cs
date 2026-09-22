@@ -105,11 +105,6 @@ public class OptionsReachabilityRosterTests
         // - The five metadata options: AIWebMetadataExtractor and HtmlMetadataExtractor implement
         //   all of this, but neither is DI-registered and neither has a call site, so the subsystem
         //   has no front door. Wiring it is a feature decision, not a knob decision.
-        ["WebFlux.Core.Options.CrawlOptions"] =
-        [
-            "CustomMetadataPrompt", "EnableMetadataExtraction",
-            "MetadataExtractionMaxChars", "MetadataSchema", "UseHtmlMetadata",
-        ],
         ["WebFlux.Core.Options.EnhancementOptions"] = ["TimeoutMs"],
         ["WebFlux.Core.Options.ExtractOptions"] = ["IncludeLinks"],
         ["WebFlux.Core.Options.ExtractionOptions"] =

@@ -82,6 +82,11 @@ public class ServiceFactory : IServiceFactory
         return _serviceProvider.GetService<IDomainRateLimiter>();
     }
 
+    public ICrawlMetadataEnricher? TryCreateMetadataEnricher()
+    {
+        return _serviceProvider.GetService<ICrawlMetadataEnricher>();
+    }
+
     public IContentQualityEvaluator? TryCreateContentQualityEvaluator()
     {
         // 품질 평가기는 선택적

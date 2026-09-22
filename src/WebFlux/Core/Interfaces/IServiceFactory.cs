@@ -76,4 +76,9 @@ public interface IServiceFactory
     /// </summary>
     /// <returns>품질 평가기 인스턴스 (등록되지 않은 경우 null)</returns>
     IContentQualityEvaluator? TryCreateContentQualityEvaluator();
+
+    /// <summary>
+    /// The crawl-path metadata enricher (0.13.0), or null when the container does not provide one.
+    /// </summary>
+    ICrawlMetadataEnricher? TryCreateMetadataEnricher();
 }

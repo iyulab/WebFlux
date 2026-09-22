@@ -2,6 +2,32 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.13.0] - 2026-09-22
+
+### Added
+- **The metadata subsystem has a front door on the crawl path.** `AIWebMetadataExtractor` (five schema
+  prompts, custom prompts, OpenGraph hints) and `HtmlMetadataExtractor` (meta tags, OpenGraph, Twitter Card,
+  JSON-LD) were fully implemented, registered nowhere and called by nothing, and the five `CrawlOptions`
+  members that describe them (`EnableMetadataExtraction`, `MetadataSchema`, `CustomMetadataPrompt`,
+  `UseHtmlMetadata`, `MetadataExtractionMaxChars`) were read by no code. `ProcessWebsiteAsync` now runs
+  `ICrawlMetadataEnricher` after extraction:
+  - `UseHtmlMetadata` (default `true`, no AI needed): the HTML snapshot is attached to
+    `ExtractedContent.Metadata.HtmlMetadata`; a title or description the extractor left empty is filled
+    from OpenGraph. Fields the extractor already filled are never overwritten.
+  - `EnableMetadataExtraction` (default `false`): the AI extractor runs with `MetadataSchema` /
+    `CustomMetadataPrompt` and the snapshot as its hint, and its result is merged (what the AI did not answer
+    is kept). It is built from the container's `IWebMetadataExtractor`, or from a registered
+    `ITextCompletionService`; with neither, a warning is logged once and the result carries HTML metadata only.
+    An AI result below `MinConfidence` is not merged.
+  - `MetadataExtractionMaxChars` now does what its documentation always said: a long document reaches the
+    AI as title + headings + the first N characters (`MetadataContentSampler`). Before, the whole body went.
+  - `CrawlOptions.Validate()` refuses `MetadataSchema.Custom` without a `CustomMetadataPrompt`.
+  - `AddWebFluxContentExtraction` registers `HtmlMetadataExtractor` and `ICrawlMetadataEnricher`
+    (`CrawlMetadataEnricher`). **Breaking** for implementations of `IServiceFactory`: one new member,
+    `TryCreateMetadataEnricher()`.
+  Default behaviour for a consumer that sets nothing: the extractor's own fields are unchanged and
+  `Metadata.HtmlMetadata` is additionally populated for HTML pages; no AI call is made.
+
 ## [0.12.0] - 2026-09-21
 
 ### Fixed

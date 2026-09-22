@@ -796,6 +796,15 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
                 continue;
             }
 
+            // Metadata: the HTML snapshot and, when asked for, the AI extraction (CrawlOptions' five metadata
+            // options were declared and read by nothing before 0.13.0).
+            var enricher = _serviceFactory.TryCreateMetadataEnricher();
+            if (enricher is not null)
+            {
+                extracted = await enricher.EnrichAsync(
+                    extracted, crawlResult.Content, crawlResult.ContentType ?? "text/html", effectiveCrawlOptions, cancellationToken);
+            }
+
             // 청킹
             var chunkingStrategy = _serviceFactory.CreateChunkingStrategy(
                 (chunkingOptions?.Strategy ?? ChunkingStrategyType.Auto).ToString());

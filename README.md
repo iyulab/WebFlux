@@ -79,6 +79,10 @@ await foreach (var chunk in processor.ProcessWebsiteAsync("https://example.com")
 - **Streaming**: Process large websites with AsyncEnumerable
 - **Parallel Processing**: Concurrent crawling and processing
 - **Rich Metadata**: Web document metadata extraction (SEO, Open Graph, Schema.org, Twitter Cards)
+  - On the crawl path (`ProcessWebsiteAsync`): `CrawlOptions.UseHtmlMetadata` (default on, no AI) attaches the HTML
+    snapshot to `Metadata.HtmlMetadata`; `CrawlOptions.EnableMetadataExtraction` (opt-in) runs the AI extractor with
+    `MetadataSchema`/`CustomMetadataPrompt` when an `ITextCompletionService` (or your own `IWebMetadataExtractor`) is
+    registered, sampling long pages to `MetadataExtractionMaxChars` (title + headings + first N characters).
 - **Progress Tracking**: Real-time batch crawling progress with detailed statistics
 
 ## Chunking Strategies

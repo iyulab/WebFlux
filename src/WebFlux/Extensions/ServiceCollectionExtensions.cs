@@ -11,6 +11,9 @@ using WebFlux.Services.AiEnhancement;
 using WebFlux.Services.ChunkingStrategies;
 using WebFlux.Services.ContentExtractors;
 using WebFlux.Services.Crawlers;
+using WebFlux.Services.MetadataEnrichment;
+using WebFlux.Infrastructure.AI;
+using WebFlux.Infrastructure.Html;
 
 namespace WebFlux.Extensions;
 
@@ -192,6 +195,21 @@ public static class ServiceCollectionExtensions
 
         // Phase 5C: 메타데이터 추출기 등록
         services.TryAddScoped<IMetadataExtractor, MetadataExtractor>();
+
+        // The metadata subsystem's front door (0.13.0). HtmlMetadataExtractor needs nothing; the AI extractor
+        // needs an ITextCompletionService, so it is built only when the container has one (or when the host
+        // registered its own IWebMetadataExtractor). Registered here, not inside AddWebFluxAIServices, so that
+        // CrawlOptions.UseHtmlMetadata works without any AI and EnableMetadataExtraction can say "no extractor"
+        // instead of failing to resolve.
+        services.TryAddSingleton<HtmlMetadataExtractor>();
+        services.TryAddScoped<ICrawlMetadataEnricher>(sp =>
+        {
+            var loggerFactory = sp.GetService<ILoggerFactory>() ?? Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance;
+            var ai = sp.GetService<IWebMetadataExtractor>();
+            if (ai is null && sp.GetService<ITextCompletionService>() is { } completion)
+                ai = new AIWebMetadataExtractor(completion, loggerFactory.CreateLogger<AIWebMetadataExtractor>());
+            return new CrawlMetadataEnricher(sp.GetRequiredService<HtmlMetadataExtractor>(), ai, loggerFactory.CreateLogger<CrawlMetadataEnricher>());
+        });
 
         // Phase 5C Week 2: 마크다운 구조 분석기 등록
         services.TryAddScoped<IMarkdownStructureAnalyzer, MarkdownStructureAnalyzer>();
