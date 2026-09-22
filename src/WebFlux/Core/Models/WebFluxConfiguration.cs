@@ -207,16 +207,6 @@ public class ChunkingConfiguration
     public bool NormalizeWhitespace { get; set; } = true;
 
     /// <summary>
-    /// 멀티모달 처리 활성화 여부 (Phase 5A.3)
-    /// </summary>
-    public bool EnableMultimodalProcessing { get; set; }
-
-    /// <summary>
-    /// 멀티모달 처리 옵션
-    /// </summary>
-    public MultimodalProcessingOptions? MultimodalOptions { get; set; }
-
-    /// <summary>
     /// 언어별 설정
     /// </summary>
     public IDictionary<string, LanguageChunkingSettings> LanguageSettings { get; set; } =

@@ -33,10 +33,6 @@ public class OptionsReachabilityRosterTests
     {
         // MarkdownConversionOptions: all eleven remaining members wired in 0.14.0 (per-call Markdig pipeline, TOC/image gates,
         // syntactic link validation); EnableCodeHighlighting and CustomSettings removed in 0.14.0.
-        ["WebFlux.Core.Options.ChunkingOptions"] =
-        [
-            "EnableMultimodalProcessing", "IncludeImageDescriptions", "MultimodalOptions",
-        ],
         // Was 19. Two were wired (FollowExternalLinks, AllowedDomains - the host scope was hardcoded
         // and both options were read by nothing, so FollowExternalLinks = true was silently ignored).
         // Eleven were removed: five described a feature that does not exist anywhere in src/
@@ -56,17 +52,6 @@ public class OptionsReachabilityRosterTests
         // - The five metadata options: AIWebMetadataExtractor and HtmlMetadataExtractor implement
         //   all of this, but neither is DI-registered and neither has a call site, so the subsystem
         //   has no front door. Wiring it is a feature decision, not a knob decision.
-        ["WebFlux.Core.Options.ImageToTextOptions"] =
-        [
-            "Context", "DetailLevel", "ExcludeElements", "IncludeElements", "Language", "MaxDescriptionLength",
-            "Perspective",
-        ],
-        ["WebFlux.Core.Options.MultimodalProcessingOptions"] =
-        [
-            "EnableParallelProcessing", "EnableQualityEnhancement", "ImageTextFormat", "ImageToTextOptions",
-            "MaxConcurrentImages", "MaxImages", "MinimumConfidence", "PriorityWeights", "RetryCount",
-            "TextIntegrationStrategy", "TimeoutSeconds",
-        ],
         // RewriteOptions.AddExamples and SummaryOptions.TargetLanguage/FocusOnKeyPoints wired in 0.14.0 (prompt
         // instructions); ChunkingOptions.PreserveHeaders wired in 0.14.0 (FluxCurator PreserveSectionHeaders).
         // Full 114-member classification (T 73 · D 24 · A 13 · B 2 · C 2): umbrella draft ISSUE-webflux-20260922-213000.
@@ -85,6 +70,10 @@ public class OptionsReachabilityRosterTests
         // ReconstructStrategyFactory, five strategies, ReconstructOptions, ReconstructedContent), DomStructureChunkingStrategy with
         // HtmlChunkingOptions, and ChunkingOptions.StrategySpecificOptions (its only reader was DomStructure). ChunkingStrategyType.Intelligent
         // had no registered strategy and silently became Paragraph; it is removed and an unknown strategy name now throws.
+        // cycle-935 (2026-09-23, same owner decision): the multimodal subsystem removed in 0.14.0 — IImageToTextService (a port the
+        // library registered helpers for and never called), IMultimodalProcessingPipeline (no implementation), their result models,
+        // ImageToTextOptions, MultimodalProcessingOptions, AddWebFluxMultimodal (registered nothing), and the members that pointed at
+        // them: ChunkingOptions.IncludeImageDescriptions/EnableMultimodalProcessing/MultimodalOptions and the ChunkingConfiguration twins.
         // cycle-933 (2026-09-22) widened the scan from *Options/*Config to *Configuration as well: NamedWith is EndsWith, so
         // WebFluxConfiguration and its 19 nested configuration types were never scanned. What it found — 112 members in
         // 20 types — is recorded here UNCLASSIFIED (no per-member verdict yet): the gate starts green at the honest number and the
@@ -94,7 +83,7 @@ public class OptionsReachabilityRosterTests
         ["WebFlux.Core.Models.AiEnhancementConfiguration"] = ["MaxRetries"],
         ["WebFlux.Core.Models.AutoChunkingConfiguration"] = ["HighComplexityThreshold", "MediumComplexityThreshold"],
         ["WebFlux.Core.Models.CachingConfiguration"] = ["DefaultExpirationMinutes", "EnableCompression", "EnableMetrics", "Enabled", "MaxCacheSize", "TypeSettings"],
-        ["WebFlux.Core.Models.ChunkingConfiguration"] = ["DefaultChunkOverlap", "DefaultMaxChunkSize", "DefaultMinChunkSize", "DefaultQualityThreshold", "DefaultSemanticThreshold", "EnableMultimodalProcessing", "LanguageSettings", "MinChunkSize", "MultimodalOptions", "NormalizeWhitespace", "OverlapSize", "StrategyDefaults"],
+        ["WebFlux.Core.Models.ChunkingConfiguration"] = ["DefaultChunkOverlap", "DefaultMaxChunkSize", "DefaultMinChunkSize", "DefaultQualityThreshold", "DefaultSemanticThreshold", "LanguageSettings", "MinChunkSize", "NormalizeWhitespace", "OverlapSize", "StrategyDefaults"],
         ["WebFlux.Core.Models.CrawlConfiguration"] = ["AllowedDomains", "DelayBetweenRequests", "ExcludePatterns", "MaxConcurrentRequests", "MaxDepth", "MaxPages", "StartUrls", "Strategy"],
         ["WebFlux.Core.Models.CrawlingConfiguration"] = ["DefaultAllowedContentTypes", "DefaultDelayMs", "DefaultExcludedExtensions", "DefaultHeaders", "DefaultRetryCount", "DefaultTimeoutSeconds", "DefaultUserAgent", "MaxConcurrentRequests", "RespectRobotsTxt"],
         ["WebFlux.Core.Models.EventConfiguration"] = ["EnableEventPublishing", "EventBatchSize", "EventBufferSize", "EventFilters", "EventTypeEnabled", "FlushIntervalMs"],

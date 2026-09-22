@@ -85,20 +85,12 @@ public interface ITextEmbeddingService
     int EmbeddingDimension { get; }
 }
 
-// 선택: LLM 텍스트 생성 (콘텐츠 재구성용)
+// 선택: LLM 텍스트 생성 (AI 증강 — 요약·재작성·메타데이터)
 // WebFlux.Core.Interfaces.ITextCompletionService extends Flux.Abstractions.ITextCompletionService
 public interface ITextCompletionService : Flux.Abstractions.ITextCompletionService
 {
     Task<bool> IsAvailableAsync(CancellationToken cancellationToken = default);
     ServiceHealthInfo GetHealthInfo();
-}
-
-// 선택: 이미지-텍스트 변환 (멀티모달 처리용)
-public interface IImageToTextService
-{
-    Task<string> ConvertImageToTextAsync(string imageUrl, ImageToTextOptions? options = null, CancellationToken cancellationToken = default);
-    Task<string> ExtractTextFromImageAsync(string imageUrl, CancellationToken cancellationToken = default);
-    Task<bool> IsAvailableAsync(CancellationToken cancellationToken = default);
 }
 ```
 

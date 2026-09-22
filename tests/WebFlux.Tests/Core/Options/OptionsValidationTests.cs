@@ -229,63 +229,6 @@ public class OptionsValidationTests
     #endregion
 
 
-    #region MultimodalProcessingOptions
-
-    [Fact]
-    public void MultimodalProcessingOptions_DefaultValues_ShouldPassValidation()
-    {
-        var options = new MultimodalProcessingOptions();
-        var result = options.Validate();
-        result.IsValid.Should().BeTrue();
-        result.Errors.Should().BeEmpty();
-    }
-
-    [Fact]
-    public void MultimodalProcessingOptions_ZeroMaxImages_ShouldFail()
-    {
-        var options = new MultimodalProcessingOptions { MaxImages = 0 };
-        var result = options.Validate();
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.Contains("MaxImages"));
-    }
-
-    [Fact]
-    public void MultimodalProcessingOptions_MinimumConfidenceOutOfRange_ShouldFail()
-    {
-        var options = new MultimodalProcessingOptions { MinimumConfidence = 1.5 };
-        var result = options.Validate();
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.Contains("MinimumConfidence"));
-    }
-
-    [Fact]
-    public void MultimodalProcessingOptions_ZeroTimeoutSeconds_ShouldFail()
-    {
-        var options = new MultimodalProcessingOptions { TimeoutSeconds = 0 };
-        var result = options.Validate();
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.Contains("TimeoutSeconds"));
-    }
-
-    [Fact]
-    public void MultimodalProcessingOptions_ZeroMaxConcurrentImages_ShouldFail()
-    {
-        var options = new MultimodalProcessingOptions { MaxConcurrentImages = 0 };
-        var result = options.Validate();
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.Contains("MaxConcurrentImages"));
-    }
-
-    [Fact]
-    public void MultimodalProcessingOptions_NegativeRetryCount_ShouldFail()
-    {
-        var options = new MultimodalProcessingOptions { RetryCount = -1 };
-        var result = options.Validate();
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.Contains("RetryCount"));
-    }
-
-    #endregion
 
     #region TextCompletionOptions
 
@@ -345,27 +288,6 @@ public class OptionsValidationTests
 
     #endregion
 
-    #region ImageToTextOptions
-
-    [Fact]
-    public void ImageToTextOptions_DefaultValues_ShouldPassValidation()
-    {
-        var options = new ImageToTextOptions();
-        var result = options.Validate();
-        result.IsValid.Should().BeTrue();
-        result.Errors.Should().BeEmpty();
-    }
-
-    [Fact]
-    public void ImageToTextOptions_ZeroMaxDescriptionLength_ShouldFail()
-    {
-        var options = new ImageToTextOptions { MaxDescriptionLength = 0 };
-        var result = options.Validate();
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.Contains("MaxDescriptionLength"));
-    }
-
-    #endregion
 
 
     #region MultipleErrors

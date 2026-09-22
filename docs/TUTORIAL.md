@@ -10,7 +10,6 @@
 4. [핵심 인터페이스](#핵심-인터페이스)
    - [ITextEmbeddingService](#itextembeddingservice-필수)
    - [ITextCompletionService](#itextcompletionservice-선택적)
-   - [IImageToTextService](#iimagetotextservice-선택적)
    - [IWebContentProcessor](#iwebcontentprocessor)
    - [IChunkingStrategy](#ichunkingstrategy)
    - [IProgressReporter](#iprogressreporter)
@@ -248,7 +247,7 @@ services.AddScoped<ITextEmbeddingService>(sp =>
 
 #### ITextCompletionService (선택적)
 
-LLM 텍스트 완성 서비스입니다. 멀티모달 처리 및 콘텐츠 재구성에 사용됩니다.
+LLM 텍스트 완성 서비스입니다. AI 증강(요약·재작성)과 메타데이터 추출에 사용됩니다.
 
 **인터페이스 정의:**
 ```csharp
@@ -321,91 +320,6 @@ public class OpenAICompletionService : ITextCompletionService
 ```csharp
 services.AddScoped<ITextCompletionService>(sp =>
     new OpenAICompletionService(Environment.GetEnvironmentVariable("OPENAI_API_KEY"), "gpt-4"));
-```
-
----
-
-#### IImageToTextService (선택적)
-
-이미지를 텍스트 설명으로 변환하는 서비스입니다. 멀티모달 콘텐츠 처리에 필요합니다.
-
-**인터페이스 정의:**
-```csharp
-public interface IImageToTextService
-{
-    Task<string> ConvertImageToTextAsync(string imageUrl, ImageToTextOptions? options = null, CancellationToken cancellationToken = default);
-    Task<string> ConvertImageToTextAsync(byte[] imageBytes, string mimeType, ImageToTextOptions? options = null, CancellationToken cancellationToken = default);
-    Task<IReadOnlyList<string>> ConvertImagesBatchAsync(IEnumerable<string> imageUrls, ImageToTextOptions? options = null, CancellationToken cancellationToken = default);
-    Task<string> ExtractTextFromImageAsync(string imageUrl, CancellationToken cancellationToken = default);
-    IReadOnlyList<string> GetSupportedImageFormats();
-    Task<bool> IsAvailableAsync(CancellationToken cancellationToken = default);
-}
-```
-
-**OpenAI GPT-4V 구현 예제:**
-```csharp
-using OpenAI.Chat;
-
-public class OpenAIVisionService : IImageToTextService
-{
-    private readonly ChatClient _client;
-
-    public OpenAIVisionService(string apiKey)
-    {
-        _client = new ChatClient("gpt-4-vision-preview", apiKey);
-    }
-
-    public async Task<string> ConvertImageToTextAsync(
-        string imageUrl,
-        ImageToTextOptions? options = null,
-        CancellationToken cancellationToken = default)
-    {
-        var prompt = options?.Prompt ?? "Describe this image in detail.";
-
-        var messages = new[]
-        {
-            new ChatMessage(ChatRole.User, new[]
-            {
-                ChatMessageContentPart.CreateTextPart(prompt),
-                ChatMessageContentPart.CreateImagePart(new Uri(imageUrl))
-            })
-        };
-
-        var response = await _client.CompleteChatAsync(messages, cancellationToken: cancellationToken);
-        return response.Value.Content[0].Text;
-    }
-
-    public async Task<string> ExtractTextFromImageAsync(
-        string imageUrl,
-        CancellationToken cancellationToken = default)
-    {
-        return await ConvertImageToTextAsync(
-            imageUrl,
-            new ImageToTextOptions { Context = "Extract all text from this image (OCR)." },
-            cancellationToken);
-    }
-
-    public IReadOnlyList<string> GetSupportedImageFormats()
-    {
-        return new[] { "image/jpeg", "image/png", "image/gif", "image/webp" };
-    }
-
-    public async Task<bool> IsAvailableAsync(CancellationToken cancellationToken = default)
-    {
-        try
-        {
-            // Simple health check
-            return true;
-        }
-        catch { return false; }
-    }
-}
-```
-
-**서비스 등록:**
-```csharp
-services.AddScoped<IImageToTextService>(sp =>
-    new OpenAIVisionService(Environment.GetEnvironmentVariable("OPENAI_API_KEY")));
 ```
 
 ---

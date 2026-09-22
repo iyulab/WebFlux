@@ -19,6 +19,14 @@ All notable changes to this project will be documented in this file.
 - **`ChunkingStrategyType.Intelligent`.** No strategy was registered for it: selecting it produced Paragraph chunks
   (see above). The remaining members keep their numbers (`MemoryOptimized` is still 6; 5 is left unused), so a
   numerically bound setting does not start meaning something else. Pick `Semantic` (needs an embedder) or `Smart`.
+- **The multimodal subsystem.** `IImageToTextService` was a port the library had registration helpers for and never
+  called — no crawl, extraction or chunking path asked it for anything; `IMultimodalProcessingPipeline` had no
+  implementation and `AddWebFluxMultimodal` registered nothing. Removed with their models (`ImageToTextResult`,
+  `MultimodalProcessingResult` and the rest of `MultimodalModels`), `ImageToTextOptions`, `MultimodalProcessingOptions`,
+  and the members pointing at them: `ChunkingOptions.IncludeImageDescriptions`, `.EnableMultimodalProcessing`,
+  `.MultimodalOptions` and the two `ChunkingConfiguration` twins. `AddWebFluxAIServices` loses its image type argument
+  (`<TTextCompletion, TTextEmbedding>` and `<TTextCompletion>`). An image description never reached a chunk through
+  these; `ExtractOptions.IncludeImages` (image URLs on the extracted content) is unchanged.
 - **Three subsystems nothing registered or called — only their own tests constructed them.** An assignment or
   construction no longer compiles; there is no replacement in this library.
   - The site-configuration analyzer: `ISiteConfigurationAnalyzer`, `SiteConfigurationAnalyzer` and its model tree

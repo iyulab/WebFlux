@@ -60,7 +60,7 @@ public class OpenAiEmbeddingService : ITextEmbeddingService
 
 ### ITextCompletionService (선택)
 
-콘텐츠 재구성 및 AI 기반 메타데이터 추출 기능 사용 시 필요합니다.
+AI 증강(요약·재작성)과 AI 기반 메타데이터 추출 기능 사용 시 필요합니다.
 
 ```csharp
 public interface ITextCompletionService
@@ -74,39 +74,6 @@ public interface ITextCompletionService
         string prompt,
         TextCompletionOptions? options = null,
         CancellationToken cancellationToken = default);
-}
-```
-
-### IImageToTextService (선택)
-
-멀티모달 처리 사용 시 필요합니다.
-
-```csharp
-public interface IImageToTextService
-{
-    Task<string> ConvertImageToTextAsync(
-        string imageUrl,
-        ImageToTextOptions? options = null,
-        CancellationToken cancellationToken = default);
-
-    Task<string> ConvertImageToTextAsync(
-        byte[] imageBytes,
-        string mimeType,
-        ImageToTextOptions? options = null,
-        CancellationToken cancellationToken = default);
-
-    Task<IReadOnlyList<string>> ConvertImagesBatchAsync(
-        IEnumerable<string> imageUrls,
-        ImageToTextOptions? options = null,
-        CancellationToken cancellationToken = default);
-
-    Task<string> ExtractTextFromImageAsync(
-        string imageUrl,
-        CancellationToken cancellationToken = default);
-
-    IReadOnlyList<string> GetSupportedImageFormats();
-
-    Task<bool> IsAvailableAsync(CancellationToken cancellationToken = default);
 }
 ```
 

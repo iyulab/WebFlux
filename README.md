@@ -118,7 +118,7 @@ public interface ITextEmbeddingService
 ### Optional AI Services
 
 #### ITextCompletionService (Optional)
-LLM text completion for multimodal processing and content reconstruction. Defined in the shared
+LLM text completion for AI enhancement (summaries, rewrites, metadata). Defined in the shared
 [`Flux.Abstractions`](https://www.nuget.org/packages/Flux.Abstractions/) contract package — only
 `CompleteAsync` is required, the rest have default implementations:
 
@@ -140,18 +140,6 @@ public interface IWebLlmService : ITextCompletionService
 {
     Task<bool> IsAvailableAsync(CancellationToken cancellationToken = default);
     ServiceHealthInfo GetHealthInfo();
-}
-```
-
-#### IImageToTextService (Optional)
-Image-to-text conversion for multimodal content:
-
-```csharp
-public interface IImageToTextService
-{
-    Task<string> ConvertImageToTextAsync(string imageUrl, ImageToTextOptions? options = null, CancellationToken cancellationToken = default);
-    Task<string> ExtractTextFromImageAsync(string imageUrl, CancellationToken cancellationToken = default);
-    Task<bool> IsAvailableAsync(CancellationToken cancellationToken = default);
 }
 ```
 

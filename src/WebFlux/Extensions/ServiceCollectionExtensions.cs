@@ -73,9 +73,6 @@ public static class ServiceCollectionExtensions
         // 진행률 리포팅 서비스 등록
         services.AddWebFluxProgressReporting();
 
-        // Phase 5A.2: 멀티모달 처리 파이프라인 등록
-        services.AddWebFluxMultimodal();
-
         // Phase 5C.2: 회복탄력성 서비스 등록
         services.AddWebFluxResilience();
 
@@ -272,19 +269,17 @@ public static class ServiceCollectionExtensions
     /// AI 서비스 구현체를 등록합니다. (소비자가 호출)
     /// </summary>
     /// <typeparam name="TTextCompletion">텍스트 완성 서비스 구현체</typeparam>
-    /// <typeparam name="TImageToText">이미지-텍스트 변환 서비스 구현체</typeparam>
     /// <typeparam name="TTextEmbedding">텍스트 임베딩 서비스 구현체</typeparam>
     /// <param name="services">서비스 컬렉션</param>
     /// <returns>서비스 컬렉션</returns>
-    public static IServiceCollection AddWebFluxAIServices<TTextCompletion, TImageToText, TTextEmbedding>(
+    /// <remarks>0.14.0 에서 이미지-텍스트 타입 인자를 뺐다 — 라이브러리 어디도 그 서비스를 호출하지 않았다.</remarks>
+    public static IServiceCollection AddWebFluxAIServices<TTextCompletion, TTextEmbedding>(
         this IServiceCollection services)
         where TTextCompletion : class, IWebLlmService
-        where TImageToText : class, IImageToTextService
         where TTextEmbedding : class, ITextEmbeddingService
     {
         services.TryAddScoped<IWebLlmService, TTextCompletion>();
         services.TryAddScoped<ITextCompletionService>(sp => sp.GetRequiredService<IWebLlmService>());
-        services.TryAddScoped<IImageToTextService, TImageToText>();
         services.TryAddScoped<ITextEmbeddingService, TTextEmbedding>();
 
         // Phase 1: AI 증강 서비스 자동 등록
@@ -297,17 +292,14 @@ public static class ServiceCollectionExtensions
     /// AI 서비스 구현체를 등록합니다. (임베딩 없는 버전, 하위 호환성)
     /// </summary>
     /// <typeparam name="TTextCompletion">텍스트 완성 서비스 구현체</typeparam>
-    /// <typeparam name="TImageToText">이미지-텍스트 변환 서비스 구현체</typeparam>
     /// <param name="services">서비스 컬렉션</param>
     /// <returns>서비스 컬렉션</returns>
-    public static IServiceCollection AddWebFluxAIServices<TTextCompletion, TImageToText>(
+    public static IServiceCollection AddWebFluxAIServices<TTextCompletion>(
         this IServiceCollection services)
         where TTextCompletion : class, IWebLlmService
-        where TImageToText : class, IImageToTextService
     {
         services.TryAddScoped<IWebLlmService, TTextCompletion>();
         services.TryAddScoped<ITextCompletionService>(sp => sp.GetRequiredService<IWebLlmService>());
-        services.TryAddScoped<IImageToTextService, TImageToText>();
 
         // Phase 1: AI 증강 서비스 자동 등록
         services.AddWebFluxAIEnhancement();
@@ -338,7 +330,6 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddWebFluxOpenAIServices(this IServiceCollection services)
     {
         // Interface Provider 패턴: 소비자가 OpenAI 구현체 제공
-        // return services.AddWebFluxAIServices<OpenAITextCompletionService, OpenAIImageToTextService, OpenAITextEmbeddingService>();
 
         // SDK는 인터페이스만 제공, 구현은 소비자 선택
         return services;
@@ -378,18 +369,6 @@ public static class ServiceCollectionExtensions
     /// <param name="services">서비스 컬렉션</param>
     /// <returns>서비스 컬렉션</returns>
     public static IServiceCollection AddWebFluxProgressReporting(this IServiceCollection services)
-    {
-        // Interface Provider 패턴: 인터페이스만 제공, 구현은 소비자가 제공
-
-        return services;
-    }
-
-    /// <summary>
-    /// 멀티모달 처리 서비스를 등록합니다. (Interface Provider 패턴)
-    /// </summary>
-    /// <param name="services">서비스 컬렉션</param>
-    /// <returns>서비스 컬렉션</returns>
-    public static IServiceCollection AddWebFluxMultimodal(this IServiceCollection services)
     {
         // Interface Provider 패턴: 인터페이스만 제공, 구현은 소비자가 제공
 

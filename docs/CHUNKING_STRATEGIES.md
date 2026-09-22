@@ -66,7 +66,6 @@ Unknown / mixed                 → Auto
 | `Language` | `"ko"` | 콘텐츠 언어 |
 | `MinimizeMemoryUsage` | `false` | 메모리 최소화 전략 선택 힌트 |
 
-멀티모달 관련 멤버(`EnableMultimodalProcessing`·`MultimodalOptions`·`IncludeImageDescriptions`)는 [README](../README.md) 의 멀티모달 절을 본다.
 
 ```csharp
 var options = new ChunkingOptions

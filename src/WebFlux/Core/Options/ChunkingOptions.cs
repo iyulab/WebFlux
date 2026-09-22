@@ -44,11 +44,6 @@ public class ChunkingOptions : IValidatable
     public bool PreserveHeaders { get; set; } = true;
 
     /// <summary>
-    /// 이미지 설명 포함 여부 (기본값: true)
-    /// </summary>
-    public bool IncludeImageDescriptions { get; set; } = true;
-
-    /// <summary>
     /// 최대 병렬 작업 수 (기본값: Environment.ProcessorCount)
     /// </summary>
     public int MaxParallelism { get; set; } = Environment.ProcessorCount;
@@ -63,18 +58,6 @@ public class ChunkingOptions : IValidatable
     /// <c>UseMemoryOptimization</c> 은 제거됐다 — 이 멤버가 실제 값이다.
     /// </summary>
     public bool MinimizeMemoryUsage { get; set; }
-
-    /// <summary>
-    /// 멀티모달 처리 활성화 여부 (Phase 5A.3 재설계)
-    /// 모든 청킹 전략에 선택적으로 적용 가능
-    /// </summary>
-    public bool EnableMultimodalProcessing { get; set; }
-
-    /// <summary>
-    /// 멀티모달 처리 옵션
-    /// EnableMultimodalProcessing이 true일 때만 사용됨
-    /// </summary>
-    public MultimodalProcessingOptions? MultimodalOptions { get; set; }
 
     /// <inheritdoc />
     public ValidationResult Validate()
