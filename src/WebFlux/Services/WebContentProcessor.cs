@@ -425,13 +425,7 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
 
         try
         {
-            var enhancementOptions = new Core.Options.EnhancementOptions
-            {
-                EnableSummary = configuration.AiEnhancement.EnableSummary,
-                EnableMetadata = configuration.AiEnhancement.EnableMetadata,
-                EnableRewrite = false,
-                EnableParallelProcessing = true
-            };
+            var enhancementOptions = ToEnhancementOptions(configuration.AiEnhancement);
 
             var enhanced = await aiService.EnhanceAsync(
                 extracted.MainContent ?? extracted.Text,
@@ -560,8 +554,7 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
             var chunkingOptions = new ChunkingOptions
             {
                 MaxChunkSize = configuration.Chunking.MaxChunkSize,
-                ChunkOverlap = 50, // 기본값
-                PreserveHeaders = true // 기본값
+                ChunkOverlap = 50 // 기본값
             };
 
             var chunks = await chunkingStrategy.ChunkAsync(
@@ -597,6 +590,23 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
         _processingSlot?.Dispose();
         GC.SuppressFinalize(this);
     }
+
+    /// <summary>
+    /// The AI-enhancement options the crawl path hands the enhancement service, from the configuration. Before
+    /// 0.14.0 this mapping carried only the two enable switches and hard-coded the rest (<c>EnableRewrite = false</c>,
+    /// parallel on, no summary/rewrite options, no timeout), so <c>AiEnhancementConfiguration.EnableRewrite</c> and
+    /// <c>TimeoutMs</c> were declared and read by nothing on this path.
+    /// </summary>
+    internal static Core.Options.EnhancementOptions ToEnhancementOptions(AiEnhancementConfiguration configuration) => new()
+    {
+        EnableSummary = configuration.EnableSummary,
+        EnableMetadata = configuration.EnableMetadata,
+        EnableRewrite = configuration.EnableRewrite,
+        EnableParallelProcessing = configuration.EnableParallelProcessing,
+        SummaryOptions = configuration.Summary,
+        RewriteOptions = configuration.Rewrite,
+        TimeoutMs = configuration.TimeoutMs
+    };
 
     private static string ExtractTitle(string? content)
     {
@@ -812,8 +822,7 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
             var effectiveChunkingOptions = chunkingOptions ?? new ChunkingOptions
             {
                 MaxChunkSize = 1000,
-                ChunkOverlap = 50,
-                PreserveHeaders = true
+                ChunkOverlap = 50
             };
 
             var chunks = await chunkingStrategy.ChunkAsync(
@@ -866,8 +875,7 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
         var effectiveOptions = chunkingOptions ?? new ChunkingOptions
         {
             MaxChunkSize = 1000,
-            ChunkOverlap = 50,
-            PreserveHeaders = true
+            ChunkOverlap = 50
         };
 
         var chunkingStrategy = _serviceFactory.CreateChunkingStrategy(

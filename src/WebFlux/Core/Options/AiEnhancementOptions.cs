@@ -11,10 +11,10 @@ public class SummaryOptions
     /// <summary>요약 스타일 (concise: 간결, detailed: 상세, bullet: 불릿 포인트)</summary>
     public string Style { get; set; } = "concise";
 
-    /// <summary>요약 언어 (원본 언어 유지 시 null)</summary>
+    /// <summary>요약 언어 (원본 언어 유지 시 null). 0.14.0 부터 요약 프롬프트의 지시가 된다 — 그 전에는 읽는 코드가 없었다.</summary>
     public string? TargetLanguage { get; set; }
 
-    /// <summary>핵심 정보만 추출 (불필요한 내용 제거)</summary>
+    /// <summary>핵심 정보만 추출 (불필요한 내용 제거). 0.14.0 부터 요약 프롬프트의 지시가 된다 — 그 전에는 읽는 코드가 없었다.</summary>
     public bool FocusOnKeyPoints { get; set; } = true;
 }
 
@@ -38,7 +38,7 @@ public class RewriteOptions
     /// <summary>기술 용어 설명 추가</summary>
     public bool ExplainTechnicalTerms { get; set; }
 
-    /// <summary>예제 추가</summary>
+    /// <summary>예제 추가. 0.14.0 부터 재작성 프롬프트의 지시가 된다 — 그 전에는 읽는 코드가 없었다.</summary>
     public bool AddExamples { get; set; }
 }
 

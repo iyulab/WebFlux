@@ -54,4 +54,8 @@
     <PackageReference Include="Polly.Extensions.Http" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="WebFlux.Tests" />
+  </ItemGroup>
+
 </Project>

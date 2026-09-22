@@ -224,7 +224,14 @@ public partial class BasicAiEnhancementService : IAiEnhancementService
 
         var lengthInstruction = $"Keep the summary under {options.MaxLength} characters.";
 
-        return $@"{styleInstructions} {lengthInstruction}
+        // TargetLanguage and FocusOnKeyPoints were declared on SummaryOptions and read by nothing before 0.14.0.
+        var instructions = new List<string> { styleInstructions, lengthInstruction };
+        if (options.FocusOnKeyPoints)
+            instructions.Add("Keep only the key points; leave out digressions, examples and repetition.");
+        if (!string.IsNullOrWhiteSpace(options.TargetLanguage))
+            instructions.Add($"Write the summary in the language '{options.TargetLanguage.Trim()}'.");
+
+        return $@"{string.Join(" ", instructions)}
 
 Content:
 {TruncateContent(content, 6000)}
@@ -252,6 +259,10 @@ Summary:";
 
         if (options.ExplainTechnicalTerms)
             instructions.Add("Explain technical terms in parentheses.");
+
+        // AddExamples was declared and read by nothing before 0.14.0.
+        if (options.AddExamples)
+            instructions.Add("Add a short, concrete example wherever it helps the reader understand a point.");
 
         var toneInstruction = $"Use a {options.Tone} tone.";
         instructions.Add(toneInstruction);

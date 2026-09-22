@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.14.0] - 2026-09-22
+
+### Added
+- **`AiEnhancementConfiguration.Summary` and `.Rewrite`** — the summary and rewrite options the crawl path hands
+  the enhancement service. Until now the path passed neither, so `SummaryOptions`/`RewriteOptions` could only
+  reach a direct caller of `IAiEnhancementService`.
+
+### Fixed
+- **Four options that were declared and read by nothing now do what they say.** `SummaryOptions.TargetLanguage`
+  (the summary is written in that language) and `FocusOnKeyPoints` (key points only) become instructions in the
+  summary prompt; `RewriteOptions.AddExamples` becomes one in the rewrite prompt; `ChunkingOptions.PreserveHeaders`
+  reaches FluxCurator's `PreserveSectionHeaders`, so `false` now stops section headers from being prepended to
+  chunks (hierarchical chunking). Defaults are unchanged.
+- **The crawl path reads `AiEnhancementConfiguration.EnableRewrite`, `EnableParallelProcessing` and `TimeoutMs`.**
+  It hard-coded `EnableRewrite = false` and parallel on, and dropped the timeout, so those three configuration
+  members had no effect on crawled content. A consumer who set `EnableRewrite = true` in configuration starts
+  getting rewritten content (an LLM call per document) — set it back to `false` if that was unintended.
+
 ## [0.13.0] - 2026-09-22
 
 ### Added

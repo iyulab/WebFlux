@@ -62,6 +62,10 @@ internal static class FluxCuratorChunkAdapter
             MinChunkSize = min,
             OverlapSize = Math.Clamp(source.ChunkOverlap, 0, Math.Max(0, target - 1)),
 
+            // PreserveHeaders reached nothing before 0.14.0: the adapter left FluxCurator's twin at its default, so
+            // a caller who set false still got section headers prepended.
+            PreserveSectionHeaders = source.PreserveHeaders,
+
             // WebFlux defaults Language to "ko" rather than leaving it unset, so an English page
             // chunked with defaults would be sized on Korean token ratios. Blank is FluxCurator's
             // "detect it", which is the honest reading of a value nobody chose.

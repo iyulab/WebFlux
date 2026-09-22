@@ -718,9 +718,21 @@ public class AiEnhancementConfiguration
     public bool EnableMetadata { get; set; } = true;
 
     /// <summary>
-    /// 재작성 활성화 (기본값: false)
+    /// 재작성 활성화 (기본값: false). 0.14.0 부터 크롤 경로가 실제로 읽는다 — 그 전에는 프로세서가 <c>false</c> 를
+    /// 리터럴로 넘겨 이 값은 아무 일도 하지 않았다.
     /// </summary>
     public bool EnableRewrite { get; set; }
+
+    /// <summary>
+    /// 요약 옵션 (<see cref="EnableSummary"/> 일 때 요약 프롬프트에 실리는 스타일·길이·언어·핵심 정보). 0.14.0 신설 —
+    /// 그 전에는 크롤 경로에서 <see cref="SummaryOptions"/> 를 넘길 방법이 없어 서비스 기본값만 쓰였다.
+    /// </summary>
+    public SummaryOptions Summary { get; set; } = new();
+
+    /// <summary>
+    /// 재작성 옵션 (<see cref="EnableRewrite"/> 일 때). 0.14.0 신설, <see cref="Summary"/> 와 같은 이유.
+    /// </summary>
+    public RewriteOptions Rewrite { get; set; } = new();
 
     /// <summary>
     /// 병렬 처리 활성화

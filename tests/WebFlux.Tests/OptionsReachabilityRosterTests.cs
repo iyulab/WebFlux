@@ -84,7 +84,7 @@ public class OptionsReachabilityRosterTests
         [
             "ChunkSize", "CreateHierarchy", "CustomSeparators", "EnableMultimodalProcessing",
             "EnableParallelProcessing", "IncludeImageDescriptions", "IncludeMetadata", "MultimodalOptions",
-            "PreserveHeaders", "SplitCodeBlocks", "SplitTables", "UseMemoryOptimization", "UseStreaming",
+            "SplitCodeBlocks", "SplitTables", "UseMemoryOptimization", "UseStreaming",
         ],
         // Was 19. Two were wired (FollowExternalLinks, AllowedDomains - the host scope was hardcoded
         // and both options were read by nothing, so FollowExternalLinks = true was silently ignored).
@@ -136,11 +136,9 @@ public class OptionsReachabilityRosterTests
         [
             "AdditionalOptions", "MaxLength", "MinLength", "PreserveOriginal", "QualityTarget", "TimeoutMs",
         ],
-        ["WebFlux.Core.Options.RewriteOptions"] = ["AddExamples"],
-        ["WebFlux.Core.Options.SummaryOptions"] =
-        [
-            "FocusOnKeyPoints", "TargetLanguage",
-        ],
+        // RewriteOptions.AddExamples and SummaryOptions.TargetLanguage/FocusOnKeyPoints wired in 0.14.0 (prompt
+        // instructions); ChunkingOptions.PreserveHeaders wired in 0.14.0 (FluxCurator PreserveSectionHeaders).
+        // Full 114-member classification (T 73 · D 24 · A 13 · B 2 · C 2): umbrella draft ISSUE-webflux-20260922-213000.
         ["WebFlux.Core.Options.TextCompletionOptions"] = ["AdditionalProperties"],
     };
 
