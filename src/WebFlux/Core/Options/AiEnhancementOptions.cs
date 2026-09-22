@@ -101,7 +101,8 @@ public class EnhancementOptions
     /// <summary>병렬 처리 활성화 (요약, 재작성, 메타데이터 동시 처리)</summary>
     public bool EnableParallelProcessing { get; set; } = true;
 
-    /// <summary>타임아웃 (밀리초)</summary>
+    /// <summary>전체 증강 타임아웃(밀리초; 켜진 패스 전부 합쳐서). 0 이하 = 제한 없음. 0.14.0 부터 실제로 취소한다 — 그 전에는
+    /// 선언만 있고 원래 토큰이 그대로 전달돼 기본 60 초가 한 번도 강제되지 않았다.</summary>
     public int TimeoutMs { get; set; } = 60000;
 
     /// <summary>모든 증강 기능 활성화</summary>

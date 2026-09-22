@@ -89,7 +89,6 @@ public class OptionsReachabilityRosterTests
         // - The five metadata options: AIWebMetadataExtractor and HtmlMetadataExtractor implement
         //   all of this, but neither is DI-registered and neither has a call site, so the subsystem
         //   has no front door. Wiring it is a feature decision, not a knob decision.
-        ["WebFlux.Core.Options.EnhancementOptions"] = ["TimeoutMs"],
         ["WebFlux.Core.Options.HtmlChunkingOptions"] =
         [
             "IncludeDomPath", "PreserveDomStructure", "PreserveHeadingHierarchy",
@@ -120,10 +119,36 @@ public class OptionsReachabilityRosterTests
         // UseStreaming (the IAsyncEnumerable ProcessAsync overloads are the streaming shape), CreateHierarchy, CustomSeparators,
         // SplitCodeBlocks, SplitTables, IncludeMetadata; ExtractOptions.IncludeLinks; MarkdownConversionOptions.EnableCodeHighlighting,
         // CustomSettings; ReconstructOptions.AdditionalOptions; TextCompletionOptions.AdditionalProperties.
+        // cycle-933 (2026-09-22) widened the scan from *Options/*Config to *Configuration as well: NamedWith is EndsWith, so
+        // WebFluxConfiguration and its 19 nested configuration types were never scanned. What it found — 112 members in
+        // 20 types — is recorded here UNCLASSIFIED (no per-member verdict yet): the gate starts green at the honest number and the
+        // next unread configuration member fails it. Classification (A/B/C/D/T, umbrella draft ISSUE-webflux-20260922-213000
+        // and its successor) decides wire vs remove; several of these types (Build/Content/Deployment/Plugin/Seo) look like
+        // static-site-generator configuration the library never consumes.
+        ["WebFlux.Core.Models.AiEnhancementConfiguration"] = ["MaxRetries"],
+        ["WebFlux.Core.Models.AutoChunkingConfiguration"] = ["HighComplexityThreshold", "MediumComplexityThreshold"],
+        ["WebFlux.Core.Models.BuildConfiguration"] = ["ExcludePatterns", "IncludePatterns", "IncrementalBuild", "OutputDirectory", "ShowFuture", "SourceDirectory"],
+        ["WebFlux.Core.Models.CachingConfiguration"] = ["DefaultExpirationMinutes", "EnableCompression", "EnableMetrics", "Enabled", "MaxCacheSize", "TypeSettings"],
+        ["WebFlux.Core.Models.ChunkingConfiguration"] = ["DefaultChunkOverlap", "DefaultMaxChunkSize", "DefaultMinChunkSize", "DefaultQualityThreshold", "DefaultSemanticThreshold", "EnableMultimodalProcessing", "LanguageSettings", "MinChunkSize", "MultimodalOptions", "NormalizeWhitespace", "OverlapSize", "StrategyDefaults"],
+        ["WebFlux.Core.Models.ContentConfiguration"] = ["Collections", "Defaults", "ExcerptSeparator", "Highlighter", "MarkdownEngine", "PaginateCount", "PaginatePath"],
+        ["WebFlux.Core.Models.CrawlConfiguration"] = ["AllowedDomains", "DelayBetweenRequests", "ExcludePatterns", "MaxConcurrentRequests", "MaxDepth", "MaxPages", "StartUrls", "Strategy"],
+        ["WebFlux.Core.Models.CrawlingConfiguration"] = ["DefaultAllowedContentTypes", "DefaultDelayMs", "DefaultExcludedExtensions", "DefaultHeaders", "DefaultRetryCount", "DefaultTimeoutSeconds", "DefaultUserAgent", "MaxConcurrentRequests", "RespectRobotsTxt"],
+        ["WebFlux.Core.Models.DeploymentConfiguration"] = ["GitHubPages", "Netlify", "Vercel"],
+        ["WebFlux.Core.Models.EventConfiguration"] = ["EnableEventPublishing", "EventBatchSize", "EventBufferSize", "EventFilters", "EventTypeEnabled", "FlushIntervalMs"],
+        ["WebFlux.Core.Models.ExtractionConfiguration"] = ["IncludeLinkUrls"],
+        ["WebFlux.Core.Models.LoggingConfiguration"] = ["CategoryLevels", "EnableDetailedErrorLogging", "EnableEvents", "EnablePerformanceLogging", "EnableStructuredLogging", "LogFilters", "MinimumLevel"],
+        ["WebFlux.Core.Models.PerformanceConfiguration"] = ["BackpressureThreshold", "BatchSize", "EnableAutoScaling", "MaxMemoryUsageBytes", "MemoryOptimizationThreshold", "PerformanceMonitoringIntervalMs", "QueueSizeLimit"],
+        ["WebFlux.Core.Models.PluginConfiguration"] = ["Gems", "PluginSettings"],
+        ["WebFlux.Core.Models.ProcessingOptimizationConfiguration"] = ["CacheOptimization", "EnableAutoStrategySelection", "EnableBottleneckDetection", "EnableStatisticsCollection", "EnableTokenOptimization", "Enabled", "PerformanceMonitoringInterval", "ResourceThresholds"],
+        ["WebFlux.Core.Models.SecurityConfiguration"] = ["AllowedDomains", "BlockedDomains", "EnableContentScanning", "EncryptApiKeys", "RateLimitPerMinute", "ValidateSslCertificates", "ValidateUserAgent"],
+        ["WebFlux.Core.Models.SeoConfiguration"] = ["GoogleTagManager", "RobotsConfig"],
+        ["WebFlux.Core.Models.SiteConfiguration"] = ["QualityScore"],
+        ["WebFlux.Core.Models.TokenCountingConfiguration"] = ["CacheMaxSize", "EnableCaching", "EnableStatistics", "EnableTokenAnalysis", "Enabled", "ModelCosts", "SupportedModels"],
+        ["WebFlux.Core.Models.WebFluxConfiguration"] = ["Caching", "CustomSettings", "DefaultTokenizerModel", "EnvironmentOverrides", "Events", "Extraction", "Logging", "ProcessingOptimization", "Security", "TokenCounting"],
     };
 
     [Fact]
     public void EveryPublicOption_IsRead() =>
-        OptionsReachability.Scan(Libraries, OptionsTypes.NamedWith("Options", "Config"))
+        OptionsReachability.Scan(Libraries, OptionsTypes.NamedWith("Options", "Config", "Configuration"))
             .ShouldMatchRoster(KnownUnread);
 }

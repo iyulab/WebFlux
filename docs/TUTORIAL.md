@@ -381,7 +381,7 @@ public class OpenAIVisionService : IImageToTextService
     {
         return await ConvertImageToTextAsync(
             imageUrl,
-            new ImageToTextOptions { Prompt = "Extract all text from this image (OCR)." },
+            new ImageToTextOptions { Context = "Extract all text from this image (OCR)." },
             cancellationToken);
     }
 

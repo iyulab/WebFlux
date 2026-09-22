@@ -46,6 +46,10 @@ All notable changes to this project will be documented in this file.
   `ValidationResult` with a syntactic check (well-formed URI, no request).
 - **`AnalyzeStructureAsync` returns the lists, quotes, math, footnotes and embeds it extracted.** The public result
   was reassembled without those five collections, so they were always empty to a caller.
+- **`EnhancementOptions.TimeoutMs` bounds the enhancement.** It was declared (default 60 s) and the raw cancellation
+  token was forwarded, so no enhancement was ever cut short; `EnhanceAsync` now cancels all its passes when the bound
+  elapses (`<= 0` = no bound). A consumer whose LLM regularly takes longer than 60 s on a document now sees
+  `OperationCanceledException` from enhancement — raise `TimeoutMs` (configuration: `AiEnhancement.TimeoutMs`).
 - **The crawl path reads `AiEnhancementConfiguration.EnableRewrite`, `EnableParallelProcessing` and `TimeoutMs`.**
   It hard-coded `EnableRewrite = false` and parallel on, and dropped the timeout, so those three configuration
   members had no effect on crawled content. A consumer who set `EnableRewrite = true` in configuration starts

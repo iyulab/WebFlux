@@ -125,6 +125,14 @@ public partial class BasicAiEnhancementService : IAiEnhancementService
 
         LogEnhancingContent(_logger, content.Length, options.EnableSummary, options.EnableRewrite, options.EnableMetadata);
 
+        // EnhancementOptions.TimeoutMs bounds the whole enhancement (all enabled passes together); <= 0 means no bound.
+        // Until 0.14.0 the member was declared and the raw token was forwarded, so the default 60 s was never enforced.
+        using var timeout = options.TimeoutMs > 0
+            ? CancellationTokenSource.CreateLinkedTokenSource(cancellationToken)
+            : null;
+        timeout?.CancelAfter(options.TimeoutMs);
+        cancellationToken = timeout?.Token ?? cancellationToken;
+
         string? summary = null;
         string? rewritten = null;
         EnrichedMetadata? metadata = null;

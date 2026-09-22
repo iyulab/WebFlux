@@ -52,6 +52,24 @@ public sealed class EnhancementOptionWiringTests
     }
 
     [Fact]
+    public async Task EnhancementOptions_TimeoutMs_cancels_the_enhancement_and_zero_means_no_bound()
+    {
+        var llm = Substitute.For<ITextCompletionService>();
+        llm.CompleteAsync(Arg.Any<string>(), Arg.Any<Flux.Abstractions.TextCompletionOptions?>(), Arg.Any<CancellationToken>())
+            .Returns(async call => { await Task.Delay(Timeout.Infinite, call.Arg<CancellationToken>()); return "never"; });
+        var service = new BasicAiEnhancementService(llm, NullLogger<BasicAiEnhancementService>.Instance);
+
+        var bounded = () => service.EnhanceAsync("content", new EnhancementOptions { EnableSummary = true, EnableMetadata = false, TimeoutMs = 50 }, TestContext.Current.CancellationToken);
+        await bounded.Should().ThrowAsync<OperationCanceledException>("50 ms is the bound for the whole enhancement");
+
+        var quick = Substitute.For<ITextCompletionService>();
+        quick.CompleteAsync(Arg.Any<string>(), Arg.Any<Flux.Abstractions.TextCompletionOptions?>(), Arg.Any<CancellationToken>()).Returns(Task.FromResult("summary"));
+        var unbounded = new BasicAiEnhancementService(quick, NullLogger<BasicAiEnhancementService>.Instance);
+        var result = await unbounded.EnhanceAsync("content", new EnhancementOptions { EnableSummary = true, EnableMetadata = false, TimeoutMs = 0 }, TestContext.Current.CancellationToken);
+        result.Summary.Should().Be("summary", "TimeoutMs <= 0 is no bound, not an immediate cancel");
+    }
+
+    [Fact]
     public void The_crawl_path_maps_every_enhancement_setting_from_the_configuration()
     {
         var summary = new SummaryOptions { TargetLanguage = "de" };
