@@ -522,9 +522,6 @@ public class MarkdownConversionOptions
     /// <summary>목차 생성</summary>
     public bool GenerateTableOfContents { get; init; } = true;
 
-    /// <summary>코드 하이라이팅</summary>
-    public bool EnableCodeHighlighting { get; init; } = true;
-
     /// <summary>수식 지원</summary>
     public bool EnableMath { get; init; } = true;
 
@@ -551,10 +548,6 @@ public class MarkdownConversionOptions
 
     /// <summary>앵커 ID 생성</summary>
     public bool GenerateAnchorIds { get; init; } = true;
-
-    /// <summary>사용자 정의 설정</summary>
-    public IReadOnlyDictionary<string, object> CustomSettings { get; init; } =
-        new Dictionary<string, object>();
 }
 
 /// <summary>

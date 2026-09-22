@@ -150,8 +150,7 @@ public class LargeDocumentStabilityTests
         {
             MaxChunkSize = 512,
             MinChunkSize = 100,
-            ChunkOverlap = 64,
-            UseStreaming = true  // 스트리밍 모드 활성화
+            ChunkOverlap = 64
         };
 
         var strategy = FluxCuratorChunkingStrategy.MemoryOptimized(new FluxCurator.Infrastructure.Chunking.ChunkerFactory());

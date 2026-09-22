@@ -252,7 +252,7 @@ Content for section two";
             Url = "https://example.com",
             Headings = new List<string> { "# Heading 1", "## Heading 2" }
         };
-        var options = new ChunkingOptions { ChunkSize = 500 };
+        var options = new ChunkingOptions { MaxChunkSize = 500 };
 
         // Act
         var chunks = await _strategy.ChunkAsync(content, options, TestContext.Current.CancellationToken);

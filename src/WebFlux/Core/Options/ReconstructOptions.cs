@@ -91,11 +91,6 @@ public class ReconstructOptions : IValidatable
     /// </summary>
     public double Temperature { get; set; } = 0.3;
 
-    /// <summary>
-    /// 추가 옵션 (확장 가능)
-    /// </summary>
-    public Dictionary<string, object> AdditionalOptions { get; set; } = new();
-
     /// <inheritdoc />
     public ValidationResult Validate()
     {

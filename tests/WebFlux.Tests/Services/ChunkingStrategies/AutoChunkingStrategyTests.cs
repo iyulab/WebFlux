@@ -234,7 +234,7 @@ public class AutoChunkingStrategyTests
             MainContent = text,
             Url = "https://example.com"
         };
-        var options = new ChunkingOptions { ChunkSize = 500 };
+        var options = new ChunkingOptions { MaxChunkSize = 500 };
 
         // Act
         var chunks = await _strategy.ChunkAsync(content, options, TestContext.Current.CancellationToken);

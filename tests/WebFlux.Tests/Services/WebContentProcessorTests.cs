@@ -156,7 +156,7 @@ public class WebContentProcessorTests : IDisposable
         // Arrange
         var startUrl = "https://example.com";
         var crawlOptions = new CrawlOptions { MaxPages = 10 };
-        var chunkingOptions = new ChunkingOptions { ChunkSize = 1000 };
+        var chunkingOptions = new ChunkingOptions { MaxChunkSize = 1000 };
 
         // Setup mock crawler to return empty results
         var mockCrawler = Substitute.For<ICrawler>();
@@ -229,7 +229,7 @@ public class WebContentProcessorTests : IDisposable
         // Arrange
         var html = "<html><body>Test content</body></html>";
         var sourceUrl = "https://example.com";
-        var options = new ChunkingOptions { ChunkSize = 500 };
+        var options = new ChunkingOptions { MaxChunkSize = 500 };
         SetupMocksForHtmlProcessing(sourceUrl);
 
         // Act

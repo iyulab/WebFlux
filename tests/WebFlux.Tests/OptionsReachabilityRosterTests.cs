@@ -57,7 +57,7 @@ public class OptionsReachabilityRosterTests
         ],
         ["WebFlux.Core.Models.MarkdownConversionOptions"] =
         [
-            "CustomSettings", "EnableAutoLinks", "EnableCodeHighlighting", "EnableEmojis", "EnableExtensions",
+            "EnableAutoLinks", "EnableEmojis", "EnableExtensions",
             "EnableFootnotes", "EnableMath", "EnableTables", "EnableTaskLists", "ExtractImageInfo",
             "GenerateAnchorIds", "GenerateTableOfContents", "ValidateLinks",
         ],
@@ -82,9 +82,7 @@ public class OptionsReachabilityRosterTests
         ],
         ["WebFlux.Core.Options.ChunkingOptions"] =
         [
-            "ChunkSize", "CreateHierarchy", "CustomSeparators", "EnableMultimodalProcessing",
-            "EnableParallelProcessing", "IncludeImageDescriptions", "IncludeMetadata", "MultimodalOptions",
-            "SplitCodeBlocks", "SplitTables", "UseMemoryOptimization", "UseStreaming",
+            "EnableMultimodalProcessing", "IncludeImageDescriptions", "MultimodalOptions",
         ],
         // Was 19. Two were wired (FollowExternalLinks, AllowedDomains - the host scope was hardcoded
         // and both options were read by nothing, so FollowExternalLinks = true was silently ignored).
@@ -106,7 +104,6 @@ public class OptionsReachabilityRosterTests
         //   all of this, but neither is DI-registered and neither has a call site, so the subsystem
         //   has no front door. Wiring it is a feature decision, not a knob decision.
         ["WebFlux.Core.Options.EnhancementOptions"] = ["TimeoutMs"],
-        ["WebFlux.Core.Options.ExtractOptions"] = ["IncludeLinks"],
         ["WebFlux.Core.Options.ExtractionOptions"] =
         [
             "AdditionalOptions", "CollectImageUrls", "CollectLinks", "ExtractMetadata", "HttpTimeoutMs",
@@ -134,12 +131,16 @@ public class OptionsReachabilityRosterTests
         ],
         ["WebFlux.Core.Options.ReconstructOptions"] =
         [
-            "AdditionalOptions", "MaxLength", "MinLength", "PreserveOriginal", "QualityTarget", "TimeoutMs",
+            "MaxLength", "MinLength", "PreserveOriginal", "QualityTarget", "TimeoutMs",
         ],
         // RewriteOptions.AddExamples and SummaryOptions.TargetLanguage/FocusOnKeyPoints wired in 0.14.0 (prompt
         // instructions); ChunkingOptions.PreserveHeaders wired in 0.14.0 (FluxCurator PreserveSectionHeaders).
         // Full 114-member classification (T 73 · D 24 · A 13 · B 2 · C 2): umbrella draft ISSUE-webflux-20260922-213000.
-        ["WebFlux.Core.Options.TextCompletionOptions"] = ["AdditionalProperties"],
+        // Removed in 0.14.0 (read by nothing; migration in CHANGELOG): ChunkingOptions.ChunkSize (alias of MaxChunkSize),
+        // UseMemoryOptimization (MinimizeMemoryUsage is the value), EnableParallelProcessing (Performance.MaxDegreeOfParallelism),
+        // UseStreaming (the IAsyncEnumerable ProcessAsync overloads are the streaming shape), CreateHierarchy, CustomSeparators,
+        // SplitCodeBlocks, SplitTables, IncludeMetadata; ExtractOptions.IncludeLinks; MarkdownConversionOptions.EnableCodeHighlighting,
+        // CustomSettings; ReconstructOptions.AdditionalOptions; TextCompletionOptions.AdditionalProperties.
     };
 
     [Fact]

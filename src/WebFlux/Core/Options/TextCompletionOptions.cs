@@ -13,11 +13,6 @@ namespace WebFlux.Core.Options;
 /// </remarks>
 public class TextCompletionOptions : Flux.Abstractions.TextCompletionOptions, IValidatable
 {
-    /// <summary>
-    /// 추가 메타데이터
-    /// </summary>
-    public Dictionary<string, object> AdditionalProperties { get; set; } = new();
-
     /// <inheritdoc />
     public ValidationResult Validate()
     {

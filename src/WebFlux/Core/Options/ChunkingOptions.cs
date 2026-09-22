@@ -19,15 +19,6 @@ public class ChunkingOptions : IValidatable
     public int MaxChunkSize { get; set; } = 512;
 
     /// <summary>
-    /// 청크 크기 (MaxChunkSize의 별칭)
-    /// </summary>
-    public int ChunkSize
-    {
-        get => MaxChunkSize;
-        set => MaxChunkSize = value;
-    }
-
-    /// <summary>
     /// 청크 간 겹치는 부분 크기 (토큰 수, 기본값: 50)
     /// </summary>
     public int ChunkOverlap { get; set; } = 50;
@@ -53,34 +44,9 @@ public class ChunkingOptions : IValidatable
     public bool PreserveHeaders { get; set; } = true;
 
     /// <summary>
-    /// 테이블 분할 여부 (기본값: false)
-    /// </summary>
-    public bool SplitTables { get; set; }
-
-    /// <summary>
-    /// 코드 블록 분할 여부 (기본값: false)
-    /// </summary>
-    public bool SplitCodeBlocks { get; set; }
-
-    /// <summary>
     /// 이미지 설명 포함 여부 (기본값: true)
     /// </summary>
     public bool IncludeImageDescriptions { get; set; } = true;
-
-    /// <summary>
-    /// 메타데이터 포함 여부 (기본값: true)
-    /// </summary>
-    public bool IncludeMetadata { get; set; } = true;
-
-    /// <summary>
-    /// 계층 구조 생성 여부 (기본값: false)
-    /// </summary>
-    public bool CreateHierarchy { get; set; }
-
-    /// <summary>
-    /// 병렬 처리 여부 (기본값: true)
-    /// </summary>
-    public bool EnableParallelProcessing { get; set; } = true;
 
     /// <summary>
     /// 최대 병렬 작업 수 (기본값: Environment.ProcessorCount)
@@ -93,34 +59,16 @@ public class ChunkingOptions : IValidatable
     public string Language { get; set; } = "ko";
 
     /// <summary>
-    /// 커스텀 구분자 목록
-    /// </summary>
-    public IList<string> CustomSeparators { get; set; } = new List<string>();
-
-    /// <summary>
     /// 전략별 추가 설정
     /// </summary>
     public IDictionary<string, object> StrategySpecificOptions { get; set; } =
         new Dictionary<string, object>();
 
     /// <summary>
-    /// 메모리 최적화 모드 사용 여부 (기본값: false)
+    /// 메모리 사용량 최소화 여부 (기본값: false). 전략 팩토리가 읽어 메모리 최적화 전략을 고른다. 0.14.0 이전의 별칭
+    /// <c>UseMemoryOptimization</c> 은 제거됐다 — 이 멤버가 실제 값이다.
     /// </summary>
-    public bool UseMemoryOptimization { get; set; }
-
-    /// <summary>
-    /// 메모리 사용량 최소화 여부 (UseMemoryOptimization의 별칭)
-    /// </summary>
-    public bool MinimizeMemoryUsage
-    {
-        get => UseMemoryOptimization;
-        set => UseMemoryOptimization = value;
-    }
-
-    /// <summary>
-    /// 스트리밍 처리 사용 여부 (기본값: true)
-    /// </summary>
-    public bool UseStreaming { get; set; } = true;
+    public bool MinimizeMemoryUsage { get; set; }
 
     /// <summary>
     /// 멀티모달 처리 활성화 여부 (Phase 5A.3 재설계)

@@ -9,6 +9,23 @@ All notable changes to this project will be documented in this file.
   the enhancement service. Until now the path passed neither, so `SummaryOptions`/`RewriteOptions` could only
   reach a direct caller of `IAiEnhancementService`.
 
+### Removed
+- **Fourteen public options that nothing read.** Each was declared with a default and acted on by no code in
+  the library; an assignment no longer compiles. Where a value has somewhere to go, it is named:
+  - `ChunkingOptions.ChunkSize` — an alias; use `MaxChunkSize`.
+  - `ChunkingOptions.UseMemoryOptimization` — `MinimizeMemoryUsage` is the value the strategy factory reads.
+  - `ChunkingOptions.EnableParallelProcessing` — per-document parallelism is
+    `WebFluxConfiguration.Performance.MaxDegreeOfParallelism`.
+  - `ChunkingOptions.UseStreaming` — streaming is the shape of the `IAsyncEnumerable` `ProcessAsync` overloads,
+    not a switch.
+  - `ChunkingOptions.CreateHierarchy`, `CustomSeparators`, `SplitCodeBlocks`, `SplitTables`, `IncludeMetadata` —
+    no chunker here implements parent/child links, caller separators, splitting inside code or tables, or
+    per-chunk metadata; nothing to move the value to.
+  - `ExtractOptions.IncludeLinks` — extracted content has no links field (`IncludeImages` is the handled twin).
+  - `MarkdownConversionOptions.EnableCodeHighlighting` (Markdig core ships no highlighter) and `CustomSettings`.
+  - `ReconstructOptions.AdditionalOptions`, `TextCompletionOptions.AdditionalProperties` — extension bags with
+    no reader.
+
 ### Fixed
 - **Four options that were declared and read by nothing now do what they say.** `SummaryOptions.TargetLanguage`
   (the summary is written in that language) and `FocusOnKeyPoints` (key points only) become instructions in the

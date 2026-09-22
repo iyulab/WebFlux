@@ -93,11 +93,6 @@ public class ExtractOptions : IValidatable
     public bool IncludeImages { get; set; }
 
     /// <summary>
-    /// 링크 URL 포함 여부
-    /// </summary>
-    public bool IncludeLinks { get; set; }
-
-    /// <summary>
     /// 최대 텍스트 길이 (null이면 제한 없음)
     /// LLM 토큰 최적화를 위해 설정
     /// </summary>
