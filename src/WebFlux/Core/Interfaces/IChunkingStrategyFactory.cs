@@ -14,6 +14,7 @@ public interface IChunkingStrategyFactory
     /// </summary>
     /// <param name="strategyName">전략 이름</param>
     /// <returns>청킹 전략 인스턴스</returns>
+    /// <exception cref="ArgumentException">이름이 비었거나 <see cref="GetAvailableStrategies"/> 에 없는 이름일 때.</exception>
     Task<IChunkingStrategy> CreateStrategyAsync(string strategyName);
 
     /// <summary>

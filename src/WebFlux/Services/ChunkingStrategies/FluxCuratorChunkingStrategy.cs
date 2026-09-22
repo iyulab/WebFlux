@@ -21,9 +21,9 @@ namespace WebFlux.Services.ChunkingStrategies;
 /// </para>
 ///
 /// <para>
-/// Web-specific chunking stays in WebFlux: <see cref="DomStructureChunkingStrategy"/> splits on
-/// HTML structure, which is not text chunking and has no FluxCurator counterpart. The boundary is
-/// "does this need to know it came from a web page", not "is this chunking".
+/// Web-specific chunking would stay in WebFlux — splitting on HTML structure is not text chunking and has
+/// no FluxCurator counterpart. The boundary is "does this need to know it came from a web page", not
+/// "is this chunking". (0.14.0 removed the one such strategy, which nothing registered.)
 /// </para>
 /// </summary>
 public sealed class FluxCuratorChunkingStrategy : BaseChunkingStrategy

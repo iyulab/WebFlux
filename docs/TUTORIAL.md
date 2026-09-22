@@ -923,7 +923,7 @@ public class BlogContentCollector
 
         var options = new ChunkingOptions
         {
-            Strategy = "Intelligent",  // LLM 기반 분할
+            Strategy = ChunkingStrategyType.Paragraph,  // 서술형 블로그 글: 문단 경계
             MaxChunkSize = 1000,
             MinChunkSize = 300
         };
@@ -1070,9 +1070,9 @@ services.AddWebFlux(config =>
 // 고품질 전략 사용
 var options = new ChunkingOptions
 {
-    Strategy = "Intelligent",  // 또는 "Semantic"
+    Strategy = ChunkingStrategyType.Semantic,  // 임베더 등록 필요 — 없으면 Smart
     MaxChunkSize = 1000,       // 크기 증가
-    OverlapSize = 200          // 오버랩 증가
+    ChunkOverlap = 200         // 오버랩 증가
 };
 ```
 

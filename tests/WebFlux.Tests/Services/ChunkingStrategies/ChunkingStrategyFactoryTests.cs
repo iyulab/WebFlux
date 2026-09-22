@@ -97,14 +97,33 @@ public class ChunkingStrategyFactoryTests
     }
 
     [Fact]
-    public async Task CreateStrategyAsync_WithInvalidStrategyName_ShouldReturnParagraphAsFallback()
+    public async Task CreateStrategyAsync_WithUnknownStrategyName_ThrowsAndNamesTheAvailableOnes()
     {
-        // Act
-        var strategy = await _factory.CreateStrategyAsync("InvalidStrategy");
+        // A caller that asks for a strategy with no implementation must not silently get a different one.
+        var ex = await Assert.ThrowsAsync<ArgumentException>(() => _factory.CreateStrategyAsync("InvalidStrategy"));
 
-        // Assert
-        strategy.Should().NotBeNull();
-        strategy.Name.Should().Be("Paragraph");
+        ex.Message.Should().Contain("InvalidStrategy").And.Contain("Paragraph");
+    }
+
+    [Fact]
+    public async Task EveryChunkingStrategyTypeMember_HasARegisteredStrategy()
+    {
+        // The enum is the typed front door (ChunkingOptions.Strategy -> ToString() -> this factory). A member
+        // with no registered strategy is a promise nothing keeps — Intelligent was one until 0.14.0.
+        foreach (var member in Enum.GetValues<WebFlux.Core.Options.ChunkingStrategyType>())
+        {
+            var strategy = await _factory.CreateStrategyAsync(member.ToString());
+            strategy.Should().NotBeNull(because: $"{member} must map to a registered strategy");
+        }
+    }
+
+    [Fact]
+    public void ChunkingStrategyType_Ordinals_AreFixed()
+    {
+        // Numeric configuration binds by ordinal; removing Intelligent (5) must not shift MemoryOptimized.
+        ((int)WebFlux.Core.Options.ChunkingStrategyType.Semantic).Should().Be(4);
+        ((int)WebFlux.Core.Options.ChunkingStrategyType.MemoryOptimized).Should().Be(6);
+        Enum.IsDefined(typeof(WebFlux.Core.Options.ChunkingStrategyType), 5).Should().BeFalse();
     }
 
     [Theory]

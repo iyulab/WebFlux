@@ -9,7 +9,27 @@ All notable changes to this project will be documented in this file.
   the enhancement service. Until now the path passed neither, so `SummaryOptions`/`RewriteOptions` could only
   reach a direct caller of `IAiEnhancementService`.
 
+### Changed
+- **`IChunkingStrategyFactory.CreateStrategyAsync` throws for a name it has no strategy for.** It used to log a
+  warning and return the Paragraph strategy, so a caller that asked for a strategy with no implementation silently
+  received a different one — `GetStrategyInfoAsync` on the same factory already refused unknown names. The
+  `ArgumentException` message lists the available strategies (`GetAvailableStrategies()`).
+
 ### Removed
+- **`ChunkingStrategyType.Intelligent`.** No strategy was registered for it: selecting it produced Paragraph chunks
+  (see above). The remaining members keep their numbers (`MemoryOptimized` is still 6; 5 is left unused), so a
+  numerically bound setting does not start meaning something else. Pick `Semantic` (needs an embedder) or `Smart`.
+- **Three subsystems nothing registered or called — only their own tests constructed them.** An assignment or
+  construction no longer compiles; there is no replacement in this library.
+  - The site-configuration analyzer: `ISiteConfigurationAnalyzer`, `SiteConfigurationAnalyzer` and its model tree
+    (`SiteConfiguration`, `SiteConfigurationInfo`, `Build`/`Content`/`Deployment`/`Plugin`/`Seo`/`SitePerformance`
+    configuration, the nine `*Config` leaves such as `GitHubPagesConfig`, and the issue/recommendation/migration types).
+  - Content reconstruction: `IContentReconstructor`, `IReconstructStrategy`, `IReconstructStrategyFactory`,
+    `ReconstructStrategyFactory`, the five `*ReconstructStrategy` classes, `ReconstructOptions`,
+    `ReconstructedContent`. For LLM summaries and rewrites of crawled content use `AiEnhancementConfiguration.Summary`
+    / `.Rewrite` (added in this release).
+  - `DomStructureChunkingStrategy` and `HtmlChunkingOptions`, with `ChunkingOptions.StrategySpecificOptions` — its only
+    reader. The README and chunking guide listed `DomStructure` as a selectable strategy; no name ever selected it.
 - **Three groups of public types no library method ever received (29 roster members).** `WebFluxOptions` and
   `WebFluxOptionsBuilder` (a duplicate of `WebFluxConfiguration`, which is what `AddWebFlux` binds — configure that
   instead); `AnalysisOptions` and `IContentAnalyzer` (the interface had no implementation and no registration);

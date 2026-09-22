@@ -40,8 +40,13 @@ public partial class ChunkingStrategyFactory : IChunkingStrategyFactory
 
         if (!_strategyCreators.TryGetValue(strategyName, out var creator))
         {
+            // Used to log and hand back Paragraph: a caller that asked for a strategy with no implementation
+            // (the removed ChunkingStrategyType.Intelligent was one) silently got a different one.
+            // GetStrategyInfoAsync already refused unknown names; the two now agree.
             LogUnknownStrategy(_logger, strategyName);
-            creator = _strategyCreators["Paragraph"];
+            throw new ArgumentException(
+                $"Unknown chunking strategy '{strategyName}'. Available: {string.Join(", ", _strategyCreators.Keys)}.",
+                nameof(strategyName));
         }
 
         try
@@ -296,7 +301,7 @@ public partial class ChunkingStrategyFactory : IChunkingStrategyFactory
     // LoggerMessage Definitions
     // ===================================================================
 
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Unknown chunking strategy: {StrategyName}, falling back to Paragraph")]
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Unknown chunking strategy requested: {StrategyName}")]
     private static partial void LogUnknownStrategy(ILogger logger, string StrategyName);
 
     [LoggerMessage(Level = LogLevel.Debug, Message = "Chunking strategy created: {StrategyName}")]

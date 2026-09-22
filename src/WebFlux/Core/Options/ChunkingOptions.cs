@@ -59,12 +59,6 @@ public class ChunkingOptions : IValidatable
     public string Language { get; set; } = "ko";
 
     /// <summary>
-    /// 전략별 추가 설정
-    /// </summary>
-    public IDictionary<string, object> StrategySpecificOptions { get; set; } =
-        new Dictionary<string, object>();
-
-    /// <summary>
     /// 메모리 사용량 최소화 여부 (기본값: false). 전략 팩토리가 읽어 메모리 최적화 전략을 고른다. 0.14.0 이전의 별칭
     /// <c>UseMemoryOptimization</c> 은 제거됐다 — 이 멤버가 실제 값이다.
     /// </summary>
@@ -120,22 +114,24 @@ public class ChunkingOptions : IValidatable
 }
 
 /// <summary>
-/// 청킹 전략 유형 열거형
+/// 청킹 전략 유형 열거형 — 멤버마다 등록된 전략이 하나씩 있다(<see cref="Interfaces.IChunkingStrategyFactory.GetAvailableStrategies"/>).
 /// </summary>
+/// <remarks>
+/// 서수는 명시한다. 0.14.0 에서 구현이 없던 <c>Intelligent</c>(5)를 지웠고 그 자리는 비워 둔다 — 숫자로 바인딩된
+/// 설정(<c>"Strategy": 6</c>)이 조용히 다른 전략을 가리키지 않게 하려는 것이다.
+/// </remarks>
 public enum ChunkingStrategyType
 {
     /// <summary>자동 선택 (콘텐츠 분석 기반)</summary>
-    Auto,
+    Auto = 0,
     /// <summary>고정 크기 분할</summary>
-    FixedSize,
+    FixedSize = 1,
     /// <summary>문단 기반 분할</summary>
-    Paragraph,
+    Paragraph = 2,
     /// <summary>구조 인식 분할 (헤더 기반)</summary>
-    Smart,
+    Smart = 3,
     /// <summary>의미론적 분할 (임베딩 기반)</summary>
-    Semantic,
-    /// <summary>지능형 분할 (LLM 기반)</summary>
-    Intelligent,
+    Semantic = 4,
     /// <summary>메모리 최적화 분할</summary>
-    MemoryOptimized
+    MemoryOptimized = 6
 }

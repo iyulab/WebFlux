@@ -31,41 +31,8 @@ public class OptionsReachabilityRosterTests
     /// </summary>
     private static readonly Dictionary<string, string[]> KnownUnread = new()
     {
-        ["WebFlux.Core.Models.CacheConfig"] =
-        [
-            "TtlSeconds", "Type",
-        ],
-        ["WebFlux.Core.Models.CdnConfig"] =
-        [
-            "AssetsUrl", "Url",
-        ],
-        ["WebFlux.Core.Models.CollectionConfig"] =
-        [
-            "Output", "Permalink",
-        ],
-        ["WebFlux.Core.Models.DefaultConfig"] =
-        [
-            "Scope", "Values",
-        ],
-        ["WebFlux.Core.Models.GitHubPagesConfig"] =
-        [
-            "Branch", "CustomDomain", "Folder",
-        ],
         // MarkdownConversionOptions: all eleven remaining members wired in 0.14.0 (per-call Markdig pipeline, TOC/image gates,
         // syntactic link validation); EnableCodeHighlighting and CustomSettings removed in 0.14.0.
-        ["WebFlux.Core.Models.NetlifyConfig"] =
-        [
-            "BuildCommand", "Environment", "PublishDirectory",
-        ],
-        ["WebFlux.Core.Models.SassConfig"] = ["Directory"],
-        ["WebFlux.Core.Models.SocialMediaConfig"] =
-        [
-            "Facebook", "GitHub", "LinkedIn", "Twitter",
-        ],
-        ["WebFlux.Core.Models.VercelConfig"] =
-        [
-            "BuildCommand", "Functions", "OutputDirectory",
-        ],
         ["WebFlux.Core.Options.ChunkingOptions"] =
         [
             "EnableMultimodalProcessing", "IncludeImageDescriptions", "MultimodalOptions",
@@ -89,10 +56,6 @@ public class OptionsReachabilityRosterTests
         // - The five metadata options: AIWebMetadataExtractor and HtmlMetadataExtractor implement
         //   all of this, but neither is DI-registered and neither has a call site, so the subsystem
         //   has no front door. Wiring it is a feature decision, not a knob decision.
-        ["WebFlux.Core.Options.HtmlChunkingOptions"] =
-        [
-            "IncludeDomPath", "PreserveDomStructure", "PreserveHeadingHierarchy",
-        ],
         ["WebFlux.Core.Options.ImageToTextOptions"] =
         [
             "Context", "DetailLevel", "ExcludeElements", "IncludeElements", "Language", "MaxDescriptionLength",
@@ -103,10 +66,6 @@ public class OptionsReachabilityRosterTests
             "EnableParallelProcessing", "EnableQualityEnhancement", "ImageTextFormat", "ImageToTextOptions",
             "MaxConcurrentImages", "MaxImages", "MinimumConfidence", "PriorityWeights", "RetryCount",
             "TextIntegrationStrategy", "TimeoutSeconds",
-        ],
-        ["WebFlux.Core.Options.ReconstructOptions"] =
-        [
-            "MaxLength", "MinLength", "PreserveOriginal", "QualityTarget", "TimeoutMs",
         ],
         // RewriteOptions.AddExamples and SummaryOptions.TargetLanguage/FocusOnKeyPoints wired in 0.14.0 (prompt
         // instructions); ChunkingOptions.PreserveHeaders wired in 0.14.0 (FluxCurator PreserveSectionHeaders).
@@ -119,6 +78,13 @@ public class OptionsReachabilityRosterTests
         // UseStreaming (the IAsyncEnumerable ProcessAsync overloads are the streaming shape), CreateHierarchy, CustomSeparators,
         // SplitCodeBlocks, SplitTables, IncludeMetadata; ExtractOptions.IncludeLinks; MarkdownConversionOptions.EnableCodeHighlighting,
         // CustomSettings; ReconstructOptions.AdditionalOptions; TextCompletionOptions.AdditionalProperties.
+        // cycle-934 (2026-09-23, owner decision «dead subsystems: remove»): removed whole in 0.14.0 because nothing registered,
+        // constructed or called them — only their own tests did: the site-configuration analyzer (ISiteConfigurationAnalyzer,
+        // SiteConfigurationAnalyzer and its model tree — SiteConfiguration, Build/Content/Deployment/Plugin/Seo/SitePerformance
+        // configuration, the nine *Config leaves), the reconstruct subsystem (IContentReconstructor, IReconstructStrategy[Factory],
+        // ReconstructStrategyFactory, five strategies, ReconstructOptions, ReconstructedContent), DomStructureChunkingStrategy with
+        // HtmlChunkingOptions, and ChunkingOptions.StrategySpecificOptions (its only reader was DomStructure). ChunkingStrategyType.Intelligent
+        // had no registered strategy and silently became Paragraph; it is removed and an unknown strategy name now throws.
         // cycle-933 (2026-09-22) widened the scan from *Options/*Config to *Configuration as well: NamedWith is EndsWith, so
         // WebFluxConfiguration and its 19 nested configuration types were never scanned. What it found — 112 members in
         // 20 types — is recorded here UNCLASSIFIED (no per-member verdict yet): the gate starts green at the honest number and the
@@ -127,22 +93,16 @@ public class OptionsReachabilityRosterTests
         // static-site-generator configuration the library never consumes.
         ["WebFlux.Core.Models.AiEnhancementConfiguration"] = ["MaxRetries"],
         ["WebFlux.Core.Models.AutoChunkingConfiguration"] = ["HighComplexityThreshold", "MediumComplexityThreshold"],
-        ["WebFlux.Core.Models.BuildConfiguration"] = ["ExcludePatterns", "IncludePatterns", "IncrementalBuild", "OutputDirectory", "ShowFuture", "SourceDirectory"],
         ["WebFlux.Core.Models.CachingConfiguration"] = ["DefaultExpirationMinutes", "EnableCompression", "EnableMetrics", "Enabled", "MaxCacheSize", "TypeSettings"],
         ["WebFlux.Core.Models.ChunkingConfiguration"] = ["DefaultChunkOverlap", "DefaultMaxChunkSize", "DefaultMinChunkSize", "DefaultQualityThreshold", "DefaultSemanticThreshold", "EnableMultimodalProcessing", "LanguageSettings", "MinChunkSize", "MultimodalOptions", "NormalizeWhitespace", "OverlapSize", "StrategyDefaults"],
-        ["WebFlux.Core.Models.ContentConfiguration"] = ["Collections", "Defaults", "ExcerptSeparator", "Highlighter", "MarkdownEngine", "PaginateCount", "PaginatePath"],
         ["WebFlux.Core.Models.CrawlConfiguration"] = ["AllowedDomains", "DelayBetweenRequests", "ExcludePatterns", "MaxConcurrentRequests", "MaxDepth", "MaxPages", "StartUrls", "Strategy"],
         ["WebFlux.Core.Models.CrawlingConfiguration"] = ["DefaultAllowedContentTypes", "DefaultDelayMs", "DefaultExcludedExtensions", "DefaultHeaders", "DefaultRetryCount", "DefaultTimeoutSeconds", "DefaultUserAgent", "MaxConcurrentRequests", "RespectRobotsTxt"],
-        ["WebFlux.Core.Models.DeploymentConfiguration"] = ["GitHubPages", "Netlify", "Vercel"],
         ["WebFlux.Core.Models.EventConfiguration"] = ["EnableEventPublishing", "EventBatchSize", "EventBufferSize", "EventFilters", "EventTypeEnabled", "FlushIntervalMs"],
         ["WebFlux.Core.Models.ExtractionConfiguration"] = ["IncludeLinkUrls"],
         ["WebFlux.Core.Models.LoggingConfiguration"] = ["CategoryLevels", "EnableDetailedErrorLogging", "EnableEvents", "EnablePerformanceLogging", "EnableStructuredLogging", "LogFilters", "MinimumLevel"],
         ["WebFlux.Core.Models.PerformanceConfiguration"] = ["BackpressureThreshold", "BatchSize", "EnableAutoScaling", "MaxMemoryUsageBytes", "MemoryOptimizationThreshold", "PerformanceMonitoringIntervalMs", "QueueSizeLimit"],
-        ["WebFlux.Core.Models.PluginConfiguration"] = ["Gems", "PluginSettings"],
         ["WebFlux.Core.Models.ProcessingOptimizationConfiguration"] = ["CacheOptimization", "EnableAutoStrategySelection", "EnableBottleneckDetection", "EnableStatisticsCollection", "EnableTokenOptimization", "Enabled", "PerformanceMonitoringInterval", "ResourceThresholds"],
         ["WebFlux.Core.Models.SecurityConfiguration"] = ["AllowedDomains", "BlockedDomains", "EnableContentScanning", "EncryptApiKeys", "RateLimitPerMinute", "ValidateSslCertificates", "ValidateUserAgent"],
-        ["WebFlux.Core.Models.SeoConfiguration"] = ["GoogleTagManager", "RobotsConfig"],
-        ["WebFlux.Core.Models.SiteConfiguration"] = ["QualityScore"],
         ["WebFlux.Core.Models.TokenCountingConfiguration"] = ["CacheMaxSize", "EnableCaching", "EnableStatistics", "EnableTokenAnalysis", "Enabled", "ModelCosts", "SupportedModels"],
         ["WebFlux.Core.Models.WebFluxConfiguration"] = ["Caching", "CustomSettings", "DefaultTokenizerModel", "EnvironmentOverrides", "Events", "Extraction", "Logging", "ProcessingOptimization", "Security", "TokenCounting"],
     };

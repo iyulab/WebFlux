@@ -228,63 +228,6 @@ public class OptionsValidationTests
 
     #endregion
 
-    #region ReconstructOptions
-
-    [Fact]
-    public void ReconstructOptions_DefaultValues_ShouldPassValidation()
-    {
-        var options = new ReconstructOptions();
-        var result = options.Validate();
-        result.IsValid.Should().BeTrue();
-        result.Errors.Should().BeEmpty();
-    }
-
-    [Fact]
-    public void ReconstructOptions_QualityTargetOutOfRange_ShouldFail()
-    {
-        var options = new ReconstructOptions { QualityTarget = -0.1 };
-        var result = options.Validate();
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.Contains("QualityTarget"));
-    }
-
-    [Fact]
-    public void ReconstructOptions_ZeroSummaryRatio_ShouldFail()
-    {
-        var options = new ReconstructOptions { SummaryRatio = 0 };
-        var result = options.Validate();
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.Contains("SummaryRatio"));
-    }
-
-    [Fact]
-    public void ReconstructOptions_ExpansionRatioLessThanOne_ShouldFail()
-    {
-        var options = new ReconstructOptions { ExpansionRatio = 0.5 };
-        var result = options.Validate();
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.Contains("ExpansionRatio"));
-    }
-
-    [Fact]
-    public void ReconstructOptions_TemperatureOutOfRange_ShouldFail()
-    {
-        var options = new ReconstructOptions { Temperature = 3.0 };
-        var result = options.Validate();
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.Contains("Temperature"));
-    }
-
-    [Fact]
-    public void ReconstructOptions_ZeroTimeoutMs_ShouldFail()
-    {
-        var options = new ReconstructOptions { TimeoutMs = 0 };
-        var result = options.Validate();
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.Contains("TimeoutMs"));
-    }
-
-    #endregion
 
     #region MultimodalProcessingOptions
 
@@ -424,45 +367,6 @@ public class OptionsValidationTests
 
     #endregion
 
-    #region HtmlChunkingOptions
-
-    [Fact]
-    public void HtmlChunkingOptions_DefaultValues_ShouldPassValidation()
-    {
-        var options = new HtmlChunkingOptions();
-        var result = options.Validate();
-        result.IsValid.Should().BeTrue();
-        result.Errors.Should().BeEmpty();
-    }
-
-    [Fact]
-    public void HtmlChunkingOptions_ZeroMaxChunkSize_ShouldFail()
-    {
-        var options = new HtmlChunkingOptions { MaxChunkSize = 0 };
-        var result = options.Validate();
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.Contains("MaxChunkSize"));
-    }
-
-    [Fact]
-    public void HtmlChunkingOptions_ZeroMinChunkSize_ShouldFail()
-    {
-        var options = new HtmlChunkingOptions { MinChunkSize = 0 };
-        var result = options.Validate();
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.Contains("MinChunkSize"));
-    }
-
-    [Fact]
-    public void HtmlChunkingOptions_MaxChunkSizeLessThanMinChunkSize_ShouldFail()
-    {
-        var options = new HtmlChunkingOptions { MaxChunkSize = 50, MinChunkSize = 100 };
-        var result = options.Validate();
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.Contains("MaxChunkSize") && e.Contains("MinChunkSize"));
-    }
-
-    #endregion
 
     #region MultipleErrors
 

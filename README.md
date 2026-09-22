@@ -55,7 +55,7 @@ await foreach (var chunk in processor.ProcessWebsiteAsync("https://example.com")
 ## Features
 
 - **Interface-Based Design**: Bring your own AI services (OpenAI, Anthropic, Azure, local models)
-- **Multiple Chunking Strategies**: Auto, Smart, Semantic, Intelligent, MemoryOptimized, Paragraph, FixedSize, DomStructure
+- **Multiple Chunking Strategies**: Auto, Smart, Semantic, Paragraph, FixedSize, MemoryOptimized — an unknown strategy name throws and lists the available ones
 - **Content Formats**: HTML, Markdown, JSON, XML, PDF
 - **Web Standards**: robots.txt, matched per [RFC 9309](https://www.rfc-editor.org/rfc/rfc9309.html)
   — groups, longest-match with `Allow` winning ties, `*` and `$`. Honoured on every crawl entry
@@ -91,12 +91,10 @@ await foreach (var chunk in processor.ProcessWebsiteAsync("https://example.com")
 |----------|----------|
 | Auto | Automatically selects best strategy based on content |
 | Smart | Structured HTML documentation |
-| Semantic | General web pages and articles |
-| Intelligent | Blogs and knowledge bases |
-| MemoryOptimized | Large documents with memory constraints |
+| Semantic | General web pages and articles (requires an embedder registered with FluxCurator) |
+| MemoryOptimized | Same token-based splitting as FixedSize; kept as a name for large-document callers |
 | Paragraph | Markdown with natural boundaries |
 | FixedSize | Uniform chunks for testing |
-| DomStructure | HTML DOM structure-based chunking preserving semantic boundaries |
 
 ## Core Interfaces
 
@@ -265,9 +263,9 @@ var options = new CrawlOptions
 
 var chunkOptions = new ChunkingOptions
 {
-    Strategy = "Auto",
+    Strategy = ChunkingStrategyType.Auto,
     MaxChunkSize = 512,
-    OverlapSize = 64
+    ChunkOverlap = 64
 };
 
 await foreach (var chunk in processor.ProcessWebsiteAsync(url, options, chunkOptions))
