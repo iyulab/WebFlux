@@ -228,55 +228,6 @@ public class OptionsValidationTests
 
     #endregion
 
-    #region AnalysisOptions
-
-    [Fact]
-    public void AnalysisOptions_DefaultValues_ShouldPassValidation()
-    {
-        var options = new AnalysisOptions();
-        var result = options.Validate();
-        result.IsValid.Should().BeTrue();
-        result.Errors.Should().BeEmpty();
-    }
-
-    [Fact]
-    public void AnalysisOptions_MinContentQualityOutOfRange_ShouldFail()
-    {
-        var options = new AnalysisOptions { MinContentQuality = 1.5 };
-        var result = options.Validate();
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.Contains("MinContentQuality"));
-    }
-
-    [Fact]
-    public void AnalysisOptions_ZeroMinSectionLength_ShouldFail()
-    {
-        var options = new AnalysisOptions { MinSectionLength = 0 };
-        var result = options.Validate();
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.Contains("MinSectionLength"));
-    }
-
-    [Fact]
-    public void AnalysisOptions_ZeroMaxSectionDepth_ShouldFail()
-    {
-        var options = new AnalysisOptions { MaxSectionDepth = 0 };
-        var result = options.Validate();
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.Contains("MaxSectionDepth"));
-    }
-
-    [Fact]
-    public void AnalysisOptions_ZeroTimeoutMs_ShouldFail()
-    {
-        var options = new AnalysisOptions { TimeoutMs = 0 };
-        var result = options.Validate();
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.Contains("TimeoutMs"));
-    }
-
-    #endregion
-
     #region ReconstructOptions
 
     [Fact]
@@ -331,46 +282,6 @@ public class OptionsValidationTests
         var result = options.Validate();
         result.IsValid.Should().BeFalse();
         result.Errors.Should().Contain(e => e.Contains("TimeoutMs"));
-    }
-
-    #endregion
-
-    #region PipelineOptions
-
-    [Fact]
-    public void PipelineOptions_DefaultValues_ShouldPassValidation()
-    {
-        var options = new PipelineOptions();
-        var result = options.Validate();
-        result.IsValid.Should().BeTrue();
-        result.Errors.Should().BeEmpty();
-    }
-
-    [Fact]
-    public void PipelineOptions_ZeroMaxConcurrency_ShouldFail()
-    {
-        var options = new PipelineOptions { MaxConcurrency = 0 };
-        var result = options.Validate();
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.Contains("MaxConcurrency"));
-    }
-
-    [Fact]
-    public void PipelineOptions_ZeroTotalTimeoutMs_ShouldFail()
-    {
-        var options = new PipelineOptions { TotalTimeoutMs = 0 };
-        var result = options.Validate();
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.Contains("TotalTimeoutMs"));
-    }
-
-    [Fact]
-    public void PipelineOptions_ZeroProgressReportIntervalMs_ShouldFail()
-    {
-        var options = new PipelineOptions { ProgressReportIntervalMs = 0 };
-        var result = options.Validate();
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.Contains("ProgressReportIntervalMs"));
     }
 
     #endregion

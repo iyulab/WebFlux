@@ -31,10 +31,6 @@ public class OptionsReachabilityRosterTests
     /// </summary>
     private static readonly Dictionary<string, string[]> KnownUnread = new()
     {
-        ["WebFlux.Configuration.WebFluxOptions"] =
-        [
-            "DevelopmentMode", "EnableMetrics", "EnableProfiling", "EnableVerboseLogging",
-        ],
         ["WebFlux.Core.Models.CacheConfig"] =
         [
             "TtlSeconds", "Type",
@@ -70,12 +66,6 @@ public class OptionsReachabilityRosterTests
         [
             "BuildCommand", "Functions", "OutputDirectory",
         ],
-        ["WebFlux.Core.Options.AnalysisOptions"] =
-        [
-            "AdditionalOptions", "AnalyzeImages", "AnalyzeStructure", "EnrichMetadata", "ExtractSections",
-            "ExtractTables", "MaxSectionDepth", "MinContentQuality", "MinSectionLength", "NoiseSelectors",
-            "RemoveNoise", "TimeoutMs",
-        ],
         ["WebFlux.Core.Options.ChunkingOptions"] =
         [
             "EnableMultimodalProcessing", "IncludeImageDescriptions", "MultimodalOptions",
@@ -100,11 +90,6 @@ public class OptionsReachabilityRosterTests
         //   all of this, but neither is DI-registered and neither has a call site, so the subsystem
         //   has no front door. Wiring it is a feature decision, not a knob decision.
         ["WebFlux.Core.Options.EnhancementOptions"] = ["TimeoutMs"],
-        ["WebFlux.Core.Options.ExtractionOptions"] =
-        [
-            "AdditionalOptions", "CollectImageUrls", "CollectLinks", "ExtractMetadata", "HttpTimeoutMs",
-            "Strategy", "UserAgent",
-        ],
         ["WebFlux.Core.Options.HtmlChunkingOptions"] =
         [
             "IncludeDomPath", "PreserveDomStructure", "PreserveHeadingHierarchy",
@@ -120,11 +105,6 @@ public class OptionsReachabilityRosterTests
             "MaxConcurrentImages", "MaxImages", "MinimumConfidence", "PriorityWeights", "RetryCount",
             "TextIntegrationStrategy", "TimeoutSeconds",
         ],
-        ["WebFlux.Core.Options.PipelineOptions"] =
-        [
-            "AdditionalOptions", "Analysis", "Chunking", "Crawl", "EnabledStages", "Extraction", "MaxConcurrency",
-            "ProgressReportIntervalMs", "Reconstruction", "TotalTimeoutMs",
-        ],
         ["WebFlux.Core.Options.ReconstructOptions"] =
         [
             "MaxLength", "MinLength", "PreserveOriginal", "QualityTarget", "TimeoutMs",
@@ -132,6 +112,9 @@ public class OptionsReachabilityRosterTests
         // RewriteOptions.AddExamples and SummaryOptions.TargetLanguage/FocusOnKeyPoints wired in 0.14.0 (prompt
         // instructions); ChunkingOptions.PreserveHeaders wired in 0.14.0 (FluxCurator PreserveSectionHeaders).
         // Full 114-member classification (T 73 · D 24 · A 13 · B 2 · C 2): umbrella draft ISSUE-webflux-20260922-213000.
+        // Types removed whole in 0.14.0 (no library method received them, no consumer): WebFluxOptions (+Builder — a duplicate of
+        // WebFluxConfiguration, which DI binds), AnalysisOptions (+IContentAnalyzer, no implementation), PipelineOptions (+PipelineStage,
+        // ExtractionOptions — referenced by nothing).
         // Removed in 0.14.0 (read by nothing; migration in CHANGELOG): ChunkingOptions.ChunkSize (alias of MaxChunkSize),
         // UseMemoryOptimization (MinimizeMemoryUsage is the value), EnableParallelProcessing (Performance.MaxDegreeOfParallelism),
         // UseStreaming (the IAsyncEnumerable ProcessAsync overloads are the streaming shape), CreateHierarchy, CustomSeparators,

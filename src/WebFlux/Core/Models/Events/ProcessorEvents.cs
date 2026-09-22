@@ -1,4 +1,3 @@
-using WebFlux.Configuration;
 
 namespace WebFlux.Core.Models.Events;
 

@@ -10,6 +10,11 @@ All notable changes to this project will be documented in this file.
   reach a direct caller of `IAiEnhancementService`.
 
 ### Removed
+- **Three groups of public types no library method ever received (29 roster members).** `WebFluxOptions` and
+  `WebFluxOptionsBuilder` (a duplicate of `WebFluxConfiguration`, which is what `AddWebFlux` binds — configure that
+  instead); `AnalysisOptions` and `IContentAnalyzer` (the interface had no implementation and no registration);
+  `PipelineOptions`, `PipelineStage` and `ExtractionOptions` (referenced by nothing). Constructing one no longer
+  compiles; there is nothing to move the values to except `WebFluxOptions` → `WebFluxConfiguration`.
 - **Fourteen public options that nothing read.** Each was declared with a default and acted on by no code in
   the library; an assignment no longer compiles. Where a value has somewhere to go, it is named:
   - `ChunkingOptions.ChunkSize` — an alias; use `MaxChunkSize`.
