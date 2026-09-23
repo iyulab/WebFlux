@@ -28,6 +28,10 @@ public interface IAiEnhancementService
     /// <param name="options">재작성 옵션</param>
     /// <param name="cancellationToken">취소 토큰</param>
     /// <returns>재작성된 콘텐츠</returns>
+    /// <exception cref="Flux.Abstractions.TextCompletionTruncatedException">
+    /// 모델이 출력 토큰 한도에서 멈춰 재작성본이 잘린 경우(완료 사유를 관찰할 수 있는 LLM 서비스에서). 잘린 재작성본을 원문 대신
+    /// 돌려주지 않는다. <see cref="EnhanceAsync"/> 는 이 경우 원문을 유지하고 <c>RewrittenContent</c> 를 비운다.
+    /// </exception>
     Task<string> RewriteAsync(
         string content,
         RewriteOptions? options = null,

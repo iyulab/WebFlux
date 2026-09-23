@@ -4,8 +4,17 @@ All notable changes to this project will be documented in this file.
 
 ## [0.14.1] - 2026-09-23
 
+### Fixed
+- **A rewrite cut off at the output token limit no longer replaces the content.** `RewriteAsync` asks the completion
+  service to report truncation (`TextCompletionOptions.ThrowOnTruncation`) and throws
+  `Flux.Abstractions.TextCompletionTruncatedException` instead of returning the partial text; `EnhanceAsync` keeps the
+  original, leaves `RewrittenContent` empty and still completes the summary and metadata passes. Applies with a
+  completion service that can observe the completion reason; others return text as before.
+- The docs snippets now call the API that exists (`ExtractBatchStreamAsync` / `ProcessWebsiteAsync`, `ChunkOverlap`,
+  `ChunkingStrategyType`) — the README ships in the package.
+
 ### Changed
-- Re-pinned sibling package(s) `Flux.Abstractions` 0.25.0 -> 0.26.0, `FluxCurator` 0.9.0 -> 0.9.1, `FluxCurator.Core` 0.9.0 -> 0.9.1 — re-consumption of already-consumed iyulab packages via `check-pin-drift.ps1 -Fix`. No source changes.
+- Re-pinned sibling package(s) `Flux.Abstractions` 0.25.0 -> 0.26.0, `FluxCurator` 0.9.0 -> 0.9.1, `FluxCurator.Core` 0.9.0 -> 0.9.1 — re-consumption of already-consumed iyulab packages via `check-pin-drift.ps1 -Fix`.
 
 ## [0.14.0] - 2026-09-22
 

@@ -71,7 +71,9 @@ public partial class BasicAiEnhancementService : IAiEnhancementService
         {
             MaxTokens = Math.Max(content.Length * 2, 4000), // 충분한 토큰
             Temperature = 0.5f, // 창의성과 일관성의 균형
-            SystemPrompt = "You improve text clarity and readability while preserving meaning and factual accuracy."
+            SystemPrompt = "You improve text clarity and readability while preserving meaning and factual accuracy.",
+            // A rewrite replaces the content: a cut-off one must not be returned in its place.
+            ThrowOnTruncation = true,
         };
 
         var rewritten = await _llm.CompleteAsync(prompt, completionOptions, cancellationToken);
@@ -146,7 +148,7 @@ public partial class BasicAiEnhancementService : IAiEnhancementService
                 tasks.Add(Task.Run(async () => summary = await SummarizeAsync(content, options.SummaryOptions, cancellationToken), cancellationToken));
 
             if (options.EnableRewrite)
-                tasks.Add(Task.Run(async () => rewritten = await RewriteAsync(content, options.RewriteOptions, cancellationToken), cancellationToken));
+                tasks.Add(Task.Run(async () => rewritten = await RewriteOrKeepAsync(content, options.RewriteOptions, cancellationToken), cancellationToken));
 
             if (options.EnableMetadata)
                 tasks.Add(Task.Run(async () => metadata = await ExtractMetadataAsync(content, options.MetadataOptions, cancellationToken), cancellationToken));
@@ -160,7 +162,7 @@ public partial class BasicAiEnhancementService : IAiEnhancementService
                 summary = await SummarizeAsync(content, options.SummaryOptions, cancellationToken);
 
             if (options.EnableRewrite)
-                rewritten = await RewriteAsync(content, options.RewriteOptions, cancellationToken);
+                rewritten = await RewriteOrKeepAsync(content, options.RewriteOptions, cancellationToken);
 
             if (options.EnableMetadata)
                 metadata = await ExtractMetadataAsync(content, options.MetadataOptions, cancellationToken);
@@ -179,6 +181,23 @@ public partial class BasicAiEnhancementService : IAiEnhancementService
             ProcessedAt = DateTimeOffset.UtcNow,
             ProcessingTimeMs = processingTime
         };
+    }
+
+    /// <summary>
+    /// <see cref="RewriteAsync"/> for <see cref="EnhanceAsync"/>: a rewrite cut off at the output token limit leaves
+    /// <c>RewrittenContent</c> empty — the original content stays authoritative — instead of failing the whole enhancement.
+    /// </summary>
+    private async Task<string?> RewriteOrKeepAsync(string content, RewriteOptions? options, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await RewriteAsync(content, options, cancellationToken);
+        }
+        catch (Flux.Abstractions.TextCompletionTruncatedException ex)
+        {
+            LogRewriteTruncated(_logger, ex.MaxTokens);
+            return null;
+        }
     }
 
     /// <summary>
@@ -489,6 +508,9 @@ Metadata JSON:";
 
     [LoggerMessage(Level = LogLevel.Debug, Message = "AI service availability check failed (this is expected during initialization)")]
     private static partial void LogAvailabilityCheckFailed(ILogger logger, Exception ex);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Rewrite stopped at the output token limit ({MaxTokens} tokens); keeping the original content")]
+    private static partial void LogRewriteTruncated(ILogger logger, int? MaxTokens);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to parse metadata JSON, returning empty metadata")]
     private static partial void LogMetadataParseFailed(ILogger logger, Exception ex);
