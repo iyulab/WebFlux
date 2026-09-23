@@ -80,12 +80,16 @@ public class OptionsReachabilityRosterTests
         // next unread configuration member fails it. Classification (A/B/C/D/T, umbrella draft ISSUE-webflux-20260922-213000
         // and its successor) decides wire vs remove; several of these types (Build/Content/Deployment/Plugin/Seo) look like
         // static-site-generator configuration the library never consumes.
+        // 0.15.0: classified (T 57 · A 15 · D 12 · C 3 · B 2, umbrella draft ISSUE-webflux-20260922-213000). The processor now
+        // reads the registered WebFluxConfiguration: the crawler settings of CrawlingConfiguration and the size/overlap/min of
+        // ChunkingConfiguration left this list, and the three ChunkingConfiguration twins were removed. The rest waits on the
+        // removal decision.
         ["WebFlux.Core.Models.AiEnhancementConfiguration"] = ["MaxRetries"],
         ["WebFlux.Core.Models.AutoChunkingConfiguration"] = ["HighComplexityThreshold", "MediumComplexityThreshold"],
         ["WebFlux.Core.Models.CachingConfiguration"] = ["DefaultExpirationMinutes", "EnableCompression", "EnableMetrics", "Enabled", "MaxCacheSize", "TypeSettings"],
-        ["WebFlux.Core.Models.ChunkingConfiguration"] = ["DefaultChunkOverlap", "DefaultMaxChunkSize", "DefaultMinChunkSize", "DefaultQualityThreshold", "DefaultSemanticThreshold", "LanguageSettings", "MinChunkSize", "NormalizeWhitespace", "OverlapSize", "StrategyDefaults"],
+        ["WebFlux.Core.Models.ChunkingConfiguration"] = ["DefaultQualityThreshold", "DefaultSemanticThreshold", "LanguageSettings", "NormalizeWhitespace", "StrategyDefaults"],
         ["WebFlux.Core.Models.CrawlConfiguration"] = ["AllowedDomains", "DelayBetweenRequests", "ExcludePatterns", "MaxConcurrentRequests", "MaxDepth", "MaxPages", "StartUrls", "Strategy"],
-        ["WebFlux.Core.Models.CrawlingConfiguration"] = ["DefaultAllowedContentTypes", "DefaultDelayMs", "DefaultExcludedExtensions", "DefaultHeaders", "DefaultRetryCount", "DefaultTimeoutSeconds", "DefaultUserAgent", "MaxConcurrentRequests", "RespectRobotsTxt"],
+        ["WebFlux.Core.Models.CrawlingConfiguration"] = ["DefaultAllowedContentTypes"],
         ["WebFlux.Core.Models.EventConfiguration"] = ["EnableEventPublishing", "EventBatchSize", "EventBufferSize", "EventFilters", "EventTypeEnabled", "FlushIntervalMs"],
         ["WebFlux.Core.Models.ExtractionConfiguration"] = ["IncludeLinkUrls"],
         ["WebFlux.Core.Models.LoggingConfiguration"] = ["CategoryLevels", "EnableDetailedErrorLogging", "EnableEvents", "EnablePerformanceLogging", "EnableStructuredLogging", "LogFilters", "MinimumLevel"],

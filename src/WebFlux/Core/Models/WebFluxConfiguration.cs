@@ -99,19 +99,19 @@ public class CrawlingConfiguration
     public string DefaultUserAgent { get; set; } = WebFlux.Core.Utilities.WebFluxUserAgent.Default;
 
     /// <summary>
-    /// 기본 요청 타임아웃 (초)
+    /// 기본 요청 타임아웃 (초, 기본값: 15). 크롤러의 요청 타임아웃(<c>CrawlOptions.TimeoutMs</c>)이 된다.
     /// </summary>
-    public int DefaultTimeoutSeconds { get; set; } = 30;
+    public int DefaultTimeoutSeconds { get; set; } = 15;
 
     /// <summary>
-    /// 기본 요청 간 지연 (밀리초)
+    /// 기본 요청 간 지연 (밀리초, 기본값: 0). 크롤러의 <c>CrawlOptions.DelayMs</c> 가 된다.
     /// </summary>
-    public int DefaultDelayMs { get; set; } = 1000;
+    public int DefaultDelayMs { get; set; }
 
     /// <summary>
-    /// 최대 동시 요청 수
+    /// 최대 동시 요청 수 (기본값: 3). 크롤러의 <c>CrawlOptions.ConcurrentRequests</c> 가 된다.
     /// </summary>
-    public int MaxConcurrentRequests { get; set; } = 5;
+    public int MaxConcurrentRequests { get; set; } = 3;
 
     /// <summary>
     /// 기본 재시도 횟수
@@ -132,12 +132,9 @@ public class CrawlingConfiguration
     };
 
     /// <summary>
-    /// 기본 제외 확장자
+    /// 기본 제외 확장자 (기본값: <c>CrawlOptions.ExcludedExtensions</c> 와 같은 목록). 크롤러의 제외 목록이 된다.
     /// </summary>
-    public ISet<string> DefaultExcludedExtensions { get; set; } = new HashSet<string>
-    {
-        ".jpg", ".jpeg", ".png", ".gif", ".pdf", ".doc", ".docx", ".zip"
-    };
+    public ISet<string> DefaultExcludedExtensions { get; set; } = new HashSet<string>(new WebFlux.Core.Options.CrawlOptions().ExcludedExtensions);
 
     /// <summary>
     /// 사용자 정의 헤더
@@ -154,21 +151,6 @@ public class ChunkingConfiguration
     /// 기본 청킹 전략
     /// </summary>
     public string DefaultStrategy { get; set; } = "Auto";
-
-    /// <summary>
-    /// 기본 최대 청크 크기 (토큰)
-    /// </summary>
-    public int DefaultMaxChunkSize { get; set; } = 512;
-
-    /// <summary>
-    /// 기본 청크 겹침 크기 (토큰)
-    /// </summary>
-    public int DefaultChunkOverlap { get; set; } = 50;
-
-    /// <summary>
-    /// 기본 최소 청크 크기 (토큰)
-    /// </summary>
-    public int DefaultMinChunkSize { get; set; } = 50;
 
     /// <summary>
     /// 기본 품질 임계값
@@ -192,14 +174,14 @@ public class ChunkingConfiguration
     public int MinChunkSize { get; set; } = 100;
 
     /// <summary>
-    /// 최대 청크 크기
+    /// 최대 청크 크기 (기본값: 1000)
     /// </summary>
-    public int MaxChunkSize { get; set; } = 2000;
+    public int MaxChunkSize { get; set; } = 1000;
 
     /// <summary>
-    /// 겹침 크기
+    /// 겹침 크기 (기본값: 50). 청킹 옵션의 <c>ChunkOverlap</c> 이 된다.
     /// </summary>
-    public int OverlapSize { get; set; } = 200;
+    public int OverlapSize { get; set; } = 50;
 
     /// <summary>
     /// 공백 정규화 여부

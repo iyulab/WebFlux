@@ -96,6 +96,48 @@ public sealed class ChunkServiceThroughRegistrationTests : IDisposable
         await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
+    [Fact]
+    public async Task ConfiguredTimeout_ReachesTheCrawler()
+    {
+        // Positive control for the registered configuration: before 0.15.0 nothing resolved it, so this setting was
+        // ignored and the call waited out the slow page.
+        _server.Serve("/slow", Page, delay: TimeSpan.FromSeconds(4));
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddWebFlux(c => c.Crawling.DefaultTimeoutSeconds = 1);
+        using var provider = services.BuildServiceProvider();
+        using var scope = provider.CreateScope();
+        var service = scope.ServiceProvider.GetRequiredService<IContentChunkService>();
+
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        var chunks = await service.ProcessUrlAsync(_server.Url("/slow"), cancellationToken: TestContext.Current.CancellationToken);
+        watch.Stop();
+
+        chunks.Should().BeEmpty("the page took longer than the configured timeout");
+        watch.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(3.5), "the 1 s timeout cut the request, not the 4 s page");
+    }
+
+    [Fact]
+    public async Task ConfiguredChunking_IsUsed_WhenTheCallerPassesNone()
+    {
+        var longPage = "<html><body>" + string.Concat(Enumerable.Range(1, 40).Select(n =>
+            $"<p>Paragraph {n} explains one more detail of how pages become chunks, with enough words to count.</p>")) + "</body></html>";
+        _server.Serve("/long", longPage);
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddWebFlux(c => c.Chunking.MaxChunkSize = 120);
+        using var provider = services.BuildServiceProvider();
+        using var scope = provider.CreateScope();
+        var small = await scope.ServiceProvider.GetRequiredService<IContentChunkService>()
+            .ProcessUrlAsync(_server.Url("/long"), cancellationToken: TestContext.Current.CancellationToken);
+
+        using var defaultScope = _provider.CreateScope();
+        var whole = await defaultScope.ServiceProvider.GetRequiredService<IContentChunkService>()
+            .ProcessUrlAsync(_server.Url("/long"), cancellationToken: TestContext.Current.CancellationToken);
+
+        small.Count.Should().BeGreaterThan(whole.Count, "the configured size limit, not the default, sized the chunks");
+    }
+
     public void Dispose()
     {
         _provider.Dispose();

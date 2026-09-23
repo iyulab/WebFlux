@@ -20,11 +20,26 @@ All notable changes to this project will be documented in this file.
 - **The chunking options passed to `ProcessUrlAsync` / `ProcessUrlsBatchAsync` are used as given.** The overlap was
   replaced by a fixed 50 and `MinChunkSize` was dropped.
 
+- **The configuration you register is used.** `AddWebFlux(config => ...)` and a `"WebFlux"` configuration section
+  bound `WebFluxConfiguration`, but nothing resolved it: every setting was ignored. `ProcessUrlAsync` /
+  `ProcessUrlsBatchAsync` now start from it. The crawler takes `Crawling.DefaultTimeoutSeconds`, `DefaultDelayMs`,
+  `MaxConcurrentRequests`, `DefaultRetryCount`, `RespectRobotsTxt`, `DefaultUserAgent`, `DefaultHeaders`,
+  `DefaultExcludedExtensions` and `Strategy`. Chunking takes `Chunking.DefaultStrategy`, `MaxChunkSize`,
+  `MinChunkSize` and `OverlapSize` when the call passes no options. AI enhancement follows `AiEnhancement`.
+  Their defaults are now the values the processor used: 15 s timeout, no delay, 3 concurrent requests, the
+  `CrawlOptions` exclusion list, 1000 / 100 / 50 for chunk size, minimum and overlap. With no configuration nothing
+  changes.
+
 ### Changed
 - **`ProcessUrlAsync` processes the page at that URL, not the site it links to.** It crawled up to 3 links deep and 100
   pages. Use `ProcessWebsiteAsync` for a site crawl.
 - **`ProcessUrlAsync` no longer forces AI enhancement on.** It was switched on for testing; enhancement now follows
   the configuration (off by default). With no AI service registered nothing changes.
+
+### Removed
+- `ChunkingConfiguration.DefaultMaxChunkSize`, `DefaultChunkOverlap` and `DefaultMinChunkSize`. They duplicated
+  `MaxChunkSize`, `OverlapSize` and `MinChunkSize`, and nothing read them. **Breaking** for code that set them: use
+  the other three.
 
 ## [0.14.1] - 2026-09-23
 

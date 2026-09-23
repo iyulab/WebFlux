@@ -1,5 +1,6 @@
 using System.Threading.Channels;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using WebFlux.Core.Interfaces;
 using WebFlux.Core.Models;
 using WebFlux.Core.Models.Events;
@@ -22,12 +23,18 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
     private readonly IResilienceService? _resilienceService;
     private readonly SemaphoreSlim _processingSlot;
 
+    private readonly WebFluxConfiguration _configuration;
+
     public WebContentProcessor(
         IServiceFactory serviceFactory,
         IEventPublisher eventPublisher,
         ILogger<WebContentProcessor> logger,
-        IResilienceService? resilienceService = null)
+        IResilienceService? resilienceService = null,
+        IOptions<WebFluxConfiguration>? configuration = null)
     {
+        // What AddWebFlux(config => ...) or a "WebFlux" configuration section sets. The per-call entry points start
+        // from it; before, they built a fresh configuration each call and the registered one was never read.
+        _configuration = configuration?.Value ?? new WebFluxConfiguration();
         _serviceFactory = serviceFactory ?? throw new ArgumentNullException(nameof(serviceFactory));
         _eventPublisher = eventPublisher ?? throw new ArgumentNullException(nameof(eventPublisher));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -51,7 +58,7 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
     /// rather than a site crawl, and the caller's chunking options as given (the configuration keeps only a few of
     /// their fields).
     /// </summary>
-    private sealed record RunOverrides(bool SinglePage, ChunkingOptions? Chunking)
+    private sealed record RunOverrides(bool SinglePage, ChunkingOptions? Chunking, IReadOnlyList<string>? StartUrls = null)
     {
         public static readonly RunOverrides None = new(false, null);
     }
@@ -64,13 +71,14 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
         var startTime = DateTimeOffset.UtcNow;
         var processedCount = 0;
 
-        LogStartingWebContentProcessing(_logger, configuration.Crawling.StartUrls.Count);
+        var startUrls = overrides.StartUrls ?? configuration.Crawling.StartUrls ?? (IReadOnlyList<string>)[];
+        LogStartingWebContentProcessing(_logger, startUrls.Count);
 
         await _eventPublisher.PublishAsync(new ProcessingStartedEvent
         {
-            Message = $"웹 콘텐츠 처리 시작 - {configuration.Crawling.StartUrls?.Count ?? 0}개 URL",
+            Message = $"웹 콘텐츠 처리 시작 - {startUrls.Count}개 URL",
             Configuration = configuration,
-            StartUrls = configuration.Crawling.StartUrls ?? new List<string>(),
+            StartUrls = startUrls.ToList(),
             Timestamp = startTime
         }, cancellationToken);
 
@@ -153,18 +161,25 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
         var crawler = _serviceFactory.CreateCrawler(crawlStrategy);
 
         // CrawlingConfiguration을 CrawlOptions로 변환
+        var crawling = configuration.Crawling;
         var crawlOptions = new CrawlOptions
         {
             // A per-URL entry point processes that page only; the configuration path crawls the site.
             MaxDepth = overrides.SinglePage ? 0 : 3,
             MaxPages = overrides.SinglePage ? 1 : 100,
-            DelayMs = 0, // 성능 최적화: 기본 대기 시간 제거 (필요시 설정에서 지정)
+            DelayMs = crawling.DefaultDelayMs,
             EnableScrolling = false, // 성능 최적화: 기본 스크롤 비활성화 (SPA가 아닌 경우)
-            TimeoutMs = 15000 // 성능 최적화: 타임아웃 15초로 단축
+            TimeoutMs = crawling.DefaultTimeoutSeconds * 1000,
+            ConcurrentRequests = crawling.MaxConcurrentRequests,
+            MaxRetries = crawling.DefaultRetryCount,
+            RespectRobotsTxt = crawling.RespectRobotsTxt,
+            UserAgent = crawling.DefaultUserAgent,
+            CustomHeaders = new Dictionary<string, string>(crawling.DefaultHeaders),
+            ExcludedExtensions = new HashSet<string>(crawling.DefaultExcludedExtensions)
         };
 
         // 병렬 URL 크롤링 (성능 최적화: 순차 → 병렬 처리)
-        var startUrls = configuration.Crawling.StartUrls ?? new List<string>();
+        var startUrls = overrides.StartUrls ?? configuration.Crawling.StartUrls ?? (IReadOnlyList<string>)[];
         var crawledCount = 0;
 
         if (startUrls.Count == 0)
@@ -570,13 +585,14 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
         {
             LogChunkingDocument(_logger, documentNumber, extracted.Text?.Length ?? 0, extracted.MainContent?.Length ?? 0);
 
-            var chunkingStrategy = _serviceFactory.CreateChunkingStrategy(configuration.Chunking.DefaultStrategy);
-
-            // The caller's options as given; otherwise the configuration's (ChunkingConfiguration keeps only the size).
+            // The caller's options as given (their strategy too); otherwise the configuration's.
+            var chunkingStrategy = _serviceFactory.CreateChunkingStrategy(
+                overrides.Chunking?.Strategy.ToString() ?? configuration.Chunking.DefaultStrategy);
             var chunkingOptions = overrides.Chunking ?? new ChunkingOptions
             {
                 MaxChunkSize = configuration.Chunking.MaxChunkSize,
-                ChunkOverlap = 50 // 기본값
+                MinChunkSize = configuration.Chunking.MinChunkSize,
+                ChunkOverlap = configuration.Chunking.OverlapSize
             };
 
             var chunks = await chunkingStrategy.ChunkAsync(
@@ -657,29 +673,12 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
 
         LogProcessingSingleUrl(_logger, url);
 
-        // WebFluxConfiguration 생성하여 단일 URL 처리
-        var configuration = new WebFluxConfiguration
-        {
-            Crawling = new CrawlingConfiguration
-            {
-                StartUrls = new List<string> { url },
-                // The static crawler: it needs no optional package. "Dynamic" here made every call throw unless
-                // WebFlux.Playwright was registered, and the batch path turned that into an empty result per URL.
-                Strategy = nameof(CrawlStrategy.BreadthFirst),
-                DefaultDelayMs = 0 // 성능 최적화: 기본 대기 시간 제거
-            },
-            Chunking = new ChunkingConfiguration
-            {
-                DefaultStrategy = chunkingOptions?.Strategy.ToString() ?? "Auto",
-                MaxChunkSize = chunkingOptions?.MaxChunkSize ?? 1000,
-                MinChunkSize = chunkingOptions?.MinChunkSize ?? 100
-            },
-        };
-
+        // The registered configuration (AddWebFlux(config => ...) / a "WebFlux" section), with this call's URL,
+        // single-page scope and chunking options pinned on top.
         // ProcessAsync를 호출하여 파이프라인 실행
         var chunks = new List<WebContentChunk>();
 
-        await foreach (var chunk in ProcessCoreAsync(configuration, new RunOverrides(SinglePage: true, chunkingOptions), cancellationToken))
+        await foreach (var chunk in ProcessCoreAsync(_configuration, new RunOverrides(SinglePage: true, chunkingOptions, [url]), cancellationToken))
         {
             chunks.Add(chunk);
         }
