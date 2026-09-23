@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.14.1] - 2026-09-23
+
+### Changed
+- Re-pinned sibling package(s) `Flux.Abstractions` 0.25.0 -> 0.26.0, `FluxCurator` 0.9.0 -> 0.9.1, `FluxCurator.Core` 0.9.0 -> 0.9.1 — re-consumption of already-consumed iyulab packages via `check-pin-drift.ps1 -Fix`. No source changes.
+
 ## [0.14.0] - 2026-09-22
 
 ### Added
