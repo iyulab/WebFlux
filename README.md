@@ -203,7 +203,7 @@ var publisher = provider.GetRequiredService<IEventPublisher>();
 using var s1 = publisher.Subscribe<PageCrawledEvent>(async e =>
 {
     Console.WriteLine($"Crawled {e.Url} [{e.StatusCode}] in {e.ProcessingTimeMs}ms");
-    await metrics.RecordPageCrawl(e);
+    await Task.CompletedTask; // your own async work (metrics, storage) goes here
 });
 
 using var s2 = publisher.Subscribe<ChunkGeneratedEvent>(e =>
@@ -217,9 +217,10 @@ using var s3 = publisher.Subscribe<ErrorOccurredEvent>(e =>
 });
 
 // Or subscribe to ALL events
-using var sAll = publisher.SubscribeAll(async e =>
+using var sAll = publisher.SubscribeAll(e =>
 {
-    await logger.LogEventAsync(e.EventType, e);
+    logger.LogInformation("WebFlux event {EventType}", e.EventType);
+    return Task.CompletedTask;
 });
 ```
 

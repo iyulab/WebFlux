@@ -342,7 +342,7 @@ using var s2 = publisher.Subscribe<ChunkGeneratedEvent>(e =>
 // 모든 이벤트 구독
 using var sAll = publisher.SubscribeAll(async e =>
 {
-    await logger.LogEventAsync(e.EventType, e);
+    logger.LogInformation("WebFlux event {EventType}", e.EventType);
 });
 ```
 
@@ -496,16 +496,17 @@ await foreach (var chunk in processor.ProcessWebsiteAsync(url, options))
 ### 진행 상황 추적
 
 ```csharp
-await foreach (var result in processor.ProcessWithProgressAsync(url))
+// One result per URL, as each finishes; a failed page does not stop the others.
+await foreach (var result in processor.ExtractBatchStreamAsync(urls))
 {
     if (result.IsSuccess)
     {
-        Console.WriteLine($"✓ Processed: {result.Url}");
-        await StoreChunksAsync(result.Result);
+        Console.WriteLine($"✓ Processed: {result.Data!.Url}");
+        await StoreContentAsync(result.Data);
     }
     else
     {
-        Console.WriteLine($"✗ Failed: {result.Url} - {result.Error}");
+        Console.WriteLine($"✗ Failed: {result.Error?.Code} - {result.Error?.Message}");
     }
 }
 ```

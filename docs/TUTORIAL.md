@@ -137,19 +137,19 @@ Console.WriteLine($"생성된 청크 수: {chunks.Count}");
 // Auto 전략 (권장 - 자동 선택)
 var autoChunks = await processor.ProcessUrlAsync(
     url,
-    new ChunkingOptions { Strategy = "Auto" }
+    new ChunkingOptions { Strategy = ChunkingStrategyType.Auto }
 );
 
 // Smart 전략 (HTML 구조 기반)
 var smartChunks = await processor.ProcessUrlAsync(
     url,
-    new ChunkingOptions { Strategy = "Smart" }
+    new ChunkingOptions { Strategy = ChunkingStrategyType.Smart }
 );
 
 // Semantic 전략 (의미 기반 - 임베딩 사용)
 var semanticChunks = await processor.ProcessUrlAsync(
     url,
-    new ChunkingOptions { Strategy = "Semantic" }
+    new ChunkingOptions { Strategy = ChunkingStrategyType.Semantic }
 );
 ```
 
@@ -158,10 +158,10 @@ var semanticChunks = await processor.ProcessUrlAsync(
 ```csharp
 var options = new ChunkingOptions
 {
-    Strategy = "Auto",
+    Strategy = ChunkingStrategyType.Auto,
     MaxChunkSize = 1000,    // 최대 1000 토큰
     MinChunkSize = 200,     // 최소 200 토큰
-    OverlapSize = 100       // 100 토큰 오버랩
+    ChunkOverlap = 100      // 100 토큰 오버랩
 };
 
 var chunks = await processor.ProcessUrlAsync(url, options);
@@ -436,7 +436,7 @@ var batchResults = await processor.ProcessUrlsBatchAsync(urls);
 await foreach (var chunk in processor.ProcessWebsiteAsync(
     "https://docs.example.com",
     new CrawlOptions { MaxDepth = 2, MaxPages = 100 },
-    new ChunkingOptions { Strategy = "Auto" }))
+    new ChunkingOptions { Strategy = ChunkingStrategyType.Auto }))
 {
     Console.WriteLine($"청크 생성: {chunk.ChunkId}");
 }
@@ -486,7 +486,7 @@ public class SentenceBasedChunkingStrategy : IChunkingStrategy
     {
         var chunks = new List<WebContentChunk>();
         var maxSize = options?.MaxChunkSize ?? 512;
-        var overlapSize = options?.OverlapSize ?? 64;
+        var overlapSize = options?.ChunkOverlap ?? 64;
 
         // 문장 분리 (간단한 예제)
         var sentences = content.Text.Split(new[] { ". ", "! ", "? " }, StringSplitOptions.RemoveEmptyEntries);
@@ -666,7 +666,7 @@ Console.WriteLine($"구독자 수: {stats.SubscriberCount}");
 
 ```csharp
 var crawlOptions = new CrawlOptions { MaxPages = 100 };
-var chunkOptions = new ChunkingOptions { Strategy = "Auto" };
+var chunkOptions = new ChunkingOptions { Strategy = ChunkingStrategyType.Auto };
 
 await foreach (var chunk in processor.ProcessWebsiteAsync(
     "https://docs.example.com",
@@ -689,20 +689,16 @@ await foreach (var chunk in processor.ProcessWebsiteAsync(
 ### 진행 상황 추적
 
 ```csharp
-await foreach (var result in processor.ProcessWithProgressAsync(
+// 사이트 크롤은 청크를 도착하는 대로 흘려보낸다 — URL 별로 세면 진행 상황이 된다.
+var perPage = new Dictionary<string, int>();
+await foreach (var chunk in processor.ProcessWebsiteAsync(
     "https://docs.example.com",
     crawlOptions,
     chunkOptions))
 {
-    if (result.IsSuccess)
-    {
-        Console.WriteLine($"✓ 성공: {result.Url} ({result.Result.Count} 청크)");
-        await SaveChunksAsync(result.Result);
-    }
-    else
-    {
-        Console.WriteLine($"✗ 실패: {result.Url} - {result.Error}");
-    }
+    perPage[chunk.SourceUrl] = perPage.GetValueOrDefault(chunk.SourceUrl) + 1;
+    Console.WriteLine($"✓ {chunk.SourceUrl} ({perPage[chunk.SourceUrl]} 청크)");
+    await SaveChunkAsync(chunk);
 }
 ```
 
@@ -794,9 +790,9 @@ public class TechnicalDocumentationRAG
 
         var chunkOptions = new ChunkingOptions
         {
-            Strategy = "Smart",      // HTML 구조 인식
+            Strategy = ChunkingStrategyType.Smart,      // HTML 구조 인식
             MaxChunkSize = 512,
-            OverlapSize = 64
+            ChunkOverlap = 64
         };
 
         await foreach (var chunk in _processor.ProcessWebsiteAsync(
@@ -868,9 +864,9 @@ public class LargeDocumentProcessor
     {
         var options = new ChunkingOptions
         {
-            Strategy = "MemoryOptimized",  // 메모리 효율적 처리
+            Strategy = ChunkingStrategyType.MemoryOptimized,  // 메모리 효율적 처리
             MaxChunkSize = 512,
-            BufferSizeBytes = 1024 * 1024  // 1MB 버퍼
+            MinimizeMemoryUsage = true     // 메모리 사용 최소화
         };
 
         int totalChunks = 0;
@@ -914,7 +910,7 @@ public class MultilingualContentProcessor
                 url,
                 new ChunkingOptions
                 {
-                    Strategy = "Semantic",
+                    Strategy = ChunkingStrategyType.Semantic,
                     MaxChunkSize = 512
                 });
 
@@ -949,7 +945,7 @@ public class MultilingualContentProcessor
 // MemoryOptimized 전략 사용
 var options = new ChunkingOptions
 {
-    Strategy = "MemoryOptimized"
+    Strategy = ChunkingStrategyType.MemoryOptimized
 };
 
 // 스트리밍 방식으로 처리
@@ -971,7 +967,7 @@ services.AddWebFlux(config =>
     config.Performance.MaxDegreeOfParallelism = 8;
 
     // 빠른 전략 사용
-    config.Chunking.DefaultStrategy = "FixedSize";
+    config.Chunking.DefaultStrategy = ChunkingStrategyType.FixedSize;
 });
 ```
 

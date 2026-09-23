@@ -174,7 +174,7 @@ services.AddWebFlux(config =>
     config.Crawling.MaxConcurrentRequests = 5;
 
     // Chunking defaults (override per-call via ChunkingOptions)
-    config.Chunking.DefaultStrategy = "Auto";
+    config.Chunking.DefaultStrategy = ChunkingStrategyType.Auto;
     config.Chunking.MaxChunkSize = 512;
     config.Chunking.OverlapSize = 64;
 
@@ -240,18 +240,18 @@ WebFlux.Core.Models.Events
 ## Error Handling
 
 ```csharp
-await foreach (var result in processor.ProcessWithProgressAsync(url))
+await foreach (var result in processor.ExtractBatchStreamAsync(urls))
 {
     if (!result.IsSuccess)
     {
         // 개별 페이지 실패는 전체 처리를 중단하지 않음
-        _logger.LogWarning("Failed: {Url}, Error: {Error}",
-            result.Url, result.Error);
+        _logger.LogWarning("Failed: {Code}, Error: {Error}",
+            result.Error?.Code, result.Error?.Message);
         continue;
     }
 
-    // 성공한 청크만 처리
-    await StoreChunksAsync(result.Result);
+    // 성공한 페이지만 처리
+    await StoreContentAsync(result.Data!);
 }
 ```
 
