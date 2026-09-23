@@ -2,6 +2,30 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.15.0] - unreleased
+
+### Fixed
+- **`ProcessUrlAsync` / `ProcessUrlsBatchAsync` produce chunks with a plain `AddWebFlux()` registration.** Two causes,
+  both on the README's quick-start path:
+  - They forced the dynamic (Playwright) crawler. Without the WebFlux.Playwright package `ProcessUrlAsync` threw
+    `InvalidOperationException`, and `ProcessUrlsBatchAsync` caught that per URL and returned an empty list for every
+    URL. They now use the static crawler; register WebFlux.Playwright and use the crawl APIs for JavaScript-rendered
+    pages.
+  - `AddWebFlux()` registered the chunking strategies but not FluxCurator's chunker factory they all resolve, so
+    every document failed to chunk (a warning in the log, zero chunks). `AddWebFluxChunking()` now registers it
+    (`AddFluxCurator()`, TryAdd-based: a host's own registration, such as one with an embedder, is kept).
+- **`ProcessUrlsBatchAsync` no longer reports a pipeline that cannot run as an empty result per URL.** A setup error
+  (`InvalidOperationException`, `NotSupportedException`) is thrown to the caller; a page that cannot be fetched or
+  chunked still yields an empty list for that URL.
+- **The chunking options passed to `ProcessUrlAsync` / `ProcessUrlsBatchAsync` are used as given.** The overlap was
+  replaced by a fixed 50 and `MinChunkSize` was dropped.
+
+### Changed
+- **`ProcessUrlAsync` processes the page at that URL, not the site it links to.** It crawled up to 3 links deep and 100
+  pages. Use `ProcessWebsiteAsync` for a site crawl.
+- **`ProcessUrlAsync` no longer forces AI enhancement on.** It was switched on for testing; enhancement now follows
+  the configuration (off by default). With no AI service registered nothing changes.
+
 ## [0.14.1] - 2026-09-23
 
 ### Fixed

@@ -1,3 +1,4 @@
+using FluxCurator;
 using Flux.Abstractions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -220,6 +221,11 @@ public static class ServiceCollectionExtensions
     /// <returns>서비스 컬렉션</returns>
     public static IServiceCollection AddWebFluxChunking(this IServiceCollection services)
     {
+        // Every chunking strategy below resolves FluxCurator's IChunkerFactory, so registering the strategies
+        // without it made each document fail to chunk (logged, then zero chunks). TryAdd-based: a host that already
+        // called AddFluxCurator (for example with an embedder for semantic chunking) keeps its registration.
+        services.AddFluxCurator();
+
         // 범용 청킹은 FluxCurator 에 위임한다. 여기서 재구현하지 않는 이유는
         // FluxCuratorChunkingStrategy 문서 참조 - 같은 규약의 두 구현은 한쪽만 고쳐지고
         // 다른 쪽이 조용히 틀린 채로 남는다.

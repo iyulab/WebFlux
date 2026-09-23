@@ -41,9 +41,25 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
     /// <param name="configuration">처리 구성</param>
     /// <param name="cancellationToken">취소 토큰</param>
     /// <returns>처리된 청크 스트림</returns>
-    public async IAsyncEnumerable<WebContentChunk> ProcessAsync(
+    public IAsyncEnumerable<WebContentChunk> ProcessAsync(
         WebFluxConfiguration configuration,
-        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default)
+        => ProcessCoreAsync(configuration, RunOverrides.None, cancellationToken);
+
+    /// <summary>
+    /// What a per-call entry point pins for one run instead of reading it from the configuration: a single page
+    /// rather than a site crawl, and the caller's chunking options as given (the configuration keeps only a few of
+    /// their fields).
+    /// </summary>
+    private sealed record RunOverrides(bool SinglePage, ChunkingOptions? Chunking)
+    {
+        public static readonly RunOverrides None = new(false, null);
+    }
+
+    private async IAsyncEnumerable<WebContentChunk> ProcessCoreAsync(
+        WebFluxConfiguration configuration,
+        RunOverrides overrides,
+        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
     {
         var startTime = DateTimeOffset.UtcNow;
         var processedCount = 0;
@@ -59,7 +75,7 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
         }, cancellationToken);
 
         // 1단계: 크롤링 파이프라인
-        var crawlingResults = CrawlWebContent(configuration, cancellationToken);
+        var crawlingResults = CrawlWebContent(configuration, overrides, cancellationToken);
 
         // 2단계: 콘텐츠 추출 파이프라인
         var extractionResults = ExtractContent(crawlingResults, configuration, cancellationToken);
@@ -70,7 +86,7 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
             : extractionResults;
 
         // 4단계: 청킹 파이프라인
-        await foreach (var chunk in ChunkContent(enhancedResults, configuration, cancellationToken))
+        await foreach (var chunk in ChunkContent(enhancedResults, configuration, overrides, cancellationToken))
         {
             processedCount++;
 
@@ -121,10 +137,12 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
     /// 웹 콘텐츠 크롤링 파이프라인
     /// </summary>
     /// <param name="configuration">구성</param>
+    /// <param name="overrides">이 실행에 고정된 값(단일 페이지 여부)</param>
     /// <param name="cancellationToken">취소 토큰</param>
     /// <returns>크롤링된 웹 콘텐츠 스트림</returns>
     private async IAsyncEnumerable<WebContent> CrawlWebContent(
         WebFluxConfiguration configuration,
+        RunOverrides overrides,
         [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
     {
         // 문자열을 CrawlStrategy enum으로 변환
@@ -137,8 +155,9 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
         // CrawlingConfiguration을 CrawlOptions로 변환
         var crawlOptions = new CrawlOptions
         {
-            MaxDepth = 3, // 기본값
-            MaxPages = 100, // 기본값
+            // A per-URL entry point processes that page only; the configuration path crawls the site.
+            MaxDepth = overrides.SinglePage ? 0 : 3,
+            MaxPages = overrides.SinglePage ? 1 : 100,
             DelayMs = 0, // 성능 최적화: 기본 대기 시간 제거 (필요시 설정에서 지정)
             EnableScrolling = false, // 성능 최적화: 기본 스크롤 비활성화 (SPA가 아닌 경우)
             TimeoutMs = 15000 // 성능 최적화: 타임아웃 15초로 단축
@@ -474,11 +493,13 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
     /// </summary>
     /// <param name="extractedContents">추출된 콘텐츠 스트림</param>
     /// <param name="configuration">구성</param>
+    /// <param name="overrides">이 실행에 고정된 값(호출자의 청킹 옵션)</param>
     /// <param name="cancellationToken">취소 토큰</param>
     /// <returns>청킹된 콘텐츠 스트림</returns>
     private async IAsyncEnumerable<WebContentChunk> ChunkContent(
         IAsyncEnumerable<ExtractedContent> extractedContents,
         WebFluxConfiguration configuration,
+        RunOverrides overrides,
         [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
     {
         // Priority 3: 병렬 처리를 위한 채널 설정
@@ -500,7 +521,7 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
                 await foreach (var extracted in extractedContents.WithCancellation(cancellationToken))
                 {
                     var docNum = Interlocked.Increment(ref docCounter);
-                    var task = ProcessSingleChunking(extracted, docNum, configuration, writer, semaphore, cancellationToken);
+                    var task = ProcessSingleChunking(extracted, docNum, configuration, overrides, writer, semaphore, cancellationToken);
                     tasks.Add(task);
 
                     // 완료된 작업 정리
@@ -538,6 +559,7 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
         ExtractedContent extracted,
         int documentNumber,
         WebFluxConfiguration configuration,
+        RunOverrides overrides,
         ChannelWriter<WebContentChunk> writer,
         SemaphoreSlim semaphore,
         CancellationToken cancellationToken)
@@ -550,8 +572,8 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
 
             var chunkingStrategy = _serviceFactory.CreateChunkingStrategy(configuration.Chunking.DefaultStrategy);
 
-            // ChunkingConfiguration을 ChunkingOptions로 변환
-            var chunkingOptions = new ChunkingOptions
+            // The caller's options as given; otherwise the configuration's (ChunkingConfiguration keeps only the size).
+            var chunkingOptions = overrides.Chunking ?? new ChunkingOptions
             {
                 MaxChunkSize = configuration.Chunking.MaxChunkSize,
                 ChunkOverlap = 50 // 기본값
@@ -641,7 +663,9 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
             Crawling = new CrawlingConfiguration
             {
                 StartUrls = new List<string> { url },
-                Strategy = "Dynamic", // Phase 1: Playwright 기반 동적 렌더링 사용
+                // The static crawler: it needs no optional package. "Dynamic" here made every call throw unless
+                // WebFlux.Playwright was registered, and the batch path turned that into an empty result per URL.
+                Strategy = nameof(CrawlStrategy.BreadthFirst),
                 DefaultDelayMs = 0 // 성능 최적화: 기본 대기 시간 제거
             },
             Chunking = new ChunkingConfiguration
@@ -650,19 +674,12 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
                 MaxChunkSize = chunkingOptions?.MaxChunkSize ?? 1000,
                 MinChunkSize = chunkingOptions?.MinChunkSize ?? 100
             },
-            AiEnhancement = new AiEnhancementConfiguration
-            {
-                // AI 증강은 구성에서 설정된 값 사용 (기본값: false)
-                Enabled = true, // 테스트를 위해 활성화
-                EnableSummary = true,
-                EnableMetadata = true
-            }
         };
 
         // ProcessAsync를 호출하여 파이프라인 실행
         var chunks = new List<WebContentChunk>();
 
-        await foreach (var chunk in ProcessAsync(configuration, cancellationToken))
+        await foreach (var chunk in ProcessCoreAsync(configuration, new RunOverrides(SinglePage: true, chunkingOptions), cancellationToken))
         {
             chunks.Add(chunk);
         }
@@ -698,8 +715,11 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
                 var chunks = await ProcessUrlAsync(url, chunkingOptions, cancellationToken).ConfigureAwait(false);
                 results[url] = chunks;
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not (InvalidOperationException or NotSupportedException))
             {
+                // A page that cannot be fetched or chunked yields no chunks. A pipeline that cannot run at all (a
+                // missing package, a strategy that does not exist) is not a per-URL outcome: it throws, instead of
+                // returning an empty result for every URL.
                 LogFailedToProcessUrlInBatch(_logger, ex, url);
                 results[url] = Array.Empty<WebContentChunk>();
             }
