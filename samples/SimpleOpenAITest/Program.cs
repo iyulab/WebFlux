@@ -81,7 +81,7 @@ public class SimpleOpenAITest
                 config.AiEnhancement.EnableRewrite = false;
                 config.AiEnhancement.EnableParallelProcessing = true;
 
-                config.Chunking.DefaultStrategy = "Paragraph";
+                config.Chunking.DefaultStrategy = ChunkingStrategyType.Paragraph;
                 config.Chunking.MaxChunkSize = 1000;
                 config.Chunking.MinChunkSize = 100;
             });

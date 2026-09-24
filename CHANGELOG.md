@@ -13,6 +13,10 @@ All notable changes to this project will be documented in this file.
 - **`CrawlingConfiguration.Strategy` is a `CrawlStrategy`** (was `string`). A `"WebFlux"` configuration section still
   gives it by name (`"Sitemap"`); an unknown name is now a binding error instead of a silent fall back to
   `BreadthFirst`. **Breaking** for code that assigned a string: use `CrawlStrategy.Dynamic` and so on.
+- **`ChunkingConfiguration.DefaultStrategy` is a `ChunkingStrategyType`** (was `string`), the type the per-call
+  `ChunkingOptions.Strategy` already had. An unknown name is now a binding error; before, every document logged a
+  warning and produced no chunks. **Breaking** for code that assigned a string: use `ChunkingStrategyType.Paragraph`
+  and so on.
 
 ### Removed
 - **Configuration that nothing read.** Setting any of these had no effect; code that sets them stops compiling

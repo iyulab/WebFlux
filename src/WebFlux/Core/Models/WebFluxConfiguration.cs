@@ -102,9 +102,10 @@ public class CrawlingConfiguration
 public class ChunkingConfiguration
 {
     /// <summary>
-    /// 기본 청킹 전략
+    /// 기본 청킹 전략 (기본값: <see cref="ChunkingStrategyType.Auto"/>). 설정 파일에서는 이름(<c>"Paragraph"</c> 등)으로 준다 —
+    /// 알 수 없는 이름은 바인딩 오류다(0.16.0 전에는 문자열이라 오타가 문서마다 경고 로그와 청크 0 개가 됐다).
     /// </summary>
-    public string DefaultStrategy { get; set; } = "Auto";
+    public ChunkingStrategyType DefaultStrategy { get; set; } = ChunkingStrategyType.Auto;
 
     /// <summary>
     /// 최소 청크 크기

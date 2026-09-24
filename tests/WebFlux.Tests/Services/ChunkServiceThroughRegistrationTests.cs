@@ -161,6 +161,26 @@ public sealed class ChunkServiceThroughRegistrationTests : IDisposable
             read.Should().Throw<InvalidOperationException>();
     }
 
+    [Theory]
+    [InlineData("Paragraph", true)]
+    [InlineData("Paragraf", false)] // a typo used to reach the strategy factory, which threw per document: a warning and 0 chunks
+    public void ConfiguredChunkingStrategy_BindsByName_AndAnUnknownNameFails(string value, bool binds)
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["WebFlux:Chunking:DefaultStrategy"] = value })
+            .Build();
+        var services = new ServiceCollection();
+        services.AddWebFlux(configuration);
+        using var provider = services.BuildServiceProvider();
+
+        var read = () => provider.GetRequiredService<Microsoft.Extensions.Options.IOptions<WebFlux.Core.Models.WebFluxConfiguration>>().Value;
+
+        if (binds)
+            read().Chunking.DefaultStrategy.Should().Be(WebFlux.Core.Options.ChunkingStrategyType.Paragraph);
+        else
+            read.Should().Throw<InvalidOperationException>();
+    }
+
     [Fact]
     public async Task ConfiguredChunking_IsUsed_WhenTheCallerPassesNone()
     {

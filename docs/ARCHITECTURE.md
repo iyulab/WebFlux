@@ -177,7 +177,7 @@ services.AddWebFlux(config =>
     config.Crawling.MaxConcurrentRequests = 5;
 
     // Chunking defaults (override per-call via ChunkingOptions)
-    config.Chunking.DefaultStrategy = nameof(ChunkingStrategyType.Auto);
+    config.Chunking.DefaultStrategy = ChunkingStrategyType.Auto;
     config.Chunking.MaxChunkSize = 512;
     config.Chunking.OverlapSize = 64;
 

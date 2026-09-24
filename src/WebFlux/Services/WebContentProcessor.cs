@@ -582,7 +582,7 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
 
             // The caller's options as given (their strategy too); otherwise the configuration's.
             var chunkingStrategy = _serviceFactory.CreateChunkingStrategy(
-                overrides.Chunking?.Strategy.ToString() ?? configuration.Chunking.DefaultStrategy);
+                (overrides.Chunking?.Strategy ?? configuration.Chunking.DefaultStrategy).ToString());
             var chunkingOptions = overrides.Chunking ?? new ChunkingOptions
             {
                 MaxChunkSize = configuration.Chunking.MaxChunkSize,
