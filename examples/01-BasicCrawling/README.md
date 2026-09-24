@@ -35,11 +35,11 @@ var services = new ServiceCollection();
 
 services.AddWebFlux(options =>
 {
-    options.MaxConcurrency = 3;
-    options.UserAgent = "WebFlux-Example/1.0";
-    options.RequestDelay = TimeSpan.FromMilliseconds(500);
-    options.DefaultChunkSize = 512;
-    options.ChunkOverlap = 50;
+    options.Crawling.MaxConcurrentRequests = 3;
+    options.Crawling.DefaultUserAgent = "WebFlux-Example/1.0";
+    options.Crawling.DefaultDelayMs = 500;
+    options.Chunking.MaxChunkSize = 512;
+    options.Chunking.OverlapSize = 50;
 });
 ```
 

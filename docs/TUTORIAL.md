@@ -967,7 +967,7 @@ services.AddWebFlux(config =>
     config.Performance.MaxDegreeOfParallelism = 8;
 
     // 빠른 전략 사용
-    config.Chunking.DefaultStrategy = ChunkingStrategyType.FixedSize;
+    config.Chunking.DefaultStrategy = nameof(ChunkingStrategyType.FixedSize);
 });
 ```
 

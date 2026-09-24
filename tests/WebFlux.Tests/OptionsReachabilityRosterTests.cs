@@ -82,22 +82,10 @@ public class OptionsReachabilityRosterTests
         // static-site-generator configuration the library never consumes.
         // 0.15.0: classified (T 57 · A 15 · D 12 · C 3 · B 2, umbrella draft ISSUE-webflux-20260922-213000). The processor now
         // reads the registered WebFluxConfiguration: the crawler settings of CrawlingConfiguration and the size/overlap/min of
-        // ChunkingConfiguration left this list, and the three ChunkingConfiguration twins were removed. The rest waits on the
-        // removal decision.
-        ["WebFlux.Core.Models.AiEnhancementConfiguration"] = ["MaxRetries"],
+        // ChunkingConfiguration left this list, and the three ChunkingConfiguration twins were removed.
+        // 0.16.0: the unread rest (T/A) was removed; CrawlConfiguration was folded into CrawlingConfiguration (MaxDepth/MaxPages,
+        // a typed Strategy). What remains here is literal-behaviour (D) the library fixes internally.
         ["WebFlux.Core.Models.AutoChunkingConfiguration"] = ["HighComplexityThreshold", "MediumComplexityThreshold"],
-        ["WebFlux.Core.Models.CachingConfiguration"] = ["DefaultExpirationMinutes", "EnableCompression", "EnableMetrics", "Enabled", "MaxCacheSize", "TypeSettings"],
-        ["WebFlux.Core.Models.ChunkingConfiguration"] = ["DefaultQualityThreshold", "DefaultSemanticThreshold", "LanguageSettings", "NormalizeWhitespace", "StrategyDefaults"],
-        ["WebFlux.Core.Models.CrawlConfiguration"] = ["AllowedDomains", "DelayBetweenRequests", "ExcludePatterns", "MaxConcurrentRequests", "MaxDepth", "MaxPages", "StartUrls", "Strategy"],
-        ["WebFlux.Core.Models.CrawlingConfiguration"] = ["DefaultAllowedContentTypes"],
-        ["WebFlux.Core.Models.EventConfiguration"] = ["EnableEventPublishing", "EventBatchSize", "EventBufferSize", "EventFilters", "EventTypeEnabled", "FlushIntervalMs"],
-        ["WebFlux.Core.Models.ExtractionConfiguration"] = ["IncludeLinkUrls"],
-        ["WebFlux.Core.Models.LoggingConfiguration"] = ["CategoryLevels", "EnableDetailedErrorLogging", "EnableEvents", "EnablePerformanceLogging", "EnableStructuredLogging", "LogFilters", "MinimumLevel"],
-        ["WebFlux.Core.Models.PerformanceConfiguration"] = ["BackpressureThreshold", "BatchSize", "EnableAutoScaling", "MaxMemoryUsageBytes", "MemoryOptimizationThreshold", "PerformanceMonitoringIntervalMs", "QueueSizeLimit"],
-        ["WebFlux.Core.Models.ProcessingOptimizationConfiguration"] = ["CacheOptimization", "EnableAutoStrategySelection", "EnableBottleneckDetection", "EnableStatisticsCollection", "EnableTokenOptimization", "Enabled", "PerformanceMonitoringInterval", "ResourceThresholds"],
-        ["WebFlux.Core.Models.SecurityConfiguration"] = ["AllowedDomains", "BlockedDomains", "EnableContentScanning", "EncryptApiKeys", "RateLimitPerMinute", "ValidateSslCertificates", "ValidateUserAgent"],
-        ["WebFlux.Core.Models.TokenCountingConfiguration"] = ["CacheMaxSize", "EnableCaching", "EnableStatistics", "EnableTokenAnalysis", "Enabled", "ModelCosts", "SupportedModels"],
-        ["WebFlux.Core.Models.WebFluxConfiguration"] = ["Caching", "CustomSettings", "DefaultTokenizerModel", "EnvironmentOverrides", "Events", "Extraction", "Logging", "ProcessingOptimization", "Security", "TokenCounting"],
     };
 
     [Fact]

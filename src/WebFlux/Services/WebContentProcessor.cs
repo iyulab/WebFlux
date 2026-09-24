@@ -153,20 +153,15 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
         RunOverrides overrides,
         [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        // 문자열을 CrawlStrategy enum으로 변환
-        var crawlStrategy = Enum.TryParse<CrawlStrategy>(configuration.Crawling.Strategy, true, out var strategy)
-            ? strategy
-            : CrawlStrategy.BreadthFirst;
-
-        var crawler = _serviceFactory.CreateCrawler(crawlStrategy);
+        var crawler = _serviceFactory.CreateCrawler(configuration.Crawling.Strategy);
 
         // CrawlingConfiguration을 CrawlOptions로 변환
         var crawling = configuration.Crawling;
         var crawlOptions = new CrawlOptions
         {
             // A per-URL entry point processes that page only; the configuration path crawls the site.
-            MaxDepth = overrides.SinglePage ? 0 : 3,
-            MaxPages = overrides.SinglePage ? 1 : 100,
+            MaxDepth = overrides.SinglePage ? 0 : crawling.MaxDepth,
+            MaxPages = overrides.SinglePage ? 1 : crawling.MaxPages,
             DelayMs = crawling.DefaultDelayMs,
             EnableScrolling = false, // 성능 최적화: 기본 스크롤 비활성화 (SPA가 아닌 경우)
             TimeoutMs = crawling.DefaultTimeoutSeconds * 1000,
@@ -755,34 +750,6 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
         }
 
         LogProcessingWebsite(_logger, startUrl, crawlOptions?.UseDynamicRendering ?? false);
-
-        // WebFluxConfiguration 생성
-        var configuration = new WebFluxConfiguration
-        {
-            Crawling = new CrawlingConfiguration
-            {
-                StartUrls = new List<string> { startUrl },
-                // CrawlOptions가 제공되고 UseDynamicRendering이 true면 Dynamic 전략 사용
-                Strategy = (crawlOptions?.UseDynamicRendering == true || crawlOptions?.Strategy == CrawlStrategy.Dynamic)
-                    ? "Dynamic"
-                    : "BreadthFirst",
-                DefaultDelayMs = crawlOptions?.DelayMs ?? 0
-            },
-            Chunking = new ChunkingConfiguration
-            {
-                DefaultStrategy = chunkingOptions?.Strategy.ToString() ?? "Auto",
-                MaxChunkSize = chunkingOptions?.MaxChunkSize ?? 1000,
-                MinChunkSize = chunkingOptions?.MinChunkSize ?? 100
-            },
-            AiEnhancement = new AiEnhancementConfiguration
-            {
-                Enabled = false
-            },
-            Performance = new PerformanceConfiguration
-            {
-                MaxDegreeOfParallelism = 3
-            }
-        };
 
         // CrawlOptions를 직접 사용하여 크롤링
         var crawlStrategy = (crawlOptions?.UseDynamicRendering == true || crawlOptions?.Strategy == CrawlStrategy.Dynamic)

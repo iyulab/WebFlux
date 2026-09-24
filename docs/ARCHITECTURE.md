@@ -168,13 +168,16 @@ await foreach (var result in channel.Reader.ReadAllAsync())
 ```csharp
 services.AddWebFlux(config =>
 {
-    // Crawling defaults
+    // Crawling defaults (site crawls via the configuration path; ProcessUrlAsync processes one page)
+    config.Crawling.Strategy = CrawlStrategy.BreadthFirst;
+    config.Crawling.MaxDepth = 3;
+    config.Crawling.MaxPages = 100;
     config.Crawling.RespectRobotsTxt = true;
     config.Crawling.DefaultDelayMs = 1000;
     config.Crawling.MaxConcurrentRequests = 5;
 
     // Chunking defaults (override per-call via ChunkingOptions)
-    config.Chunking.DefaultStrategy = ChunkingStrategyType.Auto;
+    config.Chunking.DefaultStrategy = nameof(ChunkingStrategyType.Auto);
     config.Chunking.MaxChunkSize = 512;
     config.Chunking.OverlapSize = 64;
 
@@ -201,7 +204,7 @@ WebFlux가 분석하는 웹 표준:
 
 ### 2. Memory Management
 - 스트리밍 처리로 메모리 사용 최소화
-- 백프레셔 제어 (Channel bounded capacity)
+- 단계 사이는 Channel 스트리밍 (현재 unbounded — 백프레셔 없음)
 - 청크 단위 즉시 처리
 
 ### 3. Parallel Processing

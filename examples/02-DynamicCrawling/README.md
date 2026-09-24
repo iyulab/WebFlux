@@ -151,7 +151,7 @@ Smart 전략은 HTML 헤딩 구조를 인식하여:
 
 ### 1. 동시 실행 제한
 ```csharp
-options.MaxConcurrency = 2;  // 브라우저 인스턴스는 리소스 집약적
+options.Crawling.MaxConcurrentRequests = 2;  // 브라우저 인스턴스는 리소스 집약적
 ```
 
 Playwright는 실제 브라우저를 실행하므로 동시 실행 수를 제한해야 합니다.
@@ -199,7 +199,7 @@ pwsh bin/Debug/net10.0/playwright.ps1 install chromium
 
 ### Q: 너무 느립니다
 A: 다음을 시도하세요:
-1. `MaxConcurrency`를 1로 낮추기
+1. `Crawling.MaxConcurrentRequests`를 1로 낮추기
 2. `WaitForNetworkIdle = false` 설정
 3. 특정 `WaitForSelector` 대신 타임아웃 사용
 

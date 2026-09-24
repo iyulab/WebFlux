@@ -2,7 +2,37 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.15.0] - unreleased
+## [0.16.0] - unreleased
+
+### Added
+- **`CrawlingConfiguration.MaxDepth` and `MaxPages`** (defaults 3 and 100). A configuration-driven site crawl
+  (`ProcessAsync(WebFluxConfiguration)`) used a fixed depth 3 and 100 pages whatever the caller set; it now takes these.
+  `ProcessUrlAsync` / `ProcessUrlsBatchAsync` still process only the page at each URL.
+
+### Changed
+- **`CrawlingConfiguration.Strategy` is a `CrawlStrategy`** (was `string`). A `"WebFlux"` configuration section still
+  gives it by name (`"Sitemap"`); an unknown name is now a binding error instead of a silent fall back to
+  `BreadthFirst`. **Breaking** for code that assigned a string: use `CrawlStrategy.Dynamic` and so on.
+
+### Removed
+- **Configuration that nothing read.** Setting any of these had no effect; code that sets them stops compiling
+  (**Breaking**) — delete the lines.
+  - `WebFluxConfiguration`: `Extraction`, `Logging`, `Caching`, `Security`, `Events`, `ProcessingOptimization`,
+    `TokenCounting`, `DefaultTokenizerModel`, `CustomSettings`, `EnvironmentOverrides`, with their types
+    (`LoggingConfiguration`, `CachingConfiguration`, `CacheTypeSettings`, `SecurityConfiguration`,
+    `EventConfiguration`, `EventFilter`, `ProcessingOptimizationConfiguration`, `ResourceThresholds`,
+    `CacheOptimizationSettings`, `TokenCountingConfiguration`, `TokenizerModel`).
+  - `CrawlingConfiguration.DefaultAllowedContentTypes`.
+  - `ChunkingConfiguration`: `DefaultQualityThreshold`, `DefaultSemanticThreshold`, `StrategyDefaults`,
+    `NormalizeWhitespace`, `LanguageSettings` (and `LanguageChunkingSettings`).
+  - `PerformanceConfiguration`: everything but `MaxDegreeOfParallelism`.
+  - `AiEnhancementConfiguration.MaxRetries`.
+  - `ExtractionConfiguration.IncludeLinkUrls`.
+  - `CrawlConfiguration` (its depth/page limits moved to `CrawlingConfiguration`, see Added).
+- The configuration examples in `docs/ARCHITECTURE.md`, `docs/TUTORIAL.md` and `examples/` now set only members that
+  exist and are read.
+
+## [0.15.0] - 2026-09-24
 
 ### Fixed
 - **`ProcessUrlAsync` / `ProcessUrlsBatchAsync` produce chunks with a plain `AddWebFlux()` registration.** Two causes,

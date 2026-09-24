@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Playwright;
 using WebFlux.Core.Interfaces;
+using WebFlux.Core.Models;
 using WebFlux.Core.Options;
 using WebFlux.Services;
 
@@ -40,9 +41,10 @@ class Program
         // WebFlux + Playwright 서비스 등록
         services.AddWebFlux(options =>
         {
-            options.MaxConcurrency = 2;  // 동적 크롤링은 리소스 사용량이 많으므로 동시 실행 제한
-            options.UserAgent = "WebFlux-Playwright-Example/1.0";
-            options.RequestDelay = TimeSpan.FromSeconds(1);  // 동적 페이지는 더 긴 대기 시간 필요
+            options.Crawling.Strategy = CrawlStrategy.Dynamic;
+            options.Crawling.MaxConcurrentRequests = 2;  // 동적 크롤링은 리소스 사용량이 많으므로 동시 실행 제한
+            options.Crawling.DefaultUserAgent = "WebFlux-Playwright-Example/1.0";
+            options.Crawling.DefaultDelayMs = 1000;  // 동적 페이지는 더 긴 대기 시간 필요
         });
 
         // Playwright 지원 활성화

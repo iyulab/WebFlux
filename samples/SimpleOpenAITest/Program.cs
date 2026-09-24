@@ -71,7 +71,7 @@ public class SimpleOpenAITest
             // WebFlux SDK 등록 (Phase 1: Dynamic Rendering + AI Enhancement)
             services.AddWebFlux(config =>
             {
-                config.Crawling.Strategy = "Dynamic";
+                config.Crawling.Strategy = CrawlStrategy.Dynamic;
                 config.Crawling.DefaultTimeoutSeconds = 30;
                 config.Crawling.DefaultDelayMs = 500;
 

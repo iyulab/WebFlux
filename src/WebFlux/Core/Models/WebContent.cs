@@ -135,43 +135,10 @@ public class ExtractedContent
 }
 
 /// <summary>
-/// 크롤링 구성
-/// </summary>
-public class CrawlConfiguration
-{
-    /// <summary>시작 URL들</summary>
-    public List<string> StartUrls { get; set; } = new();
-
-    /// <summary>크롤링 전략</summary>
-    public CrawlStrategy Strategy { get; set; } = CrawlStrategy.BreadthFirst;
-
-    /// <summary>최대 페이지 수</summary>
-    public int MaxPages { get; set; } = 100;
-
-    /// <summary>최대 깊이</summary>
-    public int MaxDepth { get; set; } = 3;
-
-    /// <summary>최대 동시 요청 수</summary>
-    public int MaxConcurrentRequests { get; set; } = 5;
-
-    /// <summary>요청 간 지연</summary>
-    public TimeSpan DelayBetweenRequests { get; set; } = TimeSpan.FromMilliseconds(1000);
-
-    /// <summary>허용 도메인</summary>
-    public List<string>? AllowedDomains { get; set; }
-
-    /// <summary>제외 패턴</summary>
-    public List<string>? ExcludePatterns { get; set; }
-}
-
-/// <summary>
-/// 추출 구성
+/// 추출 구성 — <see cref="WebFlux.Services.ContentExtractors.BaseContentExtractor"/> 를 상속하는 추출기가 받는다.
 /// </summary>
 public class ExtractionConfiguration
 {
-    /// <summary>링크 URL 포함 여부</summary>
-    public bool IncludeLinkUrls { get; set; }
-
     /// <summary>공백 정규화 여부</summary>
     public bool NormalizeWhitespace { get; set; } = true;
 
@@ -184,7 +151,6 @@ public class ExtractionConfiguration
     /// <summary>최대 텍스트 길이 (0은 제한 없음)</summary>
     public int MaxTextLength { get; set; }
 }
-
 
 /// <summary>
 /// 크롤 상태

@@ -38,8 +38,8 @@ class Program
         // WebFlux 핵심 서비스 등록
         services.AddWebFlux(options =>
         {
-            options.MaxConcurrency = 2;
-            options.UserAgent = "WebFlux-AI-Example/1.0";
+            options.Crawling.MaxConcurrentRequests = 2;
+            options.Crawling.DefaultUserAgent = "WebFlux-AI-Example/1.0";
         });
 
         // OpenAI 서비스 등록

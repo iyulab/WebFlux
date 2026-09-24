@@ -22,13 +22,13 @@ class Program
         services.AddWebFlux(options =>
         {
             // 크롤링 옵션 설정
-            options.MaxConcurrency = 3;
-            options.UserAgent = "WebFlux-Example/1.0";
-            options.RequestDelay = TimeSpan.FromMilliseconds(500);
+            options.Crawling.MaxConcurrentRequests = 3;
+            options.Crawling.DefaultUserAgent = "WebFlux-Example/1.0";
+            options.Crawling.DefaultDelayMs = 500;
 
             // 청킹 옵션 설정
-            options.DefaultChunkSize = 512;
-            options.ChunkOverlap = 50;
+            options.Chunking.MaxChunkSize = 512;
+            options.Chunking.OverlapSize = 50;
         });
 
         var serviceProvider = services.BuildServiceProvider();
