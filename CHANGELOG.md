@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.16.0] - unreleased
+## [0.16.0] - 2026-09-24
 
 ### Added
 - **`CrawlingConfiguration.MaxDepth` and `MaxPages`** (defaults 3 and 100). A configuration-driven site crawl
