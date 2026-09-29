@@ -26,6 +26,11 @@ All notable changes to this project will be documented in this file.
   (use `UrlProcessedEvent`), `ChunkingStartedEvent`, `ChunkingCompletedEvent` (use `ChunkGeneratedEvent`),
   `ImageProcessedEvent`, `ErrorOccurredEvent`, `PerformanceMetricsEvent` (use the `*Failed` events), and
   `CompositeEventSubscription`. A subscription to one of them never fired.
+- **Breaking**: `IProgressReporter`/`IProgressTracker`, `ICrawlProgressReporter`/`ICrawlProgressTracker`,
+  `CrawlProgressReporter` and their models (`ProgressInfo`, `JobProgress`, `JobStatus`, `ProgressLogEntry`, `ProgressLogLevel`,
+  `ProgressStatistics`, `CrawlProgress`, `CrawlError`, `CrawlStatisticsDetails`, `CrawlErrorTypes`). The first had no
+  implementation; the second was never registered or called, so no crawl ever reported through it. Progress is the event
+  stream above: per-URL, per-chunk, every 10 chunks, and at the end.
 
 ## [0.17.0] - 2026-09-29
 

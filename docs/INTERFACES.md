@@ -155,18 +155,6 @@ public interface IWebDocumentMetadataExtractor
 }
 ```
 
-### ICrawlProgressReporter (v0.1.7)
-
-크롤링 진행 상황 리포팅 인터페이스입니다.
-
-```csharp
-public interface ICrawlProgressReporter
-{
-    IAsyncEnumerable<CrawlProgress> ReportProgressAsync(
-        CancellationToken cancellationToken = default);
-}
-```
-
 ## SDK-Provided Interfaces
 
 WebFlux가 제공하는 핵심 인터페이스입니다.

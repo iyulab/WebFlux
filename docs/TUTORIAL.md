@@ -12,7 +12,6 @@
    - [ITextCompletionService](#itextcompletionservice-선택적)
    - [IWebContentProcessor](#iwebcontentprocessor)
    - [IChunkingStrategy](#ichunkingstrategy)
-   - [IProgressReporter](#iprogressreporter)
    - [IEventPublisher](#ieventpublisher)
 5. [고급 사용법](#고급-사용법)
 6. [실전 시나리오](#실전-시나리오)
@@ -548,62 +547,10 @@ services.AddScoped<IChunkingStrategy, SentenceBasedChunkingStrategy>();
 
 ### 진행률 모니터링
 
-#### IProgressReporter
+#### 진행률은 이벤트로
 
-처리 진행률을 실시간으로 추적하고 보고합니다.
-
-**인터페이스 정의:**
-```csharp
-public interface IProgressReporter
-{
-    Task<IProgressTracker> StartJobAsync(string jobId, string description, int totalSteps);
-    Task ReportProgressAsync(string jobId, ProgressInfo progress);
-    Task CompleteJobAsync(string jobId, object? result = null);
-    Task FailJobAsync(string jobId, Exception error);
-    IAsyncEnumerable<ProgressInfo> MonitorProgressAsync(string jobId, CancellationToken cancellationToken = default);
-    Task<IReadOnlyList<JobProgress>> GetAllJobsAsync();
-    Task<JobProgress?> GetJobProgressAsync(string jobId);
-}
-```
-
-**사용 예제:**
-```csharp
-var progressReporter = serviceProvider.GetRequiredService<IProgressReporter>();
-
-// 작업 시작
-var jobId = Guid.NewGuid().ToString();
-var tracker = await progressReporter.StartJobAsync(jobId, "웹사이트 크롤링", totalSteps: 3);
-
-try
-{
-    // 단계 1: 크롤링
-    await tracker.UpdateStepAsync("크롤링", 0, "페이지 수집 중...");
-    await CrawlWebsiteAsync();
-
-    // 단계 2: 추출
-    await tracker.UpdateStepAsync("콘텐츠 추출", 1, "HTML 파싱 중...");
-    await ExtractContentAsync();
-
-    // 단계 3: 청킹
-    await tracker.UpdateStepAsync("청킹", 2, "청크 생성 중...");
-    await ChunkContentAsync();
-
-    // 완료
-    await tracker.CompleteAsync(new { TotalChunks = 150 });
-}
-catch (Exception ex)
-{
-    await tracker.FailAsync(ex);
-}
-
-// 진행률 모니터링 (별도 작업)
-await foreach (var progress in progressReporter.MonitorProgressAsync(jobId))
-{
-    Console.WriteLine($"[{progress.StepName}] {progress.Progress:P0} - {progress.Details}");
-}
-```
-
----
+진행률은 [`IEventPublisher`](#ieventpublisher)로 받습니다. 처리 실행마다 `ProcessingStartedEvent`, 청크마다 `ChunkGeneratedEvent`, 청크 10개마다 `ProcessingProgressEvent`,
+끝에 `ProcessingCompletedEvent`(또는 `ProcessingFailedEvent`)가 발행되고, 크롤러가 가져오는 URL마다 `UrlProcessingStartedEvent` → `UrlProcessedEvent`/`UrlProcessingFailedEvent`가 발행됩니다.
 
 #### IEventPublisher
 
