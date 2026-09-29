@@ -24,6 +24,8 @@
     <!-- MTP equivalent of the ecosystem's VSTest blame-hang convention (BD-20260828-07) -->
     <PackageReference Include="Microsoft.Testing.Extensions.HangDump" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
+    <!-- The tutorial's provider examples are written against the OpenAI SDK; DocSnippetCompileTests compiles them. -->
+    <PackageReference Include="OpenAI" />
   </ItemGroup>
 
   <ItemGroup>

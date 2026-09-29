@@ -8,7 +8,7 @@
 2. [첫 번째 프로젝트](#첫-번째-프로젝트)
 3. [기본 사용법](#기본-사용법)
 4. [핵심 인터페이스](#핵심-인터페이스)
-   - [ITextEmbeddingService](#itextembeddingservice-필수)
+   - [ITextEmbeddingService](#itextembeddingservice-선택적)
    - [ITextCompletionService](#itextcompletionservice-선택적)
    - [IWebContentProcessor](#iwebcontentprocessor)
    - [IChunkingStrategy](#ichunkingstrategy)
@@ -24,7 +24,7 @@
 ### 요구사항
 
 - .NET 10 이상
-- AI 서비스 (OpenAI, Azure OpenAI, Anthropic 등)
+- (선택) AI 서비스 (OpenAI, Azure OpenAI, Anthropic 등)
 
 ### NuGet 패키지 설치
 
@@ -34,7 +34,8 @@ dotnet add package WebFlux
 
 ### AI 서비스 준비
 
-WebFlux는 임베딩 생성을 위한 AI 서비스가 필요합니다. 지원하는 서비스:
+크롤링·추출·청킹은 AI 서비스 없이 동작합니다. AI 서비스를 등록하면 메타데이터 추출과 AI 증강
+(`ITextCompletionService`), Semantic 청킹(FluxCurator `IEmbedder`)이 켜집니다. 연결할 수 있는 서비스:
 
 - OpenAI (GPT-4, GPT-3.5, text-embedding-3-small/large)
 - Azure OpenAI
@@ -56,12 +57,12 @@ dotnet add package WebFlux
 dotnet add package OpenAI  # 또는 선호하는 AI SDK
 ```
 
-### 2단계: AI 서비스 구현
+### 2단계: AI 서비스 구현 (선택)
 
-OpenAI를 사용하는 경우:
+크롤링·청킹은 AI 서비스 없이 동작하므로 이 단계는 건너뛰어도 됩니다. 청크를 벡터 DB 에 넣으려면 임베딩
+서비스가 필요합니다. OpenAI를 사용하는 경우:
 
 ```csharp
-using OpenAI;
 using OpenAI.Embeddings;
 using WebFlux.Core.Interfaces;
 
@@ -78,9 +79,20 @@ public class OpenAIEmbeddingService : ITextEmbeddingService
         string text,
         CancellationToken cancellationToken = default)
     {
-        var response = await _client.GenerateEmbeddingAsync(text, cancellationToken);
+        var response = await _client.GenerateEmbeddingAsync(text, cancellationToken: cancellationToken);
         return response.Value.ToFloats().ToArray();
     }
+
+    public async Task<IReadOnlyList<float[]>> GetEmbeddingsAsync(
+        IReadOnlyList<string> texts,
+        CancellationToken cancellationToken = default)
+    {
+        var response = await _client.GenerateEmbeddingsAsync(texts, cancellationToken: cancellationToken);
+        return response.Value.Select(e => e.ToFloats().ToArray()).ToList();
+    }
+
+    public int MaxTokens => 8191;
+    public int EmbeddingDimension => 1536;
 }
 ```
 
@@ -184,26 +196,19 @@ var crawlOptions = new CrawlOptions
 
 WebFlux는 **Interface Provider** 패턴을 사용합니다. 라이브러리는 인터페이스를 정의하고, 소비 애플리케이션이 구현체를 제공합니다.
 
-### 필수 AI 서비스 인터페이스
+### AI 서비스 인터페이스
 
-#### ITextEmbeddingService (필수)
+#### ITextEmbeddingService (선택적)
 
-텍스트를 벡터 임베딩으로 변환하는 서비스입니다. Semantic 청킹 전략에 필수입니다.
+텍스트를 벡터 임베딩으로 변환하는 서비스 계약입니다. WebFlux 파이프라인은 이 서비스를 호출하지 않습니다 — 청크를
+벡터 DB 에 넣을 때 여러분의 코드가 씁니다. Semantic 청킹은 이 인터페이스가 아니라 FluxCurator
+`IEmbedder`(`FluxCurator.Core.Core.IEmbedder`)를 `AddWebFlux()` 전에 등록해야 켜집니다.
 
-**인터페이스 정의:**
-```csharp
-public interface ITextEmbeddingService
-{
-    Task<float[]> GetEmbeddingAsync(string text, CancellationToken cancellationToken = default);
-    Task<IReadOnlyList<float[]>> GetEmbeddingsAsync(IReadOnlyList<string> texts, CancellationToken cancellationToken = default);
-    int MaxTokens { get; }
-    int EmbeddingDimension { get; }
-}
-```
+멤버(`GetEmbeddingAsync`, `GetEmbeddingsAsync`, `MaxTokens`, `EmbeddingDimension`)는
+[소스](../src/WebFlux/Core/Interfaces/ITextEmbeddingService.cs)의 XML 문서를 참고하세요.
 
 **OpenAI 구현 예제:**
 ```csharp
-using OpenAI;
 using OpenAI.Embeddings;
 
 public class OpenAIEmbeddingService : ITextEmbeddingService
@@ -217,7 +222,7 @@ public class OpenAIEmbeddingService : ITextEmbeddingService
 
     public async Task<float[]> GetEmbeddingAsync(string text, CancellationToken cancellationToken = default)
     {
-        var response = await _client.GenerateEmbeddingAsync(text, cancellationToken);
+        var response = await _client.GenerateEmbeddingAsync(text, cancellationToken: cancellationToken);
         return response.Value.ToFloats().ToArray();
     }
 
@@ -225,8 +230,8 @@ public class OpenAIEmbeddingService : ITextEmbeddingService
         IReadOnlyList<string> texts,
         CancellationToken cancellationToken = default)
     {
-        var tasks = texts.Select(t => GetEmbeddingAsync(t, cancellationToken));
-        return await Task.WhenAll(tasks);
+        var response = await _client.GenerateEmbeddingsAsync(texts, cancellationToken: cancellationToken);
+        return response.Value.Select(e => e.ToFloats().ToArray()).ToList();
     }
 
     public int MaxTokens => 8191;
@@ -237,7 +242,8 @@ public class OpenAIEmbeddingService : ITextEmbeddingService
 **서비스 등록:**
 ```csharp
 services.AddScoped<ITextEmbeddingService>(sp =>
-    new OpenAIEmbeddingService(Environment.GetEnvironmentVariable("OPENAI_API_KEY")));
+    new OpenAIEmbeddingService(Environment.GetEnvironmentVariable("OPENAI_API_KEY")
+        ?? throw new InvalidOperationException("OPENAI_API_KEY is not set")));
 ```
 
 ---
@@ -246,21 +252,17 @@ services.AddScoped<ITextEmbeddingService>(sp =>
 
 LLM 텍스트 완성 서비스입니다. AI 증강(요약·재작성)과 메타데이터 추출에 사용됩니다.
 
-**인터페이스 정의:**
-```csharp
-public interface ITextCompletionService
-{
-    Task<string> CompleteAsync(string prompt, TextCompletionOptions? options = null, CancellationToken cancellationToken = default);
-    IAsyncEnumerable<string> CompleteStreamAsync(string prompt, TextCompletionOptions? options = null, CancellationToken cancellationToken = default);
-    Task<IReadOnlyList<string>> CompleteBatchAsync(IEnumerable<string> prompts, TextCompletionOptions? options = null, CancellationToken cancellationToken = default);
-    Task<bool> IsAvailableAsync(CancellationToken cancellationToken = default);
-    ServiceHealthInfo GetHealthInfo();
-}
-```
+공유 계약 패키지 [`Flux.Abstractions`](https://www.nuget.org/packages/Flux.Abstractions/)의 인터페이스로,
+`CompleteAsync` 만 구현하면 됩니다 — `CompleteJsonAsync`·`CompleteBatchAsync`·`CompleteStreamAsync` 는 기본 구현이
+있습니다(스트리밍을 지원하는 SDK 라면 `CompleteStreamAsync` 를 직접 구현하세요). 상태 확인(`IsAvailableAsync`,
+`GetHealthInfo`)까지 제공하려면 이를 확장한 `WebFlux.Core.Interfaces.IWebLlmService` 를 구현하고
+`AddWebFluxAIServices<TService>()` 로 등록합니다.
 
 **OpenAI GPT-4 구현 예제:**
 ```csharp
+using Flux.Abstractions;
 using OpenAI.Chat;
+using TextCompletionOptions = Flux.Abstractions.TextCompletionOptions;
 
 public class OpenAICompletionService : ITextCompletionService
 {
@@ -276,8 +278,8 @@ public class OpenAICompletionService : ITextCompletionService
         TextCompletionOptions? options = null,
         CancellationToken cancellationToken = default)
     {
-        var messages = new[] { new ChatMessage(ChatRole.User, prompt) };
-        var response = await _client.CompleteChatAsync(messages, cancellationToken: cancellationToken);
+        ChatMessage[] messages = [new UserChatMessage(prompt)];
+        var response = await _client.CompleteChatAsync(messages, ToChatOptions(options), cancellationToken);
         return response.Value.Content[0].Text;
     }
 
@@ -286,8 +288,8 @@ public class OpenAICompletionService : ITextCompletionService
         TextCompletionOptions? options = null,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        var messages = new[] { new ChatMessage(ChatRole.User, prompt) };
-        await foreach (var update in _client.CompleteChatStreamingAsync(messages, cancellationToken: cancellationToken))
+        ChatMessage[] messages = [new UserChatMessage(prompt)];
+        await foreach (var update in _client.CompleteChatStreamingAsync(messages, ToChatOptions(options), cancellationToken))
         {
             foreach (var content in update.ContentUpdate)
             {
@@ -296,27 +298,25 @@ public class OpenAICompletionService : ITextCompletionService
         }
     }
 
-    public async Task<bool> IsAvailableAsync(CancellationToken cancellationToken = default)
+    private static ChatCompletionOptions ToChatOptions(TextCompletionOptions? options) => new()
     {
-        try
-        {
-            await CompleteAsync("test", cancellationToken: cancellationToken);
-            return true;
-        }
-        catch { return false; }
-    }
-
-    public ServiceHealthInfo GetHealthInfo()
-    {
-        return new ServiceHealthInfo { IsHealthy = true, ServiceName = "OpenAI GPT-4" };
-    }
+        Temperature = options?.Temperature,
+        MaxOutputTokenCount = options?.MaxTokens,
+    };
 }
 ```
 
 **서비스 등록:**
 ```csharp
+using Flux.Abstractions;
+
 services.AddScoped<ITextCompletionService>(sp =>
-    new OpenAICompletionService(Environment.GetEnvironmentVariable("OPENAI_API_KEY"), "gpt-4"));
+    new OpenAICompletionService(Environment.GetEnvironmentVariable("OPENAI_API_KEY")
+        ?? throw new InvalidOperationException("OPENAI_API_KEY is not set"), "gpt-4"));
+
+// AI 증강(요약·재작성)은 구성에서 켜고 증강 서비스를 등록한다
+services.AddWebFlux(config => config.AiEnhancement.Enabled = true);
+services.AddWebFluxAIEnhancement();
 ```
 
 ---
@@ -324,30 +324,34 @@ services.AddScoped<ITextCompletionService>(sp =>
 #### IWebMetadataExtractor (선택적)
 
 웹 콘텐츠에서 AI 기반으로 메타데이터를 추출하는 서비스입니다. ITextCompletionService를 사용하여 콘텐츠를 분석하고 구조화된 메타데이터를 생성합니다.
+멤버(`ExtractAsync`, `ExtractBatchAsync`, `GetSupportedSchemas`, `GetSchemaDescription`)는
+[소스](../src/WebFlux/Core/Interfaces/IWebMetadataExtractor.cs)의 XML 문서를 참고하세요.
 
-**인터페이스 정의:**
+`AddWebFlux()` 는 이 인터페이스를 컨테이너에 등록하지 않습니다. 크롤 경로(`ProcessWebsiteAsync`)에서 옵션으로 켜면
+컨테이너의 `IWebMetadataExtractor` — 없으면 등록된 `ITextCompletionService` 로 만든 기본 추출기 — 가 실행되어
+추출 결과의 `Metadata` 에 병합됩니다:
+
 ```csharp
-public interface IWebMetadataExtractor
+var crawlOptions = new CrawlOptions
 {
-    Task<EnrichedMetadata> ExtractAsync(
-        string content,
-        string url,
-        HtmlMetadataSnapshot? htmlMetadata = null,
-        MetadataSchema schema = MetadataSchema.General,
-        string? customPrompt = null,
-        CancellationToken cancellationToken = default);
-
-    Task<IReadOnlyList<EnrichedMetadata>> ExtractBatchAsync(
-        IEnumerable<(string content, string url, HtmlMetadataSnapshot? htmlMetadata)> items,
-        MetadataSchema schema = MetadataSchema.General,
-        string? customPrompt = null,
-        CancellationToken cancellationToken = default);
-}
+    EnableMetadataExtraction = true,          // ITextCompletionService 등록 필요
+    MetadataSchema = MetadataSchema.TechnicalDoc
+};
 ```
 
-**사용 예제:**
+**직접 호출 예제** (컨테이너 밖에서는 기본 구현 `AIWebMetadataExtractor` 를 만든다):
 ```csharp
-var metadataExtractor = serviceProvider.GetRequiredService<IWebMetadataExtractor>();
+using Microsoft.Extensions.Logging.Abstractions;
+using WebFlux.Infrastructure.AI;
+
+var apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY")
+    ?? throw new InvalidOperationException("OPENAI_API_KEY is not set");
+var metadataExtractor = new AIWebMetadataExtractor(
+    new OpenAICompletionService(apiKey, "gpt-4"),
+    NullLogger<AIWebMetadataExtractor>.Instance);
+
+var documentText = await File.ReadAllTextAsync("useState.md");
+var blogPost = await File.ReadAllTextAsync("post.md");
 
 // 기술 문서 메타데이터 추출
 var technicalMetadata = await metadataExtractor.ExtractAsync(
@@ -357,7 +361,7 @@ var technicalMetadata = await metadataExtractor.ExtractAsync(
 );
 
 Console.WriteLine($"주제: {string.Join(", ", technicalMetadata.Topics)}");
-Console.WriteLine($"라이브러리: {technicalMetadata.SchemaSpecificData["libraries"]}");
+Console.WriteLine($"라이브러리: {technicalMetadata.SchemaSpecificData.GetValueOrDefault("libraries")}");
 
 // 블로그 기사 메타데이터 추출
 var articleMetadata = await metadataExtractor.ExtractAsync(
@@ -368,7 +372,7 @@ var articleMetadata = await metadataExtractor.ExtractAsync(
 
 Console.WriteLine($"작성자: {articleMetadata.Author}");
 Console.WriteLine($"작성일: {articleMetadata.PublishedDate}");
-Console.WriteLine($"태그: {string.Join(", ", articleMetadata.SchemaSpecificData["tags"])}");
+Console.WriteLine($"키워드: {string.Join(", ", articleMetadata.Keywords)}");
 ```
 
 ---
@@ -379,44 +383,13 @@ Console.WriteLine($"태그: {string.Join(", ", articleMetadata.SchemaSpecificDat
 
 웹 콘텐츠 처리의 메인 진입점입니다. 크롤링부터 청킹까지 전체 파이프라인을 관리합니다.
 
-**주요 메서드:**
-```csharp
-// IWebContentProcessor는 IContentExtractService + IContentChunkService 파사드
-public interface IWebContentProcessor : IContentExtractService, IContentChunkService
-{
-    IReadOnlyList<string> GetAvailableChunkingStrategies();
-}
-
-// IContentChunkService — 청킹까지 처리
-public interface IContentChunkService
-{
-    // 단일 URL 처리
-    Task<IReadOnlyList<WebContentChunk>> ProcessUrlAsync(
-        string url,
-        ChunkingOptions? chunkingOptions = null,
-        CancellationToken cancellationToken = default);
-
-    // 여러 URL 배치 처리
-    Task<IReadOnlyDictionary<string, IReadOnlyList<WebContentChunk>>> ProcessUrlsBatchAsync(
-        IEnumerable<string> urls,
-        ChunkingOptions? chunkingOptions = null,
-        CancellationToken cancellationToken = default);
-
-    // 웹사이트 전체 크롤링 (스트리밍)
-    IAsyncEnumerable<WebContentChunk> ProcessWebsiteAsync(
-        string startUrl,
-        CrawlOptions? crawlOptions = null,
-        ChunkingOptions? chunkingOptions = null,
-        CancellationToken cancellationToken = default);
-
-    // HTML 직접 처리
-    Task<IReadOnlyList<WebContentChunk>> ProcessHtmlAsync(
-        string htmlContent,
-        string sourceUrl,
-        ChunkingOptions? chunkingOptions = null,
-        CancellationToken cancellationToken = default);
-}
-```
+`IWebContentProcessor` 는 추출(`IContentExtractService` — `ExtractContentAsync`, `ExtractBatchAsync`,
+`ExtractBatchStreamAsync`)과 청킹(`IContentChunkService` — `ProcessUrlAsync`, `ProcessUrlsBatchAsync`,
+`ProcessWebsiteAsync`, `ProcessHtmlAsync`)을 묶은 파사드이고, `GetAvailableChunkingStrategies()` 를 더합니다.
+시그니처와 옵션 설명은 소스의 XML 문서를 참고하세요:
+[IWebContentProcessor](../src/WebFlux/Core/Interfaces/IWebContentProcessor.cs) ·
+[IContentExtractService](../src/WebFlux/Core/Interfaces/IContentExtractService.cs) ·
+[IContentChunkService](../src/WebFlux/Core/Interfaces/IContentChunkService.cs).
 
 **사용 예제:**
 ```csharp
@@ -435,7 +408,7 @@ await foreach (var chunk in processor.ProcessWebsiteAsync(
     new CrawlOptions { MaxDepth = 2, MaxPages = 100 },
     new ChunkingOptions { Strategy = ChunkingStrategyType.Auto }))
 {
-    Console.WriteLine($"청크 생성: {chunk.ChunkId}");
+    Console.WriteLine($"청크 생성: {chunk.Id}");
 }
 
 // 4. HTML 직접 처리
@@ -453,30 +426,29 @@ Console.WriteLine($"사용 가능한 전략: {string.Join(", ", strategies)}");
 
 #### IChunkingStrategy
 
-청킹 전략 인터페이스입니다. 커스텀 청킹 로직을 구현할 수 있습니다.
+청킹 전략 인터페이스입니다. 커스텀 청킹 로직을 구현할 수 있습니다. 멤버(`Name`, `Description`, `ChunkAsync`)는
+[소스](../src/WebFlux/Core/Interfaces/IChunkingStrategy.cs)의 XML 문서를 참고하세요.
 
-**인터페이스 정의:**
+내장 전략은 `ChunkingOptions.Strategy`(enum)로 고르며, 전략 팩토리는 내장 전략만 만듭니다 — 컨테이너에
+`IChunkingStrategy` 를 추가 등록해도 `ProcessUrlAsync` 가 그것을 고르지 않습니다. 커스텀 전략은 추출 결과
+(`ExtractContentAsync`)에 직접 적용합니다.
+
+**커스텀 전략 구현 및 사용 예제:**
 ```csharp
-public interface IChunkingStrategy
+// 사용: 추출한 콘텐츠에 커스텀 전략을 직접 적용한다
+var extracted = await processor.ExtractContentAsync(url);
+if (extracted.IsSuccess && extracted.Data is { } content)
 {
-    string Name { get; }
-    string Description { get; }
-
-    Task<IReadOnlyList<WebContentChunk>> ChunkAsync(
-        ExtractedContent content,
-        ChunkingOptions? options = null,
-        CancellationToken cancellationToken = default);
+    var chunks = await new SentenceBasedChunkingStrategy().ChunkAsync(content, new ChunkingOptions { MaxChunkSize = 512 });
+    Console.WriteLine($"생성된 청크 수: {chunks.Count}");
 }
-```
 
-**커스텀 전략 구현 예제:**
-```csharp
 public class SentenceBasedChunkingStrategy : IChunkingStrategy
 {
     public string Name => "SentenceBased";
     public string Description => "문장 경계 기반 청킹 전략";
 
-    public async Task<IReadOnlyList<WebContentChunk>> ChunkAsync(
+    public Task<IReadOnlyList<WebContentChunk>> ChunkAsync(
         ExtractedContent content,
         ChunkingOptions? options = null,
         CancellationToken cancellationToken = default)
@@ -496,15 +468,7 @@ public class SentenceBasedChunkingStrategy : IChunkingStrategy
             if (currentChunk.Length + sentence.Length > maxSize && currentChunk.Length > 0)
             {
                 // 청크 생성
-                chunks.Add(new WebContentChunk
-                {
-                    ChunkId = Guid.NewGuid().ToString(),
-                    ChunkIndex = chunkIndex++,
-                    Content = currentChunk.ToString().Trim(),
-                    SourceUrl = content.SourceUrl,
-                    ContentType = content.ContentType,
-                    AdditionalMetadata = content.Metadata
-                });
+                chunks.Add(CreateChunk(content, currentChunk.ToString().Trim(), chunkIndex++));
 
                 // 오버랩 처리
                 var overlapText = GetLastNCharacters(currentChunk.ToString(), overlapSize);
@@ -517,30 +481,27 @@ public class SentenceBasedChunkingStrategy : IChunkingStrategy
         // 마지막 청크
         if (currentChunk.Length > 0)
         {
-            chunks.Add(new WebContentChunk
-            {
-                ChunkId = Guid.NewGuid().ToString(),
-                ChunkIndex = chunkIndex,
-                Content = currentChunk.ToString().Trim(),
-                SourceUrl = content.SourceUrl,
-                ContentType = content.ContentType,
-                AdditionalMetadata = content.Metadata
-            });
+            chunks.Add(CreateChunk(content, currentChunk.ToString().Trim(), chunkIndex));
         }
 
-        return chunks;
+        return Task.FromResult<IReadOnlyList<WebContentChunk>>(chunks);
     }
 
-    private string GetLastNCharacters(string text, int n)
+    private WebContentChunk CreateChunk(ExtractedContent content, string text, int sequenceNumber) => new()
+    {
+        Id = Guid.NewGuid().ToString(),
+        SequenceNumber = sequenceNumber,
+        Content = text,
+        Title = content.Title,
+        SourceUrl = content.SourceUrl,
+        StrategyInfo = new ChunkingStrategyInfo { StrategyName = Name }
+    };
+
+    private static string GetLastNCharacters(string text, int n)
     {
         return text.Length > n ? text.Substring(text.Length - n) : text;
     }
 }
-```
-
-**서비스 등록:**
-```csharp
-services.AddScoped<IChunkingStrategy, SentenceBasedChunkingStrategy>();
 ```
 
 ---
@@ -554,20 +515,8 @@ services.AddScoped<IChunkingStrategy, SentenceBasedChunkingStrategy>();
 
 #### IEventPublisher
 
-시스템 이벤트를 발행하고 구독합니다.
-
-**인터페이스 정의:**
-```csharp
-public interface IEventPublisher
-{
-    Task PublishAsync(ProcessingEvent processingEvent, CancellationToken cancellationToken = default);
-    void Publish(ProcessingEvent processingEvent);
-    IDisposable Subscribe<T>(Func<T, Task> handler) where T : ProcessingEvent;
-    IDisposable Subscribe<T>(Action<T> handler) where T : ProcessingEvent;
-    IDisposable SubscribeAll(Func<ProcessingEvent, Task> handler);
-    EventPublishingStatistics GetStatistics();
-}
-```
+시스템 이벤트를 발행하고 구독합니다. 멤버(`PublishAsync`, `Publish`, `Subscribe<T>`, `SubscribeAll`,
+`GetStatistics`)는 [소스](../src/WebFlux/Core/Interfaces/IEventPublisher.cs)의 XML 문서를 참고하세요.
 
 **사용 예제:**
 ```csharp
@@ -590,15 +539,19 @@ using var s2 = eventPublisher.Subscribe<ChunkGeneratedEvent>(evt =>
 });
 
 // 모든 이벤트 구독
-using var sAll = eventPublisher.SubscribeAll(async evt =>
+using var sAll = eventPublisher.SubscribeAll(evt =>
 {
     Console.WriteLine($"[{evt.EventType}] {evt.Timestamp}");
+    return Task.CompletedTask;
 });
 
 // 통계 확인
 var stats = eventPublisher.GetStatistics();
 Console.WriteLine($"총 발행 이벤트: {stats.TotalEventsPublished}");
 Console.WriteLine($"구독자 수: {stats.SubscriberCount}");
+
+// 여러분의 저장 로직
+static Task LogToDatabase(UrlProcessedEvent evt) => Task.CompletedTask;
 ```
 
 ---
@@ -610,24 +563,48 @@ Console.WriteLine($"구독자 수: {stats.SubscriberCount}");
 대규모 웹사이트를 처리할 때 메모리 효율적인 스트리밍 방식:
 
 ```csharp
-var crawlOptions = new CrawlOptions { MaxPages = 100 };
-var chunkOptions = new ChunkingOptions { Strategy = ChunkingStrategyType.Auto };
-
-await foreach (var chunk in processor.ProcessWebsiteAsync(
-    "https://docs.example.com",
-    crawlOptions,
-    chunkOptions))
+public class StreamingIndexer(
+    IWebContentProcessor processor,
+    ITextEmbeddingService embeddingService,
+    IVectorDatabase vectorDb)
 {
-    // 청크 생성 즉시 벡터 DB에 저장
-    await vectorDb.InsertAsync(new VectorEntry
+    public async Task IndexAsync(CancellationToken cancellationToken = default)
     {
-        Id = chunk.ChunkId,
-        Content = chunk.Content,
-        Embedding = await embeddingService.GetEmbeddingAsync(chunk.Content),
-        Metadata = chunk.AdditionalMetadata
-    });
+        var crawlOptions = new CrawlOptions { MaxPages = 100 };
+        var chunkOptions = new ChunkingOptions { Strategy = ChunkingStrategyType.Auto };
 
-    Console.WriteLine($"처리됨: {chunk.SourceUrl}");
+        await foreach (var chunk in processor.ProcessWebsiteAsync(
+            "https://docs.example.com",
+            crawlOptions,
+            chunkOptions,
+            cancellationToken))
+        {
+            // 청크 생성 즉시 벡터 DB에 저장
+            await vectorDb.InsertAsync(new VectorEntry
+            {
+                Id = chunk.Id,
+                Content = chunk.Content,
+                Embedding = await embeddingService.GetEmbeddingAsync(chunk.Content, cancellationToken),
+                Metadata = chunk.AdditionalMetadata
+            }, cancellationToken);
+
+            Console.WriteLine($"처리됨: {chunk.SourceUrl}");
+        }
+    }
+}
+
+// 벡터 DB 는 여러분의 저장소 코드다
+public interface IVectorDatabase
+{
+    Task InsertAsync(VectorEntry entry, CancellationToken cancellationToken = default);
+}
+
+public class VectorEntry
+{
+    public required string Id { get; init; }
+    public required string Content { get; init; }
+    public required float[] Embedding { get; init; }
+    public IReadOnlyDictionary<string, object> Metadata { get; init; } = new Dictionary<string, object>();
 }
 ```
 
@@ -645,6 +622,9 @@ await foreach (var chunk in processor.ProcessWebsiteAsync(
     Console.WriteLine($"✓ {chunk.SourceUrl} ({perPage[chunk.SourceUrl]} 청크)");
     await SaveChunkAsync(chunk);
 }
+
+// 여러분의 저장 로직
+static Task SaveChunkAsync(WebContentChunk chunk) => Task.CompletedTask;
 ```
 
 ### 병렬 처리 설정
@@ -658,18 +638,29 @@ services.AddWebFlux(config =>
 
 ### 커스텀 청킹 전략
 
+전략 팩토리는 내장 전략만 만들므로, 커스텀 전략은 컨테이너에 등록하지 않고 추출 결과에 직접 적용합니다
+([IChunkingStrategy](#ichunkingstrategy) 참조).
+
 ```csharp
+// 사용
+var extracted = await processor.ExtractContentAsync(url);
+if (extracted.Data is { } content)
+{
+    var chunks = await new CustomChunkingStrategy().ChunkAsync(content, new ChunkingOptions());
+}
+
 public class CustomChunkingStrategy : IChunkingStrategy
 {
     public string Name => "Custom";
     public string Description => "커스텀 청킹 로직";
 
-    public async Task<IReadOnlyList<WebContentChunk>> ChunkAsync(
+    public Task<IReadOnlyList<WebContentChunk>> ChunkAsync(
         ExtractedContent content,
-        ChunkingOptions options,
+        ChunkingOptions? options = null,
         CancellationToken cancellationToken = default)
     {
         var chunks = new List<WebContentChunk>();
+        var maxSize = options?.MaxChunkSize ?? 512;
 
         // 커스텀 로직 구현
         var sentences = content.Text.Split(". ");
@@ -678,14 +669,15 @@ public class CustomChunkingStrategy : IChunkingStrategy
 
         foreach (var sentence in sentences)
         {
-            if (currentChunk.Length + sentence.Length > options.MaxChunkSize)
+            if (currentChunk.Length + sentence.Length > maxSize)
             {
                 chunks.Add(new WebContentChunk
                 {
-                    ChunkId = Guid.NewGuid().ToString(),
-                    ChunkIndex = chunkIndex++,
+                    Id = Guid.NewGuid().ToString(),
+                    SequenceNumber = chunkIndex++,
                     Content = currentChunk,
-                    SourceUrl = content.SourceUrl
+                    SourceUrl = content.SourceUrl,
+                    StrategyInfo = new ChunkingStrategyInfo { StrategyName = Name }
                 });
                 currentChunk = "";
             }
@@ -696,19 +688,17 @@ public class CustomChunkingStrategy : IChunkingStrategy
         {
             chunks.Add(new WebContentChunk
             {
-                ChunkId = Guid.NewGuid().ToString(),
-                ChunkIndex = chunkIndex,
+                Id = Guid.NewGuid().ToString(),
+                SequenceNumber = chunkIndex,
                 Content = currentChunk,
-                SourceUrl = content.SourceUrl
+                SourceUrl = content.SourceUrl,
+                StrategyInfo = new ChunkingStrategyInfo { StrategyName = Name }
             });
         }
 
-        return chunks;
+        return Task.FromResult<IReadOnlyList<WebContentChunk>>(chunks);
     }
 }
-
-// 등록
-services.AddScoped<IChunkingStrategy, CustomChunkingStrategy>();
 ```
 
 ---
@@ -718,11 +708,26 @@ services.AddScoped<IChunkingStrategy, CustomChunkingStrategy>();
 ### 시나리오 1: 기술 문서 RAG 시스템
 
 ```csharp
+using Flux.Abstractions;
+
 public class TechnicalDocumentationRAG
 {
     private readonly IWebContentProcessor _processor;
     private readonly IVectorDatabase _vectorDb;
     private readonly ITextEmbeddingService _embedding;
+    private readonly ITextCompletionService _completion;
+
+    public TechnicalDocumentationRAG(
+        IWebContentProcessor processor,
+        IVectorDatabase vectorDb,
+        ITextEmbeddingService embedding,
+        ITextCompletionService completion)
+    {
+        _processor = processor;
+        _vectorDb = vectorDb;
+        _embedding = embedding;
+        _completion = completion;
+    }
 
     public async Task IndexDocumentationAsync(string docsUrl)
     {
@@ -747,7 +752,7 @@ public class TechnicalDocumentationRAG
 
             await _vectorDb.UpsertAsync(new DocumentChunk
             {
-                Id = chunk.ChunkId,
+                Id = chunk.Id,
                 Content = chunk.Content,
                 Embedding = embedding,
                 Source = chunk.SourceUrl,
@@ -762,20 +767,36 @@ public class TechnicalDocumentationRAG
         var relevantChunks = await _vectorDb.SearchAsync(questionEmbedding, topK: 5);
 
         var context = string.Join("\n\n", relevantChunks.Select(c => c.Content));
-        return await GenerateAnswerAsync(question, context);
+        return await _completion.CompleteAsync($"다음 문서를 근거로 답하라.\n\n{context}\n\n질문: {question}");
     }
+}
+
+// 벡터 DB 는 여러분의 저장소 코드다
+public interface IVectorDatabase
+{
+    Task UpsertAsync(DocumentChunk chunk);
+    Task<IReadOnlyList<DocumentChunk>> SearchAsync(float[] embedding, int topK);
+}
+
+public class DocumentChunk
+{
+    public required string Id { get; init; }
+    public required string Content { get; init; }
+    public required float[] Embedding { get; init; }
+    public required string Source { get; init; }
+    public IReadOnlyDictionary<string, object> Metadata { get; init; } = new Dictionary<string, object>();
 }
 ```
 
 ### 시나리오 2: 블로그 콘텐츠 수집
 
 ```csharp
-public class BlogContentCollector
+using Flux.Abstractions;
+
+public class BlogContentCollector(IWebContentProcessor processor, ITextCompletionService completion)
 {
     public async Task CollectBlogPostsAsync(string blogUrl)
     {
-        var processor = GetProcessor();
-
         var options = new ChunkingOptions
         {
             Strategy = ChunkingStrategyType.Paragraph,  // 서술형 블로그 글: 문단 경계
@@ -789,21 +810,35 @@ public class BlogContentCollector
         {
             await SaveToDatabase(new BlogPost
             {
-                Title = ExtractTitle(post.AdditionalMetadata),
+                Title = post.Title ?? post.Metadata.Title,
                 Content = post.Content,
-                Summary = await GenerateSummaryAsync(post.Content),
-                PublishedDate = ExtractDate(post.AdditionalMetadata),
-                Author = ExtractAuthor(post.AdditionalMetadata)
+                Summary = await completion.CompleteAsync($"다음 글을 세 문장으로 요약하라:\n\n{post.Content}"),
+                PublishedDate = post.Metadata.PublishedDate,
+                Author = post.Metadata.Author
             });
         }
     }
+
+    // 여러분의 저장 로직
+    private static Task SaveToDatabase(BlogPost post) => Task.CompletedTask;
+}
+
+public class BlogPost
+{
+    public string? Title { get; init; }
+    public required string Content { get; init; }
+    public required string Summary { get; init; }
+    public DateTimeOffset? PublishedDate { get; init; }
+    public string? Author { get; init; }
 }
 ```
 
 ### 시나리오 3: 대용량 문서 처리
 
 ```csharp
-public class LargeDocumentProcessor
+using System.Diagnostics;
+
+public class LargeDocumentProcessor(IWebContentProcessor processor)
 {
     public async Task ProcessLargeWebsiteAsync(string url)
     {
@@ -817,7 +852,7 @@ public class LargeDocumentProcessor
         int totalChunks = 0;
         var stopwatch = Stopwatch.StartNew();
 
-        await foreach (var chunk in _processor.ProcessWebsiteAsync(
+        await foreach (var chunk in processor.ProcessWebsiteAsync(
             url,
             new CrawlOptions { MaxPages = 1000 },
             options))
@@ -835,13 +870,19 @@ public class LargeDocumentProcessor
         Console.WriteLine($"완료: {totalChunks} 청크, " +
             $"{stopwatch.Elapsed.TotalMinutes:F1}분 소요");
     }
+
+    // 여러분의 청크 처리 로직
+    private static Task ProcessChunkAsync(WebContentChunk chunk) => Task.CompletedTask;
 }
 ```
 
 ### 시나리오 4: 다국어 콘텐츠 처리
 
 ```csharp
-public class MultilingualContentProcessor
+public class MultilingualContentProcessor(
+    IWebContentProcessor processor,
+    ITextEmbeddingService embedding,
+    IVectorDatabase vectorDb)
 {
     public async Task ProcessMultilingualSiteAsync(string baseUrl)
     {
@@ -851,29 +892,35 @@ public class MultilingualContentProcessor
         {
             var url = $"{baseUrl}/{lang}";
 
-            var chunks = await _processor.ProcessUrlAsync(
+            var chunks = await processor.ProcessUrlAsync(
                 url,
                 new ChunkingOptions
                 {
-                    Strategy = ChunkingStrategyType.Semantic,
+                    Strategy = ChunkingStrategyType.Semantic,  // FluxCurator IEmbedder 등록 필요
                     MaxChunkSize = 512
                 });
 
             foreach (var chunk in chunks)
             {
                 // 언어별로 별도 인덱스에 저장
-                await _vectorDb.UpsertAsync(
+                await vectorDb.UpsertAsync(
                     index: $"docs_{lang}",
                     document: new
                     {
-                        Id = chunk.ChunkId,
+                        Id = chunk.Id,
                         Content = chunk.Content,
                         Language = lang,
-                        Embedding = await GetEmbeddingAsync(chunk.Content, lang)
+                        Embedding = await embedding.GetEmbeddingAsync(chunk.Content)
                     });
             }
         }
     }
+}
+
+// 벡터 DB 는 여러분의 저장소 코드다
+public interface IVectorDatabase
+{
+    Task UpsertAsync(string index, object document);
 }
 ```
 
@@ -898,6 +945,9 @@ await foreach (var chunk in processor.ProcessWebsiteAsync(url, chunkingOptions: 
 {
     await ProcessChunkImmediately(chunk);
 }
+
+// 여러분의 청크 처리 로직
+static Task ProcessChunkImmediately(WebContentChunk chunk) => Task.CompletedTask;
 ```
 
 ### 처리 속도 느림
@@ -951,25 +1001,34 @@ var crawlOptions = new CrawlOptions
 
 **해결책**:
 ```csharp
-public class ResilientEmbeddingService : ITextEmbeddingService
+// 기존 임베딩 서비스를 감싸 재시도를 더하는 데코레이터
+public class ResilientEmbeddingService(ITextEmbeddingService innerService) : ITextEmbeddingService
 {
-    public async Task<float[]> GetEmbeddingAsync(string text, CancellationToken ct)
+    public Task<float[]> GetEmbeddingAsync(string text, CancellationToken cancellationToken = default) =>
+        RetryAsync(ct => innerService.GetEmbeddingAsync(text, ct), cancellationToken);
+
+    public Task<IReadOnlyList<float[]>> GetEmbeddingsAsync(
+        IReadOnlyList<string> texts,
+        CancellationToken cancellationToken = default) =>
+        RetryAsync(ct => innerService.GetEmbeddingsAsync(texts, ct), cancellationToken);
+
+    public int MaxTokens => innerService.MaxTokens;
+    public int EmbeddingDimension => innerService.EmbeddingDimension;
+
+    private static async Task<T> RetryAsync<T>(Func<CancellationToken, Task<T>> call, CancellationToken ct)
     {
-        int retries = 3;
-        while (retries > 0)
+        const int maxAttempts = 3;
+        for (var attempt = 1; ; attempt++)
         {
             try
             {
-                return await _innerService.GetEmbeddingAsync(text, ct);
+                return await call(ct);
             }
-            catch (Exception ex)
+            catch (Exception) when (attempt < maxAttempts && !ct.IsCancellationRequested)
             {
-                retries--;
-                if (retries == 0) throw;
-                await Task.Delay(1000 * (4 - retries));  // 백오프
+                await Task.Delay(1000 * attempt, ct);  // 백오프
             }
         }
-        throw new Exception("Max retries exceeded");
     }
 }
 ```

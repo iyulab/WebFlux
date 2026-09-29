@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.Extensions.DependencyInjection;
 using WebFlux.Core.Interfaces;
 using WebFlux.Extensions;
@@ -11,34 +12,54 @@ using WebFlux.Extensions;
 namespace WebFlux.Tests;
 
 /// <summary>
-/// Compiles every <c>```csharp</c> block in README.md against the current assemblies, and resolves every service the
-/// README asks the container for. The Quick Start once began with <c>using WebFlux;</c> — a namespace that does not
-/// exist — and read <c>chunk.ChunkIndex</c>, which <see cref="WebFlux.Core.Models.WebContentChunk"/> implements only
-/// explicitly; nothing compiled it, so a consumer copying the front door got errors on its first line.
+/// Compiles every <c>```csharp</c> block in README.md and docs/TUTORIAL.md against the current assemblies, and resolves
+/// every service those documents ask the container for. The Quick Start once began with <c>using WebFlux;</c> — a
+/// namespace that does not exist — and read <c>chunk.ChunkIndex</c>, which <see cref="WebFlux.Core.Models.WebContentChunk"/>
+/// implements only explicitly; the tutorial had drifted further (27 of its 34 blocks did not compile). Nothing compiled
+/// either document, so a consumer copying them got errors on the first line.
 /// </summary>
 /// <remarks>
-/// A block is compiled as a top-level program: its <c>using</c> lines are hoisted, the common usings below are added, and
-/// the stand-ins below are declared when the block uses the name without declaring it — values a reader already has
-/// from the surrounding text (a built provider, the options a block passes), not part of what the block shows.
+/// A block with top-level statements is compiled as a program: its <c>using</c> lines are hoisted, the common usings below
+/// are added, and the stand-ins below are declared when the block uses the name without declaring it — values a reader
+/// already has from the surrounding text (a built provider, the options a block passes), not part of what the block
+/// shows. A block that only declares types is compiled as a library, without value stand-ins: nothing in it could see a
+/// top-level local, and a program needs an entry point the block never meant to have.
 /// </remarks>
-public class ReadmeSnippetCompileTests
+public class DocSnippetCompileTests
 {
+    // The documents whose blocks are compiled, with the number of C# blocks each is expected to hold at least — a
+    // parser that silently stops finding blocks would otherwise turn every theory row into "nothing to check".
+    private static readonly (string Path, int MinBlocks)[] Documents =
+    [
+        ("README.md", 6),
+        ("docs/TUTORIAL.md", 28),
+    ];
+
+    // Flux.Abstractions is deliberately not here: it declares TextCompletionOptions, as does WebFlux.Core.Options, so a
+    // block that implements ITextCompletionService names the namespace (and the alias) itself, as a reader must.
     private const string CommonUsings = """
         using System;
         using System.Collections.Generic;
+        using System.IO;
         using System.Linq;
+        using System.Runtime.CompilerServices;
+        using System.Text;
         using System.Threading;
         using System.Threading.Tasks;
         using Microsoft.Extensions.DependencyInjection;
         using Microsoft.Extensions.Logging;
         using WebFlux.Core.Interfaces;
+        using WebFlux.Core.Models;
+        using WebFlux.Core.Models.Events;
         using WebFlux.Core.Options;
+        using WebFlux.Extensions;
         """;
 
     private static readonly (string Name, string Declaration)[] StandIns =
     [
         ("services", "IServiceCollection services = null!;"),
         ("provider", "IServiceProvider provider = null!;"),
+        ("serviceProvider", "IServiceProvider serviceProvider = null!;"),
         ("processor", "IWebContentProcessor processor = null!;"),
         ("url", "string url = \"https://example.com\";"),
         ("urls", "IEnumerable<string> urls = [];"),
@@ -47,18 +68,29 @@ public class ReadmeSnippetCompileTests
         ("logger", "ILogger logger = null!;"),
     ];
 
-    // Types a block names as the reader's own (declared after the program's statements).
+    // Types a block names as the reader's own (declared after the program's statements): a one-line registration
+    // block names the service an earlier block of the same document implemented.
     private static readonly (string Name, string Declaration)[] TypeStandIns =
     [
         ("MyCompletionService",
             "sealed class MyCompletionService : Flux.Abstractions.ITextCompletionService { " +
             "public Task<string> CompleteAsync(string prompt, Flux.Abstractions.TextCompletionOptions? options = null, " +
             "CancellationToken cancellationToken = default) => Task.FromResult(\"\"); }"),
+        ("OpenAIEmbeddingService",
+            "sealed class OpenAIEmbeddingService(string apiKey) : ITextEmbeddingService { " +
+            "public Task<float[]> GetEmbeddingAsync(string text, CancellationToken cancellationToken = default) => Task.FromResult(Array.Empty<float>()); " +
+            "public Task<IReadOnlyList<float[]>> GetEmbeddingsAsync(IReadOnlyList<string> texts, CancellationToken cancellationToken = default) => " +
+            "Task.FromResult<IReadOnlyList<float[]>>([]); " +
+            "public int MaxTokens => 0; public int EmbeddingDimension => 0; }"),
+        ("OpenAICompletionService",
+            "sealed class OpenAICompletionService(string apiKey, string model) : Flux.Abstractions.ITextCompletionService { " +
+            "public Task<string> CompleteAsync(string prompt, Flux.Abstractions.TextCompletionOptions? options = null, " +
+            "CancellationToken cancellationToken = default) => Task.FromResult(\"\"); }"),
     ];
 
     private static readonly string[] AssembliesToLoad =
     [
-        "WebFlux", "Flux.Abstractions",
+        "WebFlux", "Flux.Abstractions", "OpenAI",
         "Microsoft.Extensions.DependencyInjection", "Microsoft.Extensions.DependencyInjection.Abstractions",
         "Microsoft.Extensions.Logging.Abstractions",
     ];
@@ -66,29 +98,33 @@ public class ReadmeSnippetCompileTests
     public static TheoryData<string> Blocks()
     {
         var data = new TheoryData<string>();
-        foreach (var block in ReadBlocks())
+        foreach (var (path, _) in Documents)
+        foreach (var block in ReadBlocks(path))
             data.Add(block.Key);
         return data;
     }
 
     [Theory]
     [MemberData(nameof(Blocks))]
-    public void ReadmeBlock_Compiles(string key)
+    public void DocBlock_Compiles(string key)
     {
-        var block = ReadBlocks().Single(b => b.Key == key);
+        var block = Documents.SelectMany(d => ReadBlocks(d.Path)).Single(b => b.Key == key);
 
         var errors = Compile(block.Code);
 
         Assert.True(errors.IsEmpty,
-            $"README block {key} does not compile against the current API:\n" +
+            $"Block {key} does not compile against the current API:\n" +
             string.Join("\n", errors.Select(e => e.ToString())) + "\n--- source ---\n" + Program(block.Code));
     }
 
     [Fact]
-    public void EveryReadmeBlock_IsFound()
+    public void EveryDocBlock_IsFound()
     {
-        var blocks = ReadBlocks();
-        Assert.True(blocks.Count >= 6, $"expected the README's C# blocks, found {blocks.Count}");
+        foreach (var (path, minBlocks) in Documents)
+        {
+            var count = ReadBlocks(path).Count;
+            Assert.True(count >= minBlocks, $"expected at least {minBlocks} C# blocks in {path}, found {count}");
+        }
     }
 
     /// <summary>Positive control: the compiler rejects what the old Quick Start did.</summary>
@@ -106,16 +142,18 @@ public class ReadmeSnippetCompileTests
 
     /// <summary>
     /// A block that compiles can still ask the container for a service <c>AddWebFlux()</c> never registers. Every
-    /// <c>GetRequiredService&lt;T&gt;()</c> the README names must resolve from a bare <c>AddWebFlux()</c>.
+    /// <c>GetRequiredService&lt;T&gt;()</c> the documents name must resolve from a bare <c>AddWebFlux()</c>.
     /// </summary>
     [Fact]
-    public void EveryServiceTheReadmeResolves_IsRegisteredByAddWebFlux()
+    public void EveryServiceTheDocsResolve_IsRegisteredByAddWebFlux()
     {
-        var names = Regex.Matches(File.ReadAllText(ReadmePath()), @"GetRequiredService<([A-Za-z_][\w\.]*)>\(\)")
-            .Select(m => m.Groups[1].Value)
-            .Distinct(StringComparer.Ordinal)
+        var names = Documents
+            .SelectMany(d => Regex.Matches(File.ReadAllText(DocPath(d.Path)), @"GetRequiredService<([A-Za-z_][\w\.]*)>\(\)")
+                .Select(m => (Doc: d.Path, Name: m.Groups[1].Value)))
+            .Distinct()
             .ToList();
-        Assert.NotEmpty(names);
+        foreach (var (path, _) in Documents)
+            Assert.Contains(names, n => n.Doc == path);
 
         var services = new ServiceCollection();
         services.AddLogging();
@@ -123,12 +161,12 @@ public class ReadmeSnippetCompileTests
         using var provider = services.BuildServiceProvider();
         using var scope = provider.CreateScope();
 
-        foreach (var name in names)
+        foreach (var (doc, name) in names)
         {
             var type = FindType(name);
-            Assert.True(type is not null, $"README resolves {name}, which no loaded WebFlux assembly declares");
+            Assert.True(type is not null, $"{doc} resolves {name}, which no loaded WebFlux assembly declares");
             Assert.True(scope.ServiceProvider.GetService(type!) is not null,
-                $"README resolves {name} from AddWebFlux(), which does not register it");
+                $"{doc} resolves {name} from AddWebFlux(), which does not register it");
         }
     }
 
@@ -168,9 +206,9 @@ public class ReadmeSnippetCompileTests
 
     private sealed record Block(string Key, string Heading, string Code);
 
-    private static List<Block> ReadBlocks()
+    private static List<Block> ReadBlocks(string path)
     {
-        var lines = File.ReadAllText(ReadmePath()).Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
+        var lines = File.ReadAllText(DocPath(path)).Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
         var blocks = new List<Block>();
         var heading = "(top)";
         for (var i = 0; i < lines.Length; i++)
@@ -184,26 +222,37 @@ public class ReadmeSnippetCompileTests
             var code = new StringBuilder();
             for (i++; i < lines.Length && lines[i].Trim() != "```"; i++)
                 code.AppendLine(lines[i]);
-            blocks.Add(new Block($"line {start}: {heading}", heading, code.ToString()));
+            blocks.Add(new Block($"{path} line {start}: {heading}", heading, code.ToString()));
         }
 
         return blocks;
     }
 
+    private static bool IsUsingDirective(string line) =>
+        line.StartsWith("using ", StringComparison.Ordinal) && line.TrimEnd().EndsWith(';')
+        && !line.StartsWith("using var ", StringComparison.Ordinal);
+
+    private static string Body(string code) =>
+        string.Join("\n", code.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n').Where(l => !IsUsingDirective(l)));
+
+    // A block with no top-level statement is only type declarations: compile it as a library.
+    private static bool HasStatements(string code) =>
+        CSharpSyntaxTree.ParseText(Body(code), new CSharpParseOptions(LanguageVersion.Latest))
+            .GetCompilationUnitRoot().Members.OfType<GlobalStatementSyntax>().Any();
+
     private static string Program(string code)
     {
         var lines = code.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
-        bool IsUsingDirective(string l) =>
-            l.StartsWith("using ", StringComparison.Ordinal) && l.TrimEnd().EndsWith(';')
-            && !l.StartsWith("using var ", StringComparison.Ordinal);
-
-        var body = string.Join("\n", lines.Where(l => !IsUsingDirective(l)));
+        var body = Body(code);
         bool Declares(string name) => Regex.IsMatch(body, $@"\b(var|[A-Z][\w<>?,\s]*)\s+{name}\s*[=;]");
-        var standIns = StandIns
-            .Where(s => Regex.IsMatch(body, $@"\b{s.Name}\b") && !Declares(s.Name))
-            .Select(s => s.Declaration);
+        var standIns = HasStatements(code)
+            ? StandIns
+                .Where(s => Regex.IsMatch(body, $@"\b{s.Name}\b") && !Declares(s.Name))
+                .Select(s => s.Declaration)
+            : [];
         var typeStandIns = TypeStandIns
-            .Where(s => Regex.IsMatch(body, $@"\b{s.Name}\b"))
+            .Where(s => Regex.IsMatch(body, $@"\b{s.Name}\b")
+                        && !Regex.IsMatch(body, $@"\b(class|record|struct|interface)\s+{s.Name}\b"))
             .Select(s => s.Declaration);
 
         return string.Join("\n", lines.Where(IsUsingDirective)) + "\n" + CommonUsings + "\n"
@@ -213,9 +262,10 @@ public class ReadmeSnippetCompileTests
     private static ImmutableArray<Diagnostic> Compile(string code)
     {
         var tree = CSharpSyntaxTree.ParseText(Program(code), new CSharpParseOptions(LanguageVersion.Latest));
+        var outputKind = HasStatements(code) ? OutputKind.ConsoleApplication : OutputKind.DynamicallyLinkedLibrary;
         var compilation = CSharpCompilation.Create(
-            "ReadmeSnippet", [tree], References(),
-            new CSharpCompilationOptions(OutputKind.ConsoleApplication, nullableContextOptions: NullableContextOptions.Enable));
+            "DocSnippet", [tree], References(),
+            new CSharpCompilationOptions(outputKind, nullableContextOptions: NullableContextOptions.Enable));
         return compilation.GetDiagnostics().Where(d => d.Severity == DiagnosticSeverity.Error).ToImmutableArray();
     }
 
@@ -233,13 +283,13 @@ public class ReadmeSnippetCompileTests
         return paths.Select(p => (MetadataReference)MetadataReference.CreateFromFile(p)).ToList();
     }
 
-    private static string ReadmePath()
+    private static string DocPath(string relativePath)
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
         while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "WebFlux.slnx")))
             dir = dir.Parent;
         return Path.Combine(
             dir?.FullName ?? throw new InvalidOperationException("WebFlux.slnx not found above the test output directory"),
-            "README.md");
+            relativePath);
     }
 }
