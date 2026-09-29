@@ -71,14 +71,8 @@ public static class ServiceCollectionExtensions
         // 청킹 서비스 등록
         services.AddWebFluxChunking();
 
-        // 진행률 리포팅 서비스 등록
-        services.AddWebFluxProgressReporting();
-
         // Phase 5C.2: 회복탄력성 서비스 등록
         services.AddWebFluxResilience();
-
-        // Phase 5C.2: 처리 최적화 서비스 등록
-        services.AddWebFluxProcessingOptimization();
 
         // 경량 추출 서비스 등록 (Rate Limiter, 품질 평가기)
         services.AddWebFluxLightweightExtraction();
@@ -314,34 +308,6 @@ public static class ServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Mock AI 서비스를 등록합니다. (테스트 및 데모용)
-    /// Interface Provider 패턴 - 소비자가 실제 구현체 제공
-    /// </summary>
-    /// <param name="services">서비스 컬렉션</param>
-    /// <returns>서비스 컬렉션</returns>
-    public static IServiceCollection AddWebFluxMockAIServices(this IServiceCollection services)
-    {
-        // Interface Provider 패턴: 인터페이스만 등록, 구현은 소비자가 제공
-        // Mock 서비스는 제거됨 - 테스트/데모가 필요한 소비자가 직접 구현
-
-        return services;
-    }
-
-    /// <summary>
-    /// OpenAI AI 서비스를 등록합니다. (프로덕션용)
-    /// 실제 구현체는 소비자가 제공 - Interface Provider 패턴
-    /// </summary>
-    /// <param name="services">서비스 컬렉션</param>
-    /// <returns>서비스 컬렉션</returns>
-    public static IServiceCollection AddWebFluxOpenAIServices(this IServiceCollection services)
-    {
-        // Interface Provider 패턴: 소비자가 OpenAI 구현체 제공
-
-        // SDK는 인터페이스만 제공, 구현은 소비자 선택
-        return services;
-    }
-
-    /// <summary>
     /// 캐싱 서비스를 등록합니다. (Interface Provider 패턴)
     /// </summary>
     /// <param name="services">서비스 컬렉션</param>
@@ -351,32 +317,6 @@ public static class ServiceCollectionExtensions
         // Interface Provider 패턴: 인터페이스만 제공, 구현은 소비자가 제공
         // 기본 MemoryCache는 .NET 표준이므로 등록
         services.AddMemoryCache();
-
-        return services;
-    }
-
-    /// <summary>
-    /// 성능 측정 인터페이스를 등록합니다. (Interface Provider 패턴)
-    /// 구체적인 모니터링은 소비 애플리케이션에서 구현
-    /// </summary>
-    /// <param name="services">서비스 컬렉션</param>
-    /// <returns>서비스 컬렉션</returns>
-    public static IServiceCollection AddWebFluxPerformanceMonitoring(this IServiceCollection services)
-    {
-        // Interface Provider 패턴: 인터페이스만 제공, 구현은 소비자가 선택
-        // services.TryAddSingleton<IPerformanceMonitor>(구현체는_소비자가_제공);
-
-        return services;
-    }
-
-    /// <summary>
-    /// 진행률 리포팅 서비스를 등록합니다. (Interface Provider 패턴)
-    /// </summary>
-    /// <param name="services">서비스 컬렉션</param>
-    /// <returns>서비스 컬렉션</returns>
-    public static IServiceCollection AddWebFluxProgressReporting(this IServiceCollection services)
-    {
-        // Interface Provider 패턴: 인터페이스만 제공, 구현은 소비자가 제공
 
         return services;
     }
@@ -394,25 +334,6 @@ public static class ServiceCollectionExtensions
 
         // HTTP 클라이언트 등록 (기본 정책은 ResilienceService에서 적용)
         services.AddHttpClient("webflux-default");
-
-        return services;
-    }
-
-    /// <summary>
-    /// 처리 최적화 서비스를 등록합니다. (지능형 성능 최적화)
-    /// 콘텐츠 분석, 성능 메트릭, 리소스 모니터링을 통한 동적 최적화
-    /// </summary>
-    /// <param name="services">서비스 컬렉션</param>
-    /// <returns>서비스 컬렉션</returns>
-    public static IServiceCollection AddWebFluxProcessingOptimization(this IServiceCollection services)
-    {
-        // 처리 최적화 서비스 등록
-        // services.TryAddSingleton<IProcessingOptimizationService, ProcessingOptimizationService>();
-
-        // Interface Provider 패턴: 실제 구현체는 소비자가 제공
-        // services.TryAddSingleton<IPerformanceMonitor, 구현체>();    // 성능 모니터링
-        // services.TryAddSingleton<ITokenCountService, 구현체>();     // 토큰 계산
-        // services.TryAddSingleton<ICacheService, 구현체>();          // 캐시 서비스
 
         return services;
     }

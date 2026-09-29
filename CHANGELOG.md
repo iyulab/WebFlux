@@ -2,7 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.16.1] - Unreleased
+## [0.17.0] - Unreleased
+
+### Removed
+- **Breaking**: `AddWebFluxMockAIServices`, `AddWebFluxOpenAIServices`, `AddWebFluxPerformanceMonitoring`,
+  `AddWebFluxProgressReporting` and `AddWebFluxProcessingOptimization`. Their bodies were empty: calling them registered
+  nothing. Remove the calls; nothing changes.
 
 ### Fixed
 - **`ProcessWebsiteAsync` crawls with the `CrawlOptions.Strategy` you pass.** `DepthFirst` and `Sitemap` fell back to
