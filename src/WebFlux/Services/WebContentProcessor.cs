@@ -751,10 +751,11 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
 
         LogProcessingWebsite(_logger, startUrl, crawlOptions?.UseDynamicRendering ?? false);
 
-        // CrawlOptions를 직접 사용하여 크롤링
-        var crawlStrategy = (crawlOptions?.UseDynamicRendering == true || crawlOptions?.Strategy == CrawlStrategy.Dynamic)
+        // The caller's strategy: DepthFirst and Sitemap used to fall back to BreadthFirst here, so
+        // `CrawlStrategy.Sitemap` never read a sitemap on this path. UseDynamicRendering still wins.
+        var crawlStrategy = crawlOptions?.UseDynamicRendering == true
             ? CrawlStrategy.Dynamic
-            : CrawlStrategy.BreadthFirst;
+            : crawlOptions?.Strategy ?? CrawlStrategy.BreadthFirst;
 
         var crawler = _serviceFactory.CreateCrawler(crawlStrategy);
 

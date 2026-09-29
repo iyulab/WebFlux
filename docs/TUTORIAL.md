@@ -89,14 +89,12 @@ public class OpenAIEmbeddingService : ITextEmbeddingService
 
 ```csharp
 using Microsoft.Extensions.DependencyInjection;
-using WebFlux;
+using WebFlux.Core.Interfaces;
+using WebFlux.Extensions;
 
 var services = new ServiceCollection();
 
-// AI 서비스 등록
-var apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
-services.AddScoped<ITextEmbeddingService>(
-    sp => new OpenAIEmbeddingService(apiKey));
+// AI 서비스 없이 동작한다. Semantic 청킹을 쓰려면 FluxCurator IEmbedder 를 먼저 등록한다 (README «Chunking Strategies»).
 
 // WebFlux 등록
 services.AddWebFlux();
@@ -109,7 +107,7 @@ var chunks = await processor.ProcessUrlAsync("https://example.com");
 
 foreach (var chunk in chunks)
 {
-    Console.WriteLine($"청크 {chunk.ChunkIndex}:");
+    Console.WriteLine($"청크 {chunk.SequenceNumber}:");
     Console.WriteLine($"  내용: {chunk.Content.Substring(0, Math.Min(100, chunk.Content.Length))}...");
     Console.WriteLine($"  길이: {chunk.Content.Length} 문자");
     Console.WriteLine();

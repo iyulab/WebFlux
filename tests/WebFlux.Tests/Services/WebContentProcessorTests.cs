@@ -125,6 +125,43 @@ public class WebContentProcessorTests : IDisposable
 
     #region ProcessWebsiteAsync Tests (Stub)
 
+    [Theory]
+    [InlineData(CrawlStrategy.BreadthFirst)]
+    [InlineData(CrawlStrategy.DepthFirst)]
+    [InlineData(CrawlStrategy.Sitemap)]
+    [InlineData(CrawlStrategy.Dynamic)]
+    public async Task ProcessWebsiteAsync_UsesTheCrawlStrategyAskedFor(CrawlStrategy strategy)
+    {
+        var mockCrawler = Substitute.For<ICrawler>();
+        mockCrawler.CrawlWebsiteAsync(Arg.Any<string>(), Arg.Any<CrawlOptions>(), Arg.Any<CancellationToken>())
+            .Returns(ToAsyncEnumerable(new List<CrawlResult>()));
+        _mockServiceFactory.CreateCrawler(Arg.Any<CrawlStrategy>()).Returns(mockCrawler);
+
+        await foreach (var _ in _processor.ProcessWebsiteAsync("https://example.com", new CrawlOptions { Strategy = strategy },
+                           cancellationToken: TestContext.Current.CancellationToken))
+        {
+        }
+
+        _mockServiceFactory.Received(1).CreateCrawler(strategy);
+    }
+
+    [Fact]
+    public async Task ProcessWebsiteAsync_DynamicRenderingOverridesTheStrategy()
+    {
+        var mockCrawler = Substitute.For<ICrawler>();
+        mockCrawler.CrawlWebsiteAsync(Arg.Any<string>(), Arg.Any<CrawlOptions>(), Arg.Any<CancellationToken>())
+            .Returns(ToAsyncEnumerable(new List<CrawlResult>()));
+        _mockServiceFactory.CreateCrawler(Arg.Any<CrawlStrategy>()).Returns(mockCrawler);
+
+        await foreach (var _ in _processor.ProcessWebsiteAsync("https://example.com",
+                           new CrawlOptions { Strategy = CrawlStrategy.Sitemap, UseDynamicRendering = true },
+                           cancellationToken: TestContext.Current.CancellationToken))
+        {
+        }
+
+        _mockServiceFactory.Received(1).CreateCrawler(CrawlStrategy.Dynamic);
+    }
+
     [Fact]
     public async Task ProcessWebsiteAsync_ShouldReturnEmptyStream()
     {

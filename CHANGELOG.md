@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.16.1] - Unreleased
+
+### Fixed
+- **`ProcessWebsiteAsync` crawls with the `CrawlOptions.Strategy` you pass.** `DepthFirst` and `Sitemap` fell back to
+  breadth-first on this path, so `CrawlStrategy.Sitemap` never read a sitemap there. `UseDynamicRendering = true` still
+  routes to `Dynamic`.
+- **The README's Quick Start compiles and runs.** It began with `using WebFlux;` (no such namespace) and read
+  `chunk.ChunkIndex` (not a public member; use `SequenceNumber`). Every C# block in the README is now compiled by a test.
+  The README no longer claims PDF extraction, progress tracking or events that are not published, says that
+  `ProcessWebsiteAsync` without `CrawlOptions` processes the start page only, and shows how Semantic chunking gets its
+  embedder (a FluxCurator `IEmbedder`) and how AI enhancement is turned on.
+
 ## [0.16.0] - 2026-09-24
 
 ### Added

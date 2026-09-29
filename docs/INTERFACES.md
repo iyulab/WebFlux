@@ -359,15 +359,20 @@ using var sAll = publisher.SubscribeAll(async e =>
 RAG 시스템에서 사용하는 청크 데이터입니다.
 
 ```csharp
-public class WebContentChunk
+public class WebContentChunk : IEnrichedChunk
 {
-    public string ChunkId { get; set; }
-    public int ChunkIndex { get; set; }
-    public string Content { get; set; }
-    public string SourceUrl { get; set; }
-    public int StartPosition { get; set; }
-    public int EndPosition { get; set; }
+    public required string Id { get; init; }
+    public required string Content { get; init; }
+    public string? Title { get; init; }
+    public required string SourceUrl { get; init; }
+    public int SequenceNumber { get; init; }          // IEnrichedChunk.ChunkIndex
+    public required ChunkingStrategyInfo StrategyInfo { get; init; }
+    public double QualityScore { get; init; }
+    public ChunkType Type { get; init; }
+    public WebContentMetadata Metadata { get; set; }
     public Dictionary<string, object> AdditionalMetadata { get; set; }
+    public DateTimeOffset CreatedAt { get; init; }
+    // plus ParentChunkId, ChildChunkIds, RelatedImageUrls
 }
 ```
 
@@ -449,13 +454,13 @@ public class ChunkingOptions
 
 ```csharp
 using Microsoft.Extensions.DependencyInjection;
-using WebFlux;
+using WebFlux.Core.Interfaces;
+using WebFlux.Core.Options;
+using WebFlux.Extensions;
 
 var services = new ServiceCollection();
 
-// AI 서비스 구현 등록
-services.AddScoped<ITextEmbeddingService, YourEmbeddingService>();
-services.AddScoped<ITextCompletionService, YourLLMService>(); // Optional
+// AI 서비스는 필수가 아니다. ITextCompletionService(Flux.Abstractions)는 AI 메타데이터·강화에만 쓰인다 (README 참조).
 
 // WebFlux 등록
 services.AddWebFlux();
@@ -472,7 +477,7 @@ var chunks = await processor.ProcessUrlAsync("https://example.com");
 
 foreach (var chunk in chunks)
 {
-    Console.WriteLine($"Chunk {chunk.ChunkIndex}: {chunk.Content}");
+    Console.WriteLine($"Chunk {chunk.SequenceNumber}: {chunk.Content}");
 }
 ```
 
