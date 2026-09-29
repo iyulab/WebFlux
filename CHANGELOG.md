@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.18.0] - Unreleased
+## [0.18.0] - 2026-09-29
 
 ### Fixed
 - **`SubscribeAll` and `Subscribe<ProcessingEvent>` receive events.** Dispatch looked up only the event's exact runtime
