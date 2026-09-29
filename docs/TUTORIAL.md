@@ -630,16 +630,16 @@ using WebFlux.Core.Models.Events;
 var eventPublisher = serviceProvider.GetRequiredService<IEventPublisher>();
 
 // 페이지 크롤링 완료 이벤트 구독
-using var s1 = eventPublisher.Subscribe<PageCrawledEvent>(async evt =>
+using var s1 = eventPublisher.Subscribe<UrlProcessedEvent>(async evt =>
 {
-    Console.WriteLine($"페이지 크롤링 완료: {evt.Url} [{evt.StatusCode}] {evt.ProcessingTimeMs}ms");
+    Console.WriteLine($"페이지 크롤링 완료: {evt.Url} ({evt.ContentLength}자) {evt.ProcessingTimeMs}ms");
     await LogToDatabase(evt);
 });
 
 // 청크 생성 이벤트 구독
 using var s2 = eventPublisher.Subscribe<ChunkGeneratedEvent>(evt =>
 {
-    Console.WriteLine($"청크 생성: #{evt.SequenceNumber} ({evt.ChunkSize} tokens) from {evt.SourceUrl}");
+    Console.WriteLine($"청크 생성: #{evt.SequenceNumber} ({evt.ChunkSize}자) from {evt.SourceUrl}");
 });
 
 // 모든 이벤트 구독

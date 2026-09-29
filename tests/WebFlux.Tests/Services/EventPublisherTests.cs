@@ -1,4 +1,5 @@
 using AwesomeAssertions;
+using WebFlux.Core.Models;
 using WebFlux.Core.Models.Events;
 using WebFlux.Services;
 
@@ -249,32 +250,53 @@ public class EventPublisherTests
         callCount.Should().Be(1); // Unsubscribe action called only once
     }
 
-    // --- CompositeEventSubscription ---
+    // --- Dispatch over the type hierarchy ---
 
     [Fact]
-    public void CompositeEventSubscription_DisposesAll()
+    public async Task SubscribeAll_And_BaseTypeSubscriptions_ReceiveDerivedEvents()
     {
-        var disposed = new List<string>();
-        var sub1 = new EventSubscription(() => disposed.Add("s1"));
-        var sub2 = new EventSubscription(() => disposed.Add("s2"));
+        var publisher = new EventPublisher();
+        var all = new List<string>();
+        var baseTyped = new List<string>();
+        var exact = new List<string>();
+        publisher.SubscribeAll(e => { all.Add(e.EventType); return Task.CompletedTask; });
+        publisher.Subscribe<ProcessingEvent>(e => { baseTyped.Add(e.EventType); return Task.CompletedTask; });
+        publisher.Subscribe<UrlProcessedEvent>(e => { exact.Add(e.EventType); return Task.CompletedTask; });
 
-        var composite = new CompositeEventSubscription([sub1, sub2]);
-        composite.Dispose();
+        await publisher.PublishAsync(new UrlProcessedEvent { Url = "https://example.test/" }, TestContext.Current.CancellationToken);
+        await publisher.PublishAsync(new UrlProcessingStartedEvent { Url = "https://example.test/" }, TestContext.Current.CancellationToken);
 
-        disposed.Should().HaveCount(2);
-        disposed.Should().Contain(["s1", "s2"]);
+        all.Should().Equal("UrlProcessed", "UrlProcessingStarted");
+        baseTyped.Should().Equal("UrlProcessed", "UrlProcessingStarted");
+        exact.Should().Equal("UrlProcessed");
     }
 
     [Fact]
-    public void CompositeEventSubscription_DoubleDispose_OnlyOnce()
+    public async Task AThrowingSubscriber_IsCounted_AndDoesNotStopTheOthers()
     {
-        var callCount = 0;
-        var sub = new EventSubscription(() => callCount++);
+        var publisher = new EventPublisher();
+        var delivered = 0;
+        publisher.Subscribe<UrlProcessedEvent>(_ => throw new InvalidOperationException("subscriber bug"));
+        publisher.Subscribe<UrlProcessedEvent>(_ => { delivered++; return Task.CompletedTask; });
 
-        var composite = new CompositeEventSubscription([sub]);
-        composite.Dispose();
-        composite.Dispose();
+        var act = () => publisher.PublishAsync(new UrlProcessedEvent { Url = "https://example.test/" }, TestContext.Current.CancellationToken);
 
-        callCount.Should().Be(1);
+        await act.Should().NotThrowAsync();
+        delivered.Should().Be(1);
+        publisher.GetStatistics().PublishErrors.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task SubscribeAll_Unsubscribe_StopsDelivery()
+    {
+        var publisher = new EventPublisher();
+        var count = 0;
+        var subscription = publisher.SubscribeAll(_ => { count++; return Task.CompletedTask; });
+
+        await publisher.PublishAsync(new UrlProcessedEvent { Url = "https://example.test/" }, TestContext.Current.CancellationToken);
+        subscription.Dispose();
+        await publisher.PublishAsync(new UrlProcessedEvent { Url = "https://example.test/" }, TestContext.Current.CancellationToken);
+
+        count.Should().Be(1);
     }
 }

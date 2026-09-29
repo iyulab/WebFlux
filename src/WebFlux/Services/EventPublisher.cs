@@ -32,17 +32,21 @@ public class EventPublisher : IEventPublisher
 
         try
         {
-            var eventType = processingEvent.GetType();
+            // A handler subscribed to a base type (Subscribe<ProcessingEvent>, SubscribeAll) receives every
+            // event derived from it — not only events whose runtime type is exactly the subscribed type.
+            var asyncHandlers = HandlersFor(_asyncHandlers, processingEvent.GetType());
+            var syncHandlers = HandlersFor(_syncHandlers, processingEvent.GetType());
 
             // 비동기 핸들러 실행
-            if (_asyncHandlers.TryGetValue(eventType, out var asyncHandlers))
+            if (asyncHandlers.Count > 0)
             {
-                var tasks = asyncHandlers.Select(handler => handler(processingEvent));
-                await Task.WhenAll(tasks);
+                // A failing subscriber is counted, not rethrown: an observer must not fail the crawl it observes
+                // (the synchronous handlers below have always been isolated the same way).
+                await Task.WhenAll(asyncHandlers.Select(handler => InvokeIsolatedAsync(handler, processingEvent)));
             }
 
             // 동기 핸들러 실행 (백그라운드에서)
-            if (_syncHandlers.TryGetValue(eventType, out var syncHandlers))
+            if (syncHandlers.Count > 0)
             {
                 _ = Task.Run(() =>
                 {
@@ -66,6 +70,40 @@ public class EventPublisher : IEventPublisher
             Interlocked.Increment(ref _publishErrors);
             throw;
         }
+    }
+
+    private async Task InvokeIsolatedAsync(Func<ProcessingEvent, Task> handler, ProcessingEvent processingEvent)
+    {
+        try
+        {
+            await handler(processingEvent).ConfigureAwait(false);
+        }
+        catch
+        {
+            Interlocked.Increment(ref _publishErrors);
+        }
+    }
+
+    /// <summary>
+    /// A snapshot of the handlers registered for <paramref name="eventType"/> and each of its base types, taken
+    /// under the lock so a concurrent subscribe or unsubscribe cannot change a list while it is being enumerated.
+    /// </summary>
+    private List<THandler> HandlersFor<THandler>(ConcurrentDictionary<Type, List<THandler>> registry, Type eventType)
+    {
+        var handlers = new List<THandler>();
+        if (registry.IsEmpty)
+            return handlers;
+
+        lock (_lock)
+        {
+            for (var type = eventType; type is not null && typeof(ProcessingEvent).IsAssignableFrom(type); type = type.BaseType)
+            {
+                if (registry.TryGetValue(type, out var list))
+                    handlers.AddRange(list);
+            }
+        }
+
+        return handlers;
     }
 
     /// <summary>
@@ -161,44 +199,8 @@ public class EventPublisher : IEventPublisher
     /// <param name="handler">이벤트 핸들러</param>
     /// <returns>구독 해제용 IDisposable</returns>
     public IDisposable SubscribeAll(Func<ProcessingEvent, Task> handler)
-    {
-        ArgumentNullException.ThrowIfNull(handler);
-
-        var subscriptions = new List<IDisposable>();
-
-        // Interface Provider 패턴: 기본 이벤트 타입만 등록
-        // 소비자가 필요한 추가 이벤트 타입은 구독 시 자동 등록됨
-        var knownEventTypes = new[]
-        {
-            typeof(ProcessingEvent)
-        };
-
-        foreach (var eventType in knownEventTypes)
-        {
-            lock (_lock)
-            {
-                if (!_asyncHandlers.TryGetValue(eventType, out var handlerList))
-                {
-                    handlerList = new List<Func<ProcessingEvent, Task>>();
-                    _asyncHandlers[eventType] = handlerList;
-                }
-                handlerList.Add(handler);
-            }
-
-            subscriptions.Add(new EventSubscription(() =>
-            {
-                lock (_lock)
-                {
-                    if (_asyncHandlers.TryGetValue(eventType, out var handlers))
-                    {
-                        handlers.Remove(handler);
-                    }
-                }
-            }));
-        }
-
-        return new CompositeEventSubscription(subscriptions);
-    }
+        // Every event derives from ProcessingEvent, and dispatch walks the base types.
+        => Subscribe(handler);
 
     /// <summary>
     /// 이벤트 발행 통계를 반환합니다.
@@ -249,33 +251,6 @@ public class EventSubscription : IDisposable
         if (!_disposed)
         {
             _unsubscribe();
-            _disposed = true;
-        }
-        GC.SuppressFinalize(this);
-    }
-}
-
-/// <summary>
-/// 복합 이벤트 구독 관리 클래스
-/// </summary>
-public class CompositeEventSubscription : IDisposable
-{
-    private readonly List<IDisposable> _subscriptions;
-    private bool _disposed;
-
-    public CompositeEventSubscription(List<IDisposable> subscriptions)
-    {
-        _subscriptions = subscriptions ?? throw new ArgumentNullException(nameof(subscriptions));
-    }
-
-    public void Dispose()
-    {
-        if (!_disposed)
-        {
-            foreach (var subscription in _subscriptions)
-            {
-                subscription.Dispose();
-            }
             _disposed = true;
         }
         GC.SuppressFinalize(this);

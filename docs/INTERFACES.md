@@ -312,11 +312,13 @@ public interface IEventPublisher
 
 | 카테고리 | 이벤트 |
 |---------|--------|
-| Pipeline | `ProcessingStartedEvent`, `ProcessingProgressEvent`, `ProcessingCompletedEvent`, `ProcessingFailedEvent` |
-| Crawling | `CrawlingStartedEvent`, `CrawlingCompletedEvent`, `PageCrawledEvent`, `UrlProcessingStartedEvent`, `UrlProcessedEvent`, `UrlProcessingFailedEvent` |
-| Extraction | `ContentExtractionStartedEvent`, `ContentExtractionCompletedEvent`, `ContentExtractionFailedEvent`, `ImageProcessedEvent` |
-| Chunking | `ChunkingStartedEvent`, `ChunkingCompletedEvent`, `ChunkGeneratedEvent` |
-| Monitoring | `ErrorOccurredEvent`, `PerformanceMetricsEvent` |
+| Pipeline (모든 처리 실행) | `ProcessingStartedEvent`, `ProcessingProgressEvent`(청크 10개마다), `ProcessingCompletedEvent`, `ProcessingFailedEvent`(실행이 예외로 끝날 때) |
+| Crawling (크롤러가 가져오는 URL마다) | `UrlProcessingStartedEvent`, `UrlProcessedEvent`(성공 상태), `UrlProcessingFailedEvent`(오류 상태 또는 응답 없음) |
+| Extraction (추출마다) | `ContentExtractionStartedEvent`, `ContentExtractionCompletedEvent`, `ContentExtractionFailedEvent` |
+| Chunking (청크마다) | `ChunkGeneratedEvent` |
+
+기본 타입을 구독하면 파생 이벤트를 모두 받습니다(`SubscribeAll` = `Subscribe<ProcessingEvent>`). 예외를 던지는 구독자는
+`GetStatistics().PublishErrors`에 집계되고 실행이나 다른 구독자를 멈추지 않습니다.
 
 모든 이벤트는 `ProcessingEvent` (기본 클래스, `EventId`, `EventType`, `Timestamp`, `Severity`, `CorrelationId` 포함)를 상속합니다.
 
@@ -329,14 +331,15 @@ using WebFlux.Core.Models.Events;
 var publisher = provider.GetRequiredService<IEventPublisher>();
 
 // 특정 이벤트 구독
-using var s1 = publisher.Subscribe<PageCrawledEvent>(async e =>
+using var s1 = publisher.Subscribe<UrlProcessedEvent>(e =>
 {
-    Console.WriteLine($"Crawled {e.Url} [{e.StatusCode}] in {e.ProcessingTimeMs}ms");
+    Console.WriteLine($"Crawled {e.Url} ({e.ContentLength} chars) in {e.ProcessingTimeMs}ms");
+    return Task.CompletedTask;
 });
 
 using var s2 = publisher.Subscribe<ChunkGeneratedEvent>(e =>
 {
-    Console.WriteLine($"Chunk #{e.SequenceNumber} ({e.ChunkSize} tokens) from {e.SourceUrl}");
+    Console.WriteLine($"Chunk #{e.SequenceNumber} ({e.ChunkSize} chars) from {e.SourceUrl}");
 });
 
 // 모든 이벤트 구독

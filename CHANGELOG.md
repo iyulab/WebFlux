@@ -2,6 +2,31 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.18.0] - Unreleased
+
+### Fixed
+- **`SubscribeAll` and `Subscribe<ProcessingEvent>` receive events.** Dispatch looked up only the event's exact runtime
+  type, so a subscription to the base type — the documented way to see every event — received nothing. A subscription
+  now receives every event derived from its type.
+- **A subscriber that throws no longer fails the operation it observes.** An asynchronous handler's exception propagated
+  out of `PublishAsync`; the crawler publishes inside its request `try`, so a subscriber bug turned into a failed page.
+  It is now counted in `GetStatistics().PublishErrors`, like the synchronous handlers.
+
+### Added
+- **`ProcessWebsiteAsync` publishes the processing lifecycle** (`ProcessingStartedEvent` … `ProcessingCompletedEvent`),
+  as `ProcessUrlAsync` and the configured pipeline did; it published nothing.
+- **`ChunkGeneratedEvent` per chunk and `ProcessingFailedEvent` when a run throws** (the exception still reaches the
+  caller), on every entry point. `ChunkGeneratedEvent.ChunkSize` is the chunk's length in characters.
+- **`UrlProcessedEvent` / `UrlProcessingFailedEvent` end each crawler request** that `UrlProcessingStartedEvent` began:
+  processed for a success status, failed (with `HTTP <status>` in `Error`) for an error status or a request that got no
+  response.
+
+### Removed
+- **Breaking**: event types nothing published — `CrawlingStartedEvent`, `CrawlingCompletedEvent`, `PageCrawledEvent`
+  (use `UrlProcessedEvent`), `ChunkingStartedEvent`, `ChunkingCompletedEvent` (use `ChunkGeneratedEvent`),
+  `ImageProcessedEvent`, `ErrorOccurredEvent`, `PerformanceMetricsEvent` (use the `*Failed` events), and
+  `CompositeEventSubscription`. A subscription to one of them never fired.
+
 ## [0.17.0] - 2026-09-29
 
 ### Removed

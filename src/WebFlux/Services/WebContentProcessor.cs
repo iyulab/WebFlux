@@ -63,25 +63,20 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
         public static readonly RunOverrides None = new(false, null);
     }
 
-    private async IAsyncEnumerable<WebContentChunk> ProcessCoreAsync(
+    private IAsyncEnumerable<WebContentChunk> ProcessCoreAsync(
         WebFluxConfiguration configuration,
         RunOverrides overrides,
-        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
+        CancellationToken cancellationToken)
     {
-        var startTime = DateTimeOffset.UtcNow;
-        var processedCount = 0;
-
         var startUrls = overrides.StartUrls ?? configuration.Crawling.StartUrls ?? (IReadOnlyList<string>)[];
-        LogStartingWebContentProcessing(_logger, startUrls.Count);
+        return WithProcessingEventsAsync(RunPipelineAsync(configuration, overrides, cancellationToken), configuration, startUrls, cancellationToken);
+    }
 
-        await _eventPublisher.PublishAsync(new ProcessingStartedEvent
-        {
-            Message = $"웹 콘텐츠 처리 시작 - {startUrls.Count}개 URL",
-            Configuration = configuration,
-            StartUrls = startUrls.ToList(),
-            Timestamp = startTime
-        }, cancellationToken);
-
+    private IAsyncEnumerable<WebContentChunk> RunPipelineAsync(
+        WebFluxConfiguration configuration,
+        RunOverrides overrides,
+        CancellationToken cancellationToken)
+    {
         // 1단계: 크롤링 파이프라인
         var crawlingResults = CrawlWebContent(configuration, overrides, cancellationToken);
 
@@ -94,51 +89,90 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
             : extractionResults;
 
         // 4단계: 청킹 파이프라인
-        await foreach (var chunk in ChunkContent(enhancedResults, configuration, overrides, cancellationToken))
-        {
-            processedCount++;
+        return ChunkContent(enhancedResults, configuration, overrides, cancellationToken);
+    }
 
-            // 진행률 리포팅
+    /// <summary>
+    /// The processing lifecycle every entry point publishes around its chunk stream: <see cref="ProcessingStartedEvent"/>,
+    /// a <see cref="ChunkGeneratedEvent"/> per chunk and a <see cref="ProcessingProgressEvent"/> every 10, then
+    /// <see cref="ProcessingCompletedEvent"/> — or <see cref="ProcessingFailedEvent"/> when the stream throws (the exception
+    /// still reaches the caller). A failing subscriber cannot break the run: the publisher isolates handlers.
+    /// </summary>
+    private async IAsyncEnumerable<WebContentChunk> WithProcessingEventsAsync(
+        IAsyncEnumerable<WebContentChunk> chunks,
+        WebFluxConfiguration configuration,
+        IReadOnlyList<string> startUrls,
+        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        var startTime = DateTimeOffset.UtcNow;
+        var processedCount = 0;
+        LogStartingWebContentProcessing(_logger, startUrls.Count);
+
+        await _eventPublisher.PublishAsync(new ProcessingStartedEvent
+        {
+            Message = $"Processing started: {startUrls.Count} URL(s)",
+            Configuration = configuration,
+            StartUrls = startUrls.ToList(),
+            Timestamp = startTime
+        }, cancellationToken);
+
+        await using var enumerator = chunks.GetAsyncEnumerator(cancellationToken);
+        while (true)
+        {
+            WebContentChunk chunk;
+            try
+            {
+                if (!await enumerator.MoveNextAsync())
+                    break;
+                chunk = enumerator.Current;
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                await _eventPublisher.PublishAsync(new ProcessingFailedEvent
+                {
+                    Message = $"Processing failed after {processedCount} chunk(s)",
+                    Error = ex.Message,
+                    ProcessedCount = processedCount,
+                    Severity = EventSeverity.Error
+                }, CancellationToken.None);
+                throw;
+            }
+
+            processedCount++;
+            await _eventPublisher.PublishAsync(new ChunkGeneratedEvent
+            {
+                ChunkId = chunk.Id,
+                SourceUrl = chunk.SourceUrl,
+                ChunkSize = chunk.Content.Length,
+                QualityScore = chunk.QualityScore,
+                ChunkType = chunk.Type.ToString(),
+                SequenceNumber = chunk.SequenceNumber
+            }, cancellationToken);
+
             if (processedCount % 10 == 0)
             {
-                try
+                await _eventPublisher.PublishAsync(new ProcessingProgressEvent
                 {
-                    await _eventPublisher.PublishAsync(new ProcessingProgressEvent
-                    {
-                        Message = $"처리 진행중 - {processedCount}개 청크 완료",
-                        ProcessedCount = processedCount,
-                        ElapsedTime = DateTimeOffset.UtcNow - startTime,
-                        EstimatedRemaining = TimeSpan.Zero, // 추정 로직 필요
-                        CurrentStage = "Chunking",
-                        Timestamp = DateTimeOffset.UtcNow
-                    }, cancellationToken);
-                }
-                catch
-                {
-                    // 이벤트 발행 실패는 무시
-                }
+                    Message = $"Processing: {processedCount} chunk(s)",
+                    ProcessedCount = processedCount,
+                    ElapsedTime = DateTimeOffset.UtcNow - startTime,
+                    CurrentStage = "Chunking"
+                }, cancellationToken);
             }
 
             yield return chunk;
         }
 
-        try
+        var elapsed = DateTimeOffset.UtcNow - startTime;
+        await _eventPublisher.PublishAsync(new ProcessingCompletedEvent
         {
-            await _eventPublisher.PublishAsync(new ProcessingCompletedEvent
-            {
-                Message = $"웹 콘텐츠 처리 완료 - {processedCount}개 청크 생성",
-                ProcessedChunkCount = processedCount,
-                TotalProcessingTime = DateTimeOffset.UtcNow - startTime,
-                AverageProcessingRate = processedCount / Math.Max(1, (DateTimeOffset.UtcNow - startTime).TotalMinutes),
-                Timestamp = DateTimeOffset.UtcNow
-            }, cancellationToken);
+            Message = $"Processing completed: {processedCount} chunk(s)",
+            ProcessedChunkCount = processedCount,
+            TotalProcessingTime = elapsed,
+            AverageProcessingRate = processedCount / Math.Max(1.0 / 60, elapsed.TotalMinutes)
+        }, cancellationToken);
 
-            LogWebContentProcessingCompleted(_logger, processedCount, DateTimeOffset.UtcNow - startTime);
-        }
-        catch
-        {
-            // 완료 이벤트 발행 실패는 무시
-        }
+        LogWebContentProcessingCompleted(_logger, processedCount, elapsed);
     }
 
     /// <summary>
@@ -729,11 +763,20 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
         return results.ToDictionary(kvp => kvp.Key, kvp => kvp.Value).AsReadOnly();
     }
 
-    public async IAsyncEnumerable<WebContentChunk> ProcessWebsiteAsync(
+    public IAsyncEnumerable<WebContentChunk> ProcessWebsiteAsync(
         string startUrl,
         CrawlOptions? crawlOptions = null,
         ChunkingOptions? chunkingOptions = null,
-        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default)
+        => WithProcessingEventsAsync(
+            ProcessWebsiteCoreAsync(startUrl, crawlOptions, chunkingOptions, cancellationToken),
+            _configuration, [startUrl], cancellationToken);
+
+    private async IAsyncEnumerable<WebContentChunk> ProcessWebsiteCoreAsync(
+        string startUrl,
+        CrawlOptions? crawlOptions,
+        ChunkingOptions? chunkingOptions,
+        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
     {
         if (crawlOptions != null)
         {

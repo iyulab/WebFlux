@@ -85,7 +85,7 @@ await foreach (var chunk in processor.ProcessWebsiteAsync("https://example.com",
     snapshot to `Metadata.HtmlMetadata`; `CrawlOptions.EnableMetadataExtraction` (opt-in) runs the AI extractor with
     `MetadataSchema`/`CustomMetadataPrompt` when an `ITextCompletionService` (or your own `IWebMetadataExtractor`) is
     registered, sampling long pages to `MetadataExtractionMaxChars` (title + headings + first N characters).
-- **Events** — `IEventPublisher` (see below) for processing, per-URL and extraction events.
+- **Events** — `IEventPublisher` (see below) for processing, per-chunk, per-URL and extraction events.
 - **Configuration** — `AddWebFlux(config => …)` or `AddWebFlux(configuration)` (the `"WebFlux"` section) sets the defaults
   `ProcessUrlAsync` starts from: crawling, chunking, AI enhancement.
 
@@ -199,12 +199,13 @@ using var all = publisher.SubscribeAll(e =>
 
 | When | Events |
 |------|--------|
-| `ProcessUrlAsync` / the configured pipeline | `ProcessingStartedEvent`, `ProcessingProgressEvent`, `ProcessingCompletedEvent` |
-| Every URL a crawler fetches | `UrlProcessingStartedEvent` |
+| Every processing run (`ProcessUrlAsync`, `ProcessWebsiteAsync`, the configured pipeline) | `ProcessingStartedEvent`, then `ChunkGeneratedEvent` per chunk and `ProcessingProgressEvent` every 10 chunks, then `ProcessingCompletedEvent` — or `ProcessingFailedEvent` when the run throws |
+| Every URL a crawler fetches | `UrlProcessingStartedEvent`, then `UrlProcessedEvent` (success status) or `UrlProcessingFailedEvent` (error status, or no response) |
 | Every extraction | `ContentExtractionStartedEvent`, `ContentExtractionCompletedEvent`, `ContentExtractionFailedEvent` |
 | Retries and circuit breaking | `ResilienceEvent` |
 
-The namespace declares more event types (crawling, chunking and monitoring); they are not published yet.
+A subscription to a base type receives every event derived from it — `SubscribeAll` and `Subscribe<ProcessingEvent>` see them all.
+A subscriber that throws is counted in `GetStatistics().PublishErrors` and does not interrupt the run or the other subscribers.
 All events derive from `ProcessingEvent` (`EventId`, `EventType`, `Timestamp`, `Severity`, `CorrelationId`).
 
 ## Configuration

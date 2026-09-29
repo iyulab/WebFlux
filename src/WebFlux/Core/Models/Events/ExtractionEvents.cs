@@ -50,26 +50,3 @@ public class ContentExtractionFailedEvent : ProcessingEvent
     /// <summary>오류 메시지</summary>
     public required string Error { get; init; }
 }
-
-/// <summary>
-/// 이미지 처리 이벤트
-/// </summary>
-public class ImageProcessedEvent : ProcessingEvent
-{
-    public override string EventType => "ImageProcessed";
-
-    /// <summary>이미지 URL</summary>
-    public required string ImageUrl { get; init; }
-
-    /// <summary>생성된 설명 길이</summary>
-    public int DescriptionLength { get; init; }
-
-    /// <summary>처리 시간 (밀리초)</summary>
-    public long ProcessingTimeMs { get; init; }
-
-    /// <summary>이미지 크기 (바이트)</summary>
-    public long? ImageSize { get; init; }
-
-    /// <summary>이미지 형식</summary>
-    public string? ImageFormat { get; init; }
-}

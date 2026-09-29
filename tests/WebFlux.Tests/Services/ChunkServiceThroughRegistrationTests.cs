@@ -4,6 +4,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using WebFlux.Core.Interfaces;
+using WebFlux.Core.Models;
+using WebFlux.Core.Models.Events;
 using WebFlux.Core.Options;
 using WebFlux.Extensions;
 using WebFlux.Tests.TestSupport;
@@ -200,6 +202,53 @@ public sealed class ChunkServiceThroughRegistrationTests : IDisposable
             .ProcessUrlAsync(_server.Url("/long"), cancellationToken: TestContext.Current.CancellationToken);
 
         small.Count.Should().BeGreaterThan(whole.Count, "the configured size limit, not the default, sized the chunks");
+    }
+
+    [Fact]
+    public async Task ProcessWebsiteAsync_PublishesTheProcessingLifecycle_ToACatchAllSubscriber()
+    {
+        _server.Serve("/start", Page.Replace("</body>", "<a href=\"/missing\">gone</a></body>"));
+        var events = new System.Collections.Concurrent.ConcurrentQueue<ProcessingEvent>();
+        using var subscription = _provider.GetRequiredService<IEventPublisher>()
+            .SubscribeAll(e => { events.Enqueue(e); return Task.CompletedTask; });
+        using var scope = _provider.CreateScope();
+        var processor = scope.ServiceProvider.GetRequiredService<IWebContentProcessor>();
+
+        var chunks = new List<WebContentChunk>();
+        await foreach (var chunk in processor.ProcessWebsiteAsync(
+            _server.Url("/start"), new CrawlOptions { MaxDepth = 1, MaxPages = 5 }, cancellationToken: TestContext.Current.CancellationToken))
+            chunks.Add(chunk);
+
+        chunks.Should().NotBeEmpty();
+        var types = events.Select(e => e.EventType).ToList();
+        types.First().Should().Be("ProcessingStarted");
+        types.Last().Should().Be("ProcessingCompleted");
+        types.Count(t => t == "ChunkGenerated").Should().Be(chunks.Count);
+        events.OfType<UrlProcessedEvent>().Select(e => e.Url).Should().Contain(_server.Url("/start"));
+        events.OfType<UrlProcessingFailedEvent>().Should().ContainSingle(e => e.Url == _server.Url("/missing"))
+            .Which.Error.Should().StartWith("HTTP 404");
+        events.OfType<ProcessingCompletedEvent>().Single().ProcessedChunkCount.Should().Be(chunks.Count);
+    }
+
+    [Fact]
+    public async Task ProcessWebsiteAsync_PublishesProcessingFailed_AndStillThrows()
+    {
+        var failed = new List<ProcessingFailedEvent>();
+        using var subscription = _provider.GetRequiredService<IEventPublisher>()
+            .Subscribe<ProcessingFailedEvent>(e => { failed.Add(e); return Task.CompletedTask; });
+        using var scope = _provider.CreateScope();
+        var processor = scope.ServiceProvider.GetRequiredService<IWebContentProcessor>();
+
+        var act = async () =>
+        {
+            await foreach (var _ in processor.ProcessWebsiteAsync(
+                _server.Url("/start"), chunkingOptions: new ChunkingOptions { MaxChunkSize = -1 }, cancellationToken: TestContext.Current.CancellationToken))
+            {
+            }
+        };
+
+        await act.Should().ThrowAsync<ArgumentException>();
+        failed.Should().ContainSingle().Which.Error.Should().Contain("Invalid chunking options");
     }
 
     public void Dispose()

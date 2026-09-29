@@ -131,6 +131,7 @@ public abstract class BaseCrawler : ICrawler
                 };
 
                 UpdateStatistics(result);
+                await PublishOutcomeAsync(result, content.Length, cancellationToken);
                 return result;
             }
             catch (HttpRequestException ex) when (attempt < maxRetries)
@@ -175,8 +176,32 @@ public abstract class BaseCrawler : ICrawler
         };
 
         UpdateStatistics(errorResult);
+        await PublishOutcomeAsync(errorResult, contentLength: 0, cancellationToken);
         return errorResult;
     }
+
+    /// <summary>
+    /// The end of the request <see cref="UrlProcessingStartedEvent"/> began: <see cref="UrlProcessedEvent"/> for a
+    /// success status, <see cref="UrlProcessingFailedEvent"/> for an error status or a request that got no response.
+    /// </summary>
+    private Task PublishOutcomeAsync(CrawlResult result, int contentLength, CancellationToken cancellationToken)
+        => result.IsSuccess
+            ? EventPublisher.PublishAsync(new UrlProcessedEvent
+            {
+                Url = result.Url,
+                ContentLength = contentLength,
+                ContentType = result.ContentType ?? string.Empty,
+                DiscoveredUrlCount = result.DiscoveredLinks.Count,
+                ProcessingTimeMs = (int)result.ResponseTimeMs,
+            }, cancellationToken)
+            : EventPublisher.PublishAsync(new UrlProcessingFailedEvent
+            {
+                Url = result.Url,
+                Error = result.StatusCode > 0
+                    ? $"HTTP {result.StatusCode} {result.ErrorMessage}".TrimEnd()
+                    : result.ErrorMessage ?? "Request failed",
+                Severity = EventSeverity.Warning,
+            }, cancellationToken);
 
     /// <summary>
     /// Rejects options that <see cref="CrawlOptions.Validate"/> calls invalid, once, before any request
