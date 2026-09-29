@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.19.0] - Unreleased
+## [0.19.0] - 2026-09-29
 
 ### Fixed
 - **`ChunkingOptions.SemanticThreshold` sets the semantic chunker's boundary.** It was passed to nothing, so the boundary was
