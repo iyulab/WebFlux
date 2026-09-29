@@ -59,12 +59,11 @@ Unknown / mixed                 → Auto
 | `MaxChunkSize` | 512 | 최대 청크 크기 |
 | `MinChunkSize` | 50 | 최소 청크 크기 |
 | `ChunkOverlap` | 50 | 인접 청크 겹침 |
-| `SemanticThreshold` | 0.7 | Semantic 경계 민감도 |
-| `QualityThreshold` | 0.6 | 품질 임계값 |
+| `SemanticThreshold` | 0.5 | Semantic 경계 민감도 — 인접 문장 유사도가 이보다 낮으면 경계. FluxCurator `SemanticSimilarityThreshold` 로 전달된다(0.19.0+, 그 전엔 무시됐다) |
 | `PreserveHeaders` | `true` | 섹션 헤더를 청크 앞에 붙일지 |
-| `MaxParallelism` | `Environment.ProcessorCount` | 병렬도 |
 | `Language` | `"ko"` | 콘텐츠 언어 |
-| `MinimizeMemoryUsage` | `false` | 메모리 최소화 전략 선택 힌트 |
+
+메모리 최적화는 옵션이 아니라 전략이다 — `Strategy = ChunkingStrategyType.MemoryOptimized`.
 
 
 ```csharp

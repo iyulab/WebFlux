@@ -29,14 +29,6 @@ public interface IChunkingStrategyFactory
     /// <param name="strategyName">전략 이름</param>
     /// <returns>전략 정보</returns>
     Task<StrategyInfo> GetStrategyInfoAsync(string strategyName);
-
-    /// <summary>
-    /// 콘텐츠 특성에 따른 권장 전략을 제안합니다.
-    /// </summary>
-    /// <param name="content">분석할 콘텐츠</param>
-    /// <param name="options">청킹 옵션</param>
-    /// <returns>권장 전략 이름</returns>
-    Task<string> RecommendStrategyAsync(ExtractedContent content, ChunkingOptions? options = null);
 }
 
 /// <summary>

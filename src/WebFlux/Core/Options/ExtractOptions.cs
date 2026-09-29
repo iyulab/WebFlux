@@ -54,7 +54,8 @@ public class ExtractOptions : IValidatable
     #region 캐싱 설정
 
     /// <summary>
-    /// 캐시 사용 여부
+    /// 캐시 사용 여부. 캐시는 컨테이너에 <see cref="Interfaces.ICacheService"/> 구현이 등록돼 있을 때만 동작한다 —
+    /// <c>AddWebFlux()</c> 는 구현을 등록하지 않으므로, 등록하지 않은 구성에서 이 값은 효과가 없다.
     /// </summary>
     public bool UseCache { get; set; } = true;
 
@@ -131,7 +132,9 @@ public class ExtractOptions : IValidatable
     public bool EnableDomainRateLimiting { get; set; } = true;
 
     /// <summary>
-    /// 도메인별 최소 요청 간격 (밀리초)
+    /// 같은 도메인 요청 간 최소 간격 (밀리초, 기본값: 1000). 배치 추출(<c>ExtractBatchAsync</c>·<c>ExtractBatchStreamAsync</c>)이
+    /// <see cref="EnableDomainRateLimiting"/> 일 때 도메인 rate limiter 에 넘긴다. robots.txt <c>Crawl-delay</c> 처럼 도메인에
+    /// 명시된 한도보다 짧게 만들지는 못한다. 0.19.0 전에는 검증만 되고 limiter 는 고정 1 초였다.
     /// </summary>
     public int DomainMinIntervalMs { get; set; } = 1000;
 

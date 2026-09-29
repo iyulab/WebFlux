@@ -921,11 +921,9 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
         return chunks;
     }
 
-    public IReadOnlyList<string> GetAvailableChunkingStrategies()
-    {
-        // Stub implementation
-        return new List<string> { "FixedSize", "Paragraph", "Smart", "Semantic", "Auto", "MemoryOptimized" }.AsReadOnly();
-    }
+    // Every ChunkingStrategyType member has a keyed IChunkingStrategy registration (AddWebFlux), and the processor resolves
+    // the strategy by that name — so the enum is the list, not a second hand-kept copy.
+    public IReadOnlyList<string> GetAvailableChunkingStrategies() => Enum.GetNames<ChunkingStrategyType>();
 
     #region 경량 추출 API 구현
 
@@ -1214,6 +1212,7 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
                 {
                     result = await rateLimiter.ExecuteAsync(
                         domain,
+                        TimeSpan.FromMilliseconds(options.DomainMinIntervalMs),
                         () => ExtractContentAsync(url, options, cancellationToken),
                         cancellationToken).ConfigureAwait(false);
                 }
@@ -1343,6 +1342,7 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
                         var domain = GetDomain(url);
                         result = await rateLimiter.ExecuteAsync(
                             domain,
+                            TimeSpan.FromMilliseconds(options.DomainMinIntervalMs),
                             () => ExtractContentAsync(url, options, cancellationToken),
                             cancellationToken).ConfigureAwait(false);
                     }

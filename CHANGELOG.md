@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.19.0] - Unreleased
+
+### Fixed
+- **`ChunkingOptions.SemanticThreshold` sets the semantic chunker's boundary.** It was passed to nothing, so the boundary was
+  always FluxCurator's default. It now reaches `SemanticSimilarityThreshold`; its default is 0.5 (was an inert 0.7), so a
+  caller who never set it sees no change.
+- **`ExtractOptions.DomainMinIntervalMs` sets the per-domain interval of batch extraction.** The limiter used a fixed one
+  second. The value replaces the limiter's default but never shortens a limit set for the domain (`SetDomainLimit`,
+  robots.txt `Crawl-delay`). `IDomainRateLimiter` gains `ExecuteAsync<T>(domain, minimumInterval, operation, ct)`.
+- **`GetAvailableChunkingStrategies()` lists the strategies the processor resolves** — the `ChunkingStrategyType` names —
+  instead of a hand-kept copy.
+
+### Removed
+- **Breaking**: `ChunkingOptions.QualityThreshold`, `MaxParallelism` and `MinimizeMemoryUsage`. Nothing read them (only
+  validation did); for memory-light chunking set `Strategy = ChunkingStrategyType.MemoryOptimized`. Delete the assignments.
+- **Breaking**: `IChunkingStrategyFactory.RecommendStrategyAsync`. Nothing called it; `ChunkingStrategyType.Auto` chooses a
+  strategy per document.
+
+### Documentation
+- `ExtractOptions.UseCache` says the cache works only with an `ICacheService` registered (`AddWebFlux()` registers none).
+
 ## [0.18.0] - 2026-09-29
 
 ### Fixed

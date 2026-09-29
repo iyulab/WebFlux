@@ -29,14 +29,11 @@ public class ChunkingOptions : IValidatable
     public int MinChunkSize { get; set; } = 50;
 
     /// <summary>
-    /// 의미론적 청킹 임계값 (코사인 유사도, 기본값: 0.7)
+    /// Semantic 전략의 경계 민감도 — 인접 문장의 코사인 유사도가 이 값보다 낮으면 경계를 둔다(기본값: 0.5).
+    /// FluxCurator 의 <c>SemanticSimilarityThreshold</c> 로 전달된다. 다른 전략은 읽지 않는다.
     /// </summary>
-    public double SemanticThreshold { get; set; } = 0.7;
-
-    /// <summary>
-    /// 품질 점수 임계값 (기본값: 0.6)
-    /// </summary>
-    public double QualityThreshold { get; set; } = 0.6;
+    /// <remarks>0.19.0 전에는 어디에도 전달되지 않았다(기본 0.7 은 효력이 없었고 실제 경계는 FluxCurator 기본 0.5 였다).</remarks>
+    public double SemanticThreshold { get; set; } = 0.5;
 
     /// <summary>
     /// 헤더 정보 보존 여부 (기본값: true)
@@ -44,20 +41,9 @@ public class ChunkingOptions : IValidatable
     public bool PreserveHeaders { get; set; } = true;
 
     /// <summary>
-    /// 최대 병렬 작업 수 (기본값: Environment.ProcessorCount)
-    /// </summary>
-    public int MaxParallelism { get; set; } = Environment.ProcessorCount;
-
-    /// <summary>
     /// 언어별 토큰화 설정
     /// </summary>
     public string Language { get; set; } = "ko";
-
-    /// <summary>
-    /// 메모리 사용량 최소화 여부 (기본값: false). 전략 팩토리가 읽어 메모리 최적화 전략을 고른다. 0.14.0 이전의 별칭
-    /// <c>UseMemoryOptimization</c> 은 제거됐다 — 이 멤버가 실제 값이다.
-    /// </summary>
-    public bool MinimizeMemoryUsage { get; set; }
 
     /// <inheritdoc />
     public ValidationResult Validate()
@@ -81,12 +67,6 @@ public class ChunkingOptions : IValidatable
 
         if (SemanticThreshold < 0 || SemanticThreshold > 1)
             errors.Add("SemanticThreshold must be between 0 and 1");
-
-        if (QualityThreshold < 0 || QualityThreshold > 1)
-            errors.Add("QualityThreshold must be between 0 and 1");
-
-        if (MaxParallelism <= 0)
-            errors.Add("MaxParallelism must be greater than 0");
 
         return new ValidationResult
         {

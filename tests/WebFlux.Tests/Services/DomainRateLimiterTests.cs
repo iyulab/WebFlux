@@ -28,6 +28,60 @@ public class DomainRateLimiterTests : IDisposable
         GC.SuppressFinalize(this);
     }
 
+    #region Per-call interval (ExtractOptions.DomainMinIntervalMs)
+
+    private static async Task<TimeSpan> SecondCallWaitAsync(DomainRateLimiter limiter, TimeSpan? interval)
+    {
+        var ct = TestContext.Current.CancellationToken;
+        Task<int> Op() => Task.FromResult(1);
+        if (interval is { } i)
+        {
+            await limiter.ExecuteAsync("example.com", i, Op, ct);
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            await limiter.ExecuteAsync("example.com", i, Op, ct);
+            return sw.Elapsed;
+        }
+
+        await limiter.ExecuteAsync("example.com", Op, ct);
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        await limiter.ExecuteAsync("example.com", Op, ct);
+        return watch.Elapsed;
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WithShorterInterval_ReplacesTheDefault()
+    {
+        using var limiter = new DomainRateLimiter(_mockLogger, TimeSpan.FromMilliseconds(800));
+
+        (await SecondCallWaitAsync(limiter, TimeSpan.Zero)).Should().BeLessThan(TimeSpan.FromMilliseconds(400));
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WithoutInterval_KeepsTheDefault()
+    {
+        using var limiter = new DomainRateLimiter(_mockLogger, TimeSpan.FromMilliseconds(800));
+
+        (await SecondCallWaitAsync(limiter, null)).Should().BeGreaterThan(TimeSpan.FromMilliseconds(600));
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WithShorterInterval_DoesNotShortenAnExplicitDomainLimit()
+    {
+        using var limiter = new DomainRateLimiter(_mockLogger, TimeSpan.Zero);
+        limiter.SetDomainLimit("example.com", TimeSpan.FromMilliseconds(800));   // e.g. robots.txt Crawl-delay
+
+        (await SecondCallWaitAsync(limiter, TimeSpan.Zero)).Should().BeGreaterThan(TimeSpan.FromMilliseconds(600));
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WithNegativeInterval_Throws()
+    {
+        await FluentActions.Awaiting(() => _rateLimiter.ExecuteAsync("example.com", TimeSpan.FromMilliseconds(-1), () => Task.FromResult(1), TestContext.Current.CancellationToken))
+            .Should().ThrowAsync<ArgumentOutOfRangeException>();
+    }
+
+    #endregion
+
     #region Constructor Tests
 
     [Fact]

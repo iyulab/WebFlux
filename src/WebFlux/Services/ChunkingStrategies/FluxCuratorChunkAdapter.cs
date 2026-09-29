@@ -66,6 +66,10 @@ internal static class FluxCuratorChunkAdapter
             // a caller who set false still got section headers prepended.
             PreserveSectionHeaders = source.PreserveHeaders,
 
+            // Read by FluxCurator's semantic chunker only. Before 0.19.0 nothing passed it, so the boundary was always
+            // FluxCurator's own default whatever the caller set.
+            SemanticSimilarityThreshold = (float)Math.Clamp(source.SemanticThreshold, 0, 1),
+
             // WebFlux defaults Language to "ko" rather than leaving it unset, so an English page
             // chunked with defaults would be sized on Korean token ratios. Blank is FluxCurator's
             // "detect it", which is the honest reading of a value nobody chose.

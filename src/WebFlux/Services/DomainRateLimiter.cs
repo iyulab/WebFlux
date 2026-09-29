@@ -34,10 +34,28 @@ public partial class DomainRateLimiter : IDomainRateLimiter, IDisposable
     }
 
     /// <inheritdoc />
-    public async Task<T> ExecuteAsync<T>(
+    public Task<T> ExecuteAsync<T>(
         string domain,
         Func<Task<T>> operation,
         CancellationToken cancellationToken = default)
+        => ExecuteCoreAsync(domain, requested: null, operation, cancellationToken);
+
+    /// <inheritdoc />
+    public Task<T> ExecuteAsync<T>(
+        string domain,
+        TimeSpan minimumInterval,
+        Func<Task<T>> operation,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(minimumInterval, TimeSpan.Zero);
+        return ExecuteCoreAsync(domain, minimumInterval, operation, cancellationToken);
+    }
+
+    private async Task<T> ExecuteCoreAsync<T>(
+        string domain,
+        TimeSpan? requested,
+        Func<Task<T>> operation,
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(operation);
 
@@ -48,7 +66,7 @@ public partial class DomainRateLimiter : IDomainRateLimiter, IDisposable
 
         try
         {
-            var waitTime = await WaitIfNeededAsync(state, cancellationToken).ConfigureAwait(false);
+            var waitTime = await WaitIfNeededAsync(state, EffectiveInterval(state, requested), cancellationToken).ConfigureAwait(false);
 
             LogExecutingOperation(_logger, normalizedDomain, waitTime.TotalMilliseconds);
 
@@ -79,12 +97,20 @@ public partial class DomainRateLimiter : IDomainRateLimiter, IDisposable
         }, cancellationToken).ConfigureAwait(false);
     }
 
+    // A caller's interval replaces the limiter's default, but never shortens a limit set explicitly for the domain
+    // (SetDomainLimit, robots.txt Crawl-delay): that one is the site's rule, not a default.
+    private static TimeSpan EffectiveInterval(DomainState state, TimeSpan? requested)
+        => requested is not { } interval
+            ? state.MinInterval
+            : state.IsExplicit ? TimeSpan.FromTicks(Math.Max(interval.Ticks, state.MinInterval.Ticks)) : interval;
+
     /// <inheritdoc />
     public void SetDomainLimit(string domain, TimeSpan minimumInterval)
     {
         var normalizedDomain = NormalizeDomain(domain);
         var state = GetOrCreateState(normalizedDomain);
         state.MinInterval = minimumInterval;
+        state.IsExplicit = true;
 
         LogDomainLimitSet(_logger, normalizedDomain, minimumInterval.TotalMilliseconds);
     }
@@ -232,7 +258,7 @@ public partial class DomainRateLimiter : IDomainRateLimiter, IDisposable
         });
     }
 
-    private async Task<TimeSpan> WaitIfNeededAsync(DomainState state, CancellationToken cancellationToken)
+    private async Task<TimeSpan> WaitIfNeededAsync(DomainState state, TimeSpan minInterval, CancellationToken cancellationToken)
     {
         if (state.LastRequestTime == null)
         {
@@ -240,7 +266,7 @@ public partial class DomainRateLimiter : IDomainRateLimiter, IDisposable
         }
 
         var elapsed = DateTimeOffset.UtcNow - state.LastRequestTime.Value;
-        var waitTime = state.MinInterval - elapsed;
+        var waitTime = minInterval - elapsed;
 
         if (waitTime > TimeSpan.Zero)
         {
@@ -332,6 +358,8 @@ public partial class DomainRateLimiter : IDomainRateLimiter, IDisposable
     private sealed class DomainState
     {
         public TimeSpan MinInterval { get; set; }
+        /// <summary>Set by SetDomainLimit (or a robots.txt Crawl-delay) rather than the limiter's default.</summary>
+        public bool IsExplicit { get; set; }
         public DateTimeOffset? LastRequestTime { get; set; }
         public SemaphoreSlim Semaphore { get; set; } = null!;
         public long RequestCount;

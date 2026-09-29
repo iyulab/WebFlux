@@ -100,4 +100,24 @@ public sealed class EnhancementOptionWiringTests
 
         curator.PreserveSectionHeaders.Should().Be(preserve);
     }
+
+    // Before 0.19.0 nothing passed SemanticThreshold on, so the semantic boundary was FluxCurator's default whatever was set.
+    [Theory]
+    [InlineData(0.3)]
+    [InlineData(0.85)]
+    public void ChunkingOptions_SemanticThreshold_reaches_FluxCurators_SemanticSimilarityThreshold(double threshold)
+    {
+        var curator = FluxCuratorChunkAdapter.ToCuratorOptions(new ChunkingOptions { SemanticThreshold = threshold }, FluxCurator.Core.Domain.ChunkingStrategy.Semantic);
+
+        curator.SemanticSimilarityThreshold.Should().BeApproximately((float)threshold, 1e-6f);
+    }
+
+    [Fact]
+    public void ChunkingOptions_SemanticThreshold_default_keeps_FluxCurators_boundary()
+    {
+        // The default moved from an inert 0.7 to 0.5 so that wiring it changes nothing for a caller who never set it.
+        var curator = FluxCuratorChunkAdapter.ToCuratorOptions(new ChunkingOptions(), FluxCurator.Core.Domain.ChunkingStrategy.Semantic);
+
+        curator.SemanticSimilarityThreshold.Should().Be(new FluxCurator.Core.Domain.ChunkOptions().SemanticSimilarityThreshold);
+    }
 }

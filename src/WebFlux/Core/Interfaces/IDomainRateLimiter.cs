@@ -31,6 +31,25 @@ public interface IDomainRateLimiter
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Rate Limiting을 적용하여 작업을 실행하되, 이 호출이 요구하는 최소 간격을 쓴다.
+    /// </summary>
+    /// <remarks>
+    /// <paramref name="minimumInterval"/> 은 limiter 의 기본 간격을 대신한다. 다만 <see cref="SetDomainLimit"/> 나 robots.txt
+    /// <c>Crawl-delay</c> 로 그 도메인에 명시된 한도보다 짧아지지는 않는다 — 그것은 기본값이 아니라 사이트의 규칙이다.
+    /// </remarks>
+    /// <typeparam name="T">반환 타입</typeparam>
+    /// <param name="domain">대상 도메인</param>
+    /// <param name="minimumInterval">같은 도메인 요청 간 최소 간격(0 이상)</param>
+    /// <param name="operation">실행할 작업</param>
+    /// <param name="cancellationToken">취소 토큰</param>
+    /// <returns>작업 결과</returns>
+    Task<T> ExecuteAsync<T>(
+        string domain,
+        TimeSpan minimumInterval,
+        Func<Task<T>> operation,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// 도메인별 요청 간격을 설정합니다
     /// </summary>
     /// <param name="domain">대상 도메인</param>

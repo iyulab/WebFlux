@@ -80,57 +80,6 @@ public partial class ChunkingStrategyFactory : IChunkingStrategyFactory
         throw new ArgumentException($"Unknown strategy: {strategyName}");
     }
 
-    public async Task<string> RecommendStrategyAsync(ExtractedContent content, ChunkingOptions? options = null)
-    {
-        await Task.CompletedTask;
-
-        try
-        {
-            var contentLength = content.MainContent?.Length ?? 0;
-            var hasImages = content.ImageUrls?.Count > 0;
-            var hasHeadings = content.Headings?.Count > 0;
-            var isTechnical = AnalyzeTechnicalContent(content);
-
-            // 메모리 제약이 있는 경우
-            if (options?.MinimizeMemoryUsage == true || contentLength > 100000)
-            {
-                return "MemoryOptimized";
-            }
-
-            // Auto 전략이 사용 가능한 경우 (메타데이터 기반 선택)
-            if (HasMetadataContext(content))
-            {
-                return "Auto";
-            }
-
-            // 멀티미디어 콘텐츠
-            if (hasImages && contentLength > 5000)
-            {
-                return "Smart";
-            }
-
-            // 기술 문서
-            if (isTechnical || hasHeadings)
-            {
-                return "Smart";
-            }
-
-            // 긴 텍스트 문서
-            if (contentLength > 10000)
-            {
-                return "Semantic";
-            }
-
-            // 일반 문서
-            return "Paragraph";
-        }
-        catch (Exception ex)
-        {
-            LogStrategyRecommendationFailed(_logger, ex);
-            return "Paragraph";
-        }
-    }
-
     /// <summary>
     /// 전략 초기화
     /// </summary>
@@ -261,42 +210,6 @@ public partial class ChunkingStrategyFactory : IChunkingStrategyFactory
         LogFactoryInitialized(_logger, _strategyCreators.Count);
     }
 
-    /// <summary>
-    /// 기술적 콘텐츠 분석
-    /// </summary>
-    private static bool AnalyzeTechnicalContent(ExtractedContent content)
-    {
-        var text = content.MainContent?.ToLowerInvariant() ?? "";
-        var technicalKeywords = new[]
-        {
-            "class ", "function ", "method ", "api ", "```", "code", "example",
-            "parameter", "return", "import", "export", "interface", "type"
-        };
-
-        var techCount = technicalKeywords.Count(keyword => text.Contains(keyword));
-        return techCount >= 3;
-    }
-
-    /// <summary>
-    /// 메타데이터 컨텍스트 존재 여부 확인
-    /// </summary>
-    private static bool HasMetadataContext(ExtractedContent content)
-    {
-        // URL에서 메타데이터 가능성 추정
-        var url = content.Url?.ToLowerInvariant() ?? "";
-
-        // 일반적으로 메타데이터가 풍부한 사이트들
-        var metadataRichSites = new[]
-        {
-            "github.com", "stackoverflow.com", "medium.com", "dev.to",
-            "docs.", "api.", "learn.", "guide.", "manual."
-        };
-
-        return metadataRichSites.Any(site => url.Contains(site)) ||
-               !string.IsNullOrEmpty(content.Title) ||
-               content.Headings?.Count > 0;
-    }
-
     // ===================================================================
     // LoggerMessage Definitions
     // ===================================================================
@@ -309,9 +222,6 @@ public partial class ChunkingStrategyFactory : IChunkingStrategyFactory
 
     [LoggerMessage(Level = LogLevel.Error, Message = "Failed to create chunking strategy: {StrategyName}")]
     private static partial void LogStrategyCreationFailed(ILogger logger, Exception ex, string StrategyName);
-
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Strategy recommendation failed, returning default strategy")]
-    private static partial void LogStrategyRecommendationFailed(ILogger logger, Exception ex);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Chunking strategy factory initialized: {StrategyCount} strategies")]
     private static partial void LogFactoryInitialized(ILogger logger, int StrategyCount);

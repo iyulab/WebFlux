@@ -845,8 +845,7 @@ public class LargeDocumentProcessor(IWebContentProcessor processor)
         var options = new ChunkingOptions
         {
             Strategy = ChunkingStrategyType.MemoryOptimized,  // 메모리 효율적 처리
-            MaxChunkSize = 512,
-            MinimizeMemoryUsage = true     // 메모리 사용 최소화
+            MaxChunkSize = 512
         };
 
         int totalChunks = 0;

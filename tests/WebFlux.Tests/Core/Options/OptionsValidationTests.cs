@@ -74,24 +74,6 @@ public class OptionsValidationTests
         result.Errors.Should().Contain(e => e.Contains("SemanticThreshold"));
     }
 
-    [Fact]
-    public void ChunkingOptions_QualityThresholdOutOfRange_ShouldFail()
-    {
-        var options = new ChunkingOptions { QualityThreshold = -0.1 };
-        var result = options.Validate();
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.Contains("QualityThreshold"));
-    }
-
-    [Fact]
-    public void ChunkingOptions_ZeroMaxParallelism_ShouldFail()
-    {
-        var options = new ChunkingOptions { MaxParallelism = 0 };
-        var result = options.Validate();
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.Contains("MaxParallelism"));
-    }
-
     #endregion
 
     #region CrawlOptions
@@ -300,14 +282,12 @@ public class OptionsValidationTests
             MaxChunkSize = -1,
             MinChunkSize = -1,
             ChunkOverlap = -1,
-            SemanticThreshold = 2.0,
-            QualityThreshold = -1.0,
-            MaxParallelism = 0
+            SemanticThreshold = 2.0
         };
 
         var result = options.Validate();
         result.IsValid.Should().BeFalse();
-        result.Errors.Count.Should().BeGreaterThanOrEqualTo(5);
+        result.Errors.Count.Should().BeGreaterThanOrEqualTo(4);
     }
 
     #endregion
