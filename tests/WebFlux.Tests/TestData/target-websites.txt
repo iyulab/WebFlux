@@ -33,9 +33,9 @@ https://huggingface.co/docs
 https://openai.com/blog/
 https://www.anthropic.com/
 
-## Local Test Files
-file:///D:/data/WebFlux/tests/TestData/sample-rich-metadata.html
-file:///D:/data/WebFlux/tests/TestData/sample-blog-post.html
+## Local Test Files (in this directory)
+sample-rich-metadata.html
+sample-blog-post.html
 
 ## Expected Metadata Standards to Test:
 # 1. HTML Meta Tags (title, description, keywords, author, robots)

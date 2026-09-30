@@ -136,8 +136,8 @@ dotnet run
 
 ### 전체 예제 빌드
 ```bash
-# examples 디렉토리로 이동
-cd D:\data\WebFlux\examples
+# 리포지토리 루트에서 examples 디렉토리로 이동
+cd examples
 
 # 모든 예제 빌드
 for dir in 01-BasicCrawling 02-DynamicCrawling 03-AIEnhancement 04-ChunkingStrategies 05-CustomServices; do

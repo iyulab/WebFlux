@@ -1,9 +1,7 @@
 # Unlists a published package version from nuget.org.
 #
-# Copied from flux/FluxIndex, which grew it first. It moved here because the second withdrawal this
-# ecosystem needed was WebFlux 0.8.0 and there was nowhere to run it - the tool existed in exactly one
-# repository, so the alternative was the nuget.org web UI, which leaves no record of who withdrew what
-# or why.
+# It lives in this repository so a withdrawal of one of its packages leaves a record of who withdrew what
+# and why; the alternative, the nuget.org web UI, leaves none.
 #
 # Manual dispatch only, deliberately: unlisting is outward-facing and reaches consumers, so it stays a
 # decision someone makes rather than something a schedule does. It is reversible through the nuget.org web

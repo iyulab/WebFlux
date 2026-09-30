@@ -2,17 +2,15 @@
 
   <PropertyGroup>
     <IsPackable>false</IsPackable>
-    <!-- xUnit v3 test projects are stand-alone executables (BD-20260829-xunit-v3-pilot) -->
+    <!-- xUnit v3 test projects are stand-alone executables -->
     <OutputType>Exe</OutputType>
     <IsTestProject>true</IsTestProject>
 
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- xUnit v3 pilot rollout: xunit replaced with xunit.v3, no Microsoft.NET.Test.Sdk (not
-         required under Microsoft.Testing.Platform), coverlet.collector dropped (unused: CI
-         never invoked collect against it). xunit.runner.visualstudio kept for IDE Test
-         Explorer discovery. -->
+    <!-- xUnit v3: no Microsoft.NET.Test.Sdk (not required under Microsoft.Testing.Platform).
+         xunit.runner.visualstudio is kept for IDE Test Explorer discovery. -->
     <PackageReference Include="Iyu.Conventions.Testing" />
     <PackageReference Include="AwesomeAssertions" />
     <PackageReference Include="NSubstitute" />
@@ -21,7 +19,7 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <!-- MTP equivalent of the ecosystem's VSTest blame-hang convention (BD-20260828-07) -->
+    <!-- Hang dumps for stuck tests: the Microsoft.Testing.Platform equivalent of VSTest's blame-hang -->
     <PackageReference Include="Microsoft.Testing.Extensions.HangDump" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
     <!-- The tutorial's provider examples are written against the OpenAI SDK; DocSnippetCompileTests compiles them. -->

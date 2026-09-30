@@ -54,7 +54,7 @@ public class OptionsReachabilityRosterTests
         //   has no front door. Wiring it is a feature decision, not a knob decision.
         // RewriteOptions.AddExamples and SummaryOptions.TargetLanguage/FocusOnKeyPoints wired in 0.14.0 (prompt
         // instructions); ChunkingOptions.PreserveHeaders wired in 0.14.0 (FluxCurator PreserveSectionHeaders).
-        // Full 114-member classification (T 73 · D 24 · A 13 · B 2 · C 2): umbrella draft ISSUE-webflux-20260922-213000.
+        // Full 114-member classification: T 73 · D 24 · A 13 · B 2 · C 2.
         // Types removed whole in 0.14.0 (no library method received them, no consumer): WebFluxOptions (+Builder — a duplicate of
         // WebFluxConfiguration, which DI binds), AnalysisOptions (+IContentAnalyzer, no implementation), PipelineOptions (+PipelineStage,
         // ExtractionOptions — referenced by nothing).
@@ -63,24 +63,23 @@ public class OptionsReachabilityRosterTests
         // UseStreaming (the IAsyncEnumerable ProcessAsync overloads are the streaming shape), CreateHierarchy, CustomSeparators,
         // SplitCodeBlocks, SplitTables, IncludeMetadata; ExtractOptions.IncludeLinks; MarkdownConversionOptions.EnableCodeHighlighting,
         // CustomSettings; ReconstructOptions.AdditionalOptions; TextCompletionOptions.AdditionalProperties.
-        // cycle-934 (2026-09-23, owner decision «dead subsystems: remove»): removed whole in 0.14.0 because nothing registered,
+        // Removed whole in 0.14.0 because nothing registered,
         // constructed or called them — only their own tests did: the site-configuration analyzer (ISiteConfigurationAnalyzer,
         // SiteConfigurationAnalyzer and its model tree — SiteConfiguration, Build/Content/Deployment/Plugin/Seo/SitePerformance
         // configuration, the nine *Config leaves), the reconstruct subsystem (IContentReconstructor, IReconstructStrategy[Factory],
         // ReconstructStrategyFactory, five strategies, ReconstructOptions, ReconstructedContent), DomStructureChunkingStrategy with
         // HtmlChunkingOptions, and ChunkingOptions.StrategySpecificOptions (its only reader was DomStructure). ChunkingStrategyType.Intelligent
         // had no registered strategy and silently became Paragraph; it is removed and an unknown strategy name now throws.
-        // cycle-935 (2026-09-23, same owner decision): the multimodal subsystem removed in 0.14.0 — IImageToTextService (a port the
+        // Also removed in 0.14.0: the multimodal subsystem — IImageToTextService (a port the
         // library registered helpers for and never called), IMultimodalProcessingPipeline (no implementation), their result models,
         // ImageToTextOptions, MultimodalProcessingOptions, AddWebFluxMultimodal (registered nothing), and the members that pointed at
         // them: ChunkingOptions.IncludeImageDescriptions/EnableMultimodalProcessing/MultimodalOptions and the ChunkingConfiguration twins.
-        // cycle-933 (2026-09-22) widened the scan from *Options/*Config to *Configuration as well: NamedWith is EndsWith, so
-        // WebFluxConfiguration and its 19 nested configuration types were never scanned. What it found — 112 members in
+        // The scan covers *Configuration as well as *Options/*Config: NamedWith is EndsWith, so a narrower filter never saw
+        // WebFluxConfiguration and its 19 nested configuration types. What it found — 112 members in
         // 20 types — is recorded here UNCLASSIFIED (no per-member verdict yet): the gate starts green at the honest number and the
-        // next unread configuration member fails it. Classification (A/B/C/D/T, umbrella draft ISSUE-webflux-20260922-213000
-        // and its successor) decides wire vs remove; several of these types (Build/Content/Deployment/Plugin/Seo) look like
+        // next unread configuration member fails it. Classification (A/B/C/D/T) decides wire vs remove; several of these types (Build/Content/Deployment/Plugin/Seo) look like
         // static-site-generator configuration the library never consumes.
-        // 0.15.0: classified (T 57 · A 15 · D 12 · C 3 · B 2, umbrella draft ISSUE-webflux-20260922-213000). The processor now
+        // 0.15.0: classified (T 57 · A 15 · D 12 · C 3 · B 2). The processor now
         // reads the registered WebFluxConfiguration: the crawler settings of CrawlingConfiguration and the size/overlap/min of
         // ChunkingConfiguration left this list, and the three ChunkingConfiguration twins were removed.
         // 0.16.0: the unread rest (T/A) was removed; CrawlConfiguration was folded into CrawlingConfiguration (MaxDepth/MaxPages,

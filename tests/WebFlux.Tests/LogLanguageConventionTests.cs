@@ -8,9 +8,7 @@ using Xunit;
 namespace WebFlux.Tests;
 
 // Operator log pipelines (grep / Loki / Elastic) and international support require
-// English-only log messages. See umbrella ISSUE-ecosystem-logging-language-convention
-// for the rationale. Reference implementation:
-// flux/FluxIndex/tests/FluxIndex.Storage.SQLite.Tests/LogLanguageConventionTests.cs
+// English-only log messages.
 public class LogLanguageConventionTests
 {
     private static readonly Regex HangulRegex = new(@"[가-힣ᄀ-ᇿ㄰-㆏]");
