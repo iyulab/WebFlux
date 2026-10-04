@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.20.0] - Unreleased
+## [0.20.0] - 2026-10-05
 
 ### Changed
 - **Breaking: `IContentExtractService.ExtractContentAsync` returns the `ExtractedContent` and throws
