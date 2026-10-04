@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.19.6] - Unreleased
+## [0.19.6] - 2026-10-05
 
 ### Changed
 - **The packages now carry the LICENSE text**, so an application that redistributes them can ship the MIT notice
