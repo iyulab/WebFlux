@@ -239,7 +239,6 @@ setx OPENAI_API_KEY "sk-your-key"
 - [아키텍처 가이드](../docs/ARCHITECTURE.md)
 - [인터페이스 레퍼런스](../docs/INTERFACES.md)
 - [청킹 전략 가이드](../docs/CHUNKING_STRATEGIES.md)
-- [성능 최적화](../docs/PERFORMANCE_DESIGN.md)
 
 ### 외부 리소스
 - [OpenAI API 문서](https://platform.openai.com/docs)
@@ -255,9 +254,8 @@ setx OPENAI_API_KEY "sk-your-key"
 4. 프로덕션 환경 배포
 
 ### 고급 주제
-- [멀티모달 처리](../docs/MULTIMODAL_DESIGN.md)
-- [Web Intelligence Engine](../TASKS.md#phase-4)
-- [메타데이터 통합](../docs/METADATA_INTEGRATION.md)
+- [아키텍처](../docs/ARCHITECTURE.md)
+- [메타데이터 추출 · AI 서비스](../README.md#services-you-can-provide)
 
 ## 🤝 기여
 
