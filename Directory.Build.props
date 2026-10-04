@@ -15,7 +15,7 @@
   <!-- 📋 버전 관리 -->
   <!-- ═══════════════════════════════════════════════════════════════════════ -->
   <PropertyGroup>
-    <VersionPrefix>0.19.5</VersionPrefix>
+    <VersionPrefix>0.19.6</VersionPrefix>
     <VersionSuffix></VersionSuffix>
     <PackageVersion Condition="'$(VersionSuffix)' == ''">$(VersionPrefix)</PackageVersion>
     <PackageVersion Condition="'$(VersionSuffix)' != ''">$(VersionPrefix)-$(VersionSuffix)</PackageVersion>
@@ -99,6 +99,7 @@
   <ItemGroup Condition="'$(IsPackable)' == 'true'">
     <None Include="$(MSBuildThisFileDirectory)src\logo.png" Pack="true" PackagePath="\" />
     <None Include="$(MSBuildThisFileDirectory)README.md" Pack="true" PackagePath="\" />
+    <None Include="$(MSBuildThisFileDirectory)LICENSE" Pack="true" PackagePath="\" Visible="false" />
   </ItemGroup>
 
   <!-- ═══════════════════════════════════════════════════════════════════════ -->

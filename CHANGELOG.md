@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.19.6] - Unreleased
+
+### Changed
+- **The packages now carry the LICENSE text**, so an application that redistributes them can ship the MIT notice
+  from the package itself.
+
+### Dependencies
+- OpenAI 2.14.0.
+
 ## [0.19.5] - 2026-10-02
 
 ### Changed
