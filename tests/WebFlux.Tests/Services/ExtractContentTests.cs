@@ -34,18 +34,18 @@ public class ExtractContentTests : IDisposable
     #region ExtractContentAsync Tests
 
     [Fact]
-    public async Task ExtractContentAsync_WithInvalidUrl_ShouldReturnFailure()
+    public async Task ExtractContentAsync_WithInvalidUrl_Throws()
     {
         // Arrange
         var invalidUrl = "not-a-valid-url";
 
         // Act
-        var result = await _processor.ExtractContentAsync(invalidUrl, cancellationToken: TestContext.Current.CancellationToken);
+        var act = () => _processor.ExtractContentAsync(invalidUrl, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
-        result.IsSuccess.Should().BeFalse();
-        result.Error.Should().NotBeNull();
-        result.Error!.Code.Should().Be(ExtractErrorCodes.InvalidUrl);
+        var ex = (await act.Should().ThrowAsync<WebExtractionException>()).Which;
+        ex.ErrorCode.Should().Be(ExtractErrorCodes.InvalidUrl);
+        ex.Url.Should().Be(invalidUrl);
     }
 
     [Fact]
@@ -59,9 +59,8 @@ public class ExtractContentTests : IDisposable
         var result = await _processor.ExtractContentAsync(url, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Data.Should().NotBeNull();
-        result.Data!.Url.Should().Be(url);
+        result.Should().NotBeNull();
+        result.Url.Should().Be(url);
     }
 
     [Fact]
@@ -81,54 +80,52 @@ public class ExtractContentTests : IDisposable
         var result = await _processor.ExtractContentAsync(url, options, TestContext.Current.CancellationToken);
 
         // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Data.Should().NotBeNull();
+        result.Should().NotBeNull();
     }
 
     [Fact]
-    public async Task ExtractContentAsync_WithCrawlFailure_ShouldReturnFailure()
+    public async Task ExtractContentAsync_WithCrawlFailure_ThrowsWithTheHttpStatus()
     {
         // Arrange
         var url = "https://example.com";
         SetupFailedCrawl(url, 404);
 
         // Act
-        var result = await _processor.ExtractContentAsync(url, cancellationToken: TestContext.Current.CancellationToken);
+        var act = () => _processor.ExtractContentAsync(url, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
-        result.IsSuccess.Should().BeFalse();
-        result.Error.Should().NotBeNull();
+        var ex = (await act.Should().ThrowAsync<WebExtractionException>()).Which;
+        ex.ErrorCode.Should().Be(ExtractErrorCodes.NotFound);
+        ex.HttpStatusCode.Should().Be(404);
     }
 
     [Fact]
-    public async Task ExtractContentAsync_WithEmptyContent_ShouldReturnFailure()
+    public async Task ExtractContentAsync_WithEmptyContent_Throws()
     {
         // Arrange
         var url = "https://example.com";
         SetupEmptyContentCrawl(url);
 
         // Act
-        var result = await _processor.ExtractContentAsync(url, cancellationToken: TestContext.Current.CancellationToken);
+        var act = () => _processor.ExtractContentAsync(url, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
-        result.IsSuccess.Should().BeFalse();
-        result.Error!.Code.Should().Be(ExtractErrorCodes.EmptyContent);
+        (await act.Should().ThrowAsync<WebExtractionException>()).Which.ErrorCode.Should().Be(ExtractErrorCodes.EmptyContent);
     }
 
     [Fact]
-    public async Task ExtractContentAsync_WithCancellation_ShouldReturnTimeout()
+    public async Task ExtractContentAsync_WhenTheCallerCancels_ThrowsOperationCanceled()
     {
-        // Arrange
+        // Arrange - the caller's cancellation is not a failed extraction (it used to come back as a "Timeout" result)
         var url = "https://example.com";
         using var cts = new CancellationTokenSource();
         cts.Cancel();
 
         // Act
-        var result = await _processor.ExtractContentAsync(url, cancellationToken: cts.Token);
+        var act = () => _processor.ExtractContentAsync(url, cancellationToken: cts.Token);
 
         // Assert
-        result.IsSuccess.Should().BeFalse();
-        result.Error!.Code.Should().Be(ExtractErrorCodes.Timeout);
+        await act.Should().ThrowAsync<OperationCanceledException>();
     }
 
     [Fact]
@@ -176,9 +173,8 @@ public class ExtractContentTests : IDisposable
         var result = await _processor.ExtractContentAsync(url, options, TestContext.Current.CancellationToken);
 
         // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Data!.Quality.Should().NotBeNull();
-        result.Data.Quality!.OverallScore.Should().Be(0.8);
+        result.Quality.Should().NotBeNull();
+        result.Quality!.OverallScore.Should().Be(0.8);
     }
 
     #endregion
@@ -295,13 +291,10 @@ public class ExtractContentTests : IDisposable
             "https://example2.com"
         };
 
-        foreach (var url in urls)
-        {
-            SetupSuccessfulCrawl(url);
-        }
+        SetupSuccessfulCrawlForAnyUrl();
 
         // Act
-        var results = new List<ProcessingResult<ExtractedContent>>();
+        var results = new List<ExtractStreamItem>();
         await foreach (var result in _processor.ExtractBatchStreamAsync(urls, cancellationToken: TestContext.Current.CancellationToken))
         {
             results.Add(result);
@@ -309,6 +302,31 @@ public class ExtractContentTests : IDisposable
 
         // Assert
         results.Should().HaveCount(2);
+        results.Should().OnlyContain(r => r.Content != null && r.Failure == null);
+    }
+
+    [Fact]
+    public async Task ExtractBatchStreamAsync_AFailedUrl_IsAnItemThatNamesItsUrl()
+    {
+        // Arrange - a failure used to arrive without the URL it belonged to
+        SetupMixedCrawl("https://ok.example", "https://missing.example");
+
+        // Act
+        var results = new List<ExtractStreamItem>();
+        await foreach (var item in _processor.ExtractBatchStreamAsync(
+            ["https://ok.example", "https://missing.example"], cancellationToken: TestContext.Current.CancellationToken))
+        {
+            results.Add(item);
+        }
+
+        // Assert
+        results.Should().HaveCount(2);
+        var failed = results.Single(r => r.Url == "https://missing.example");
+        failed.Content.Should().BeNull();
+        failed.Failure!.Url.Should().Be("https://missing.example");
+        failed.Failure.ErrorCode.Should().Be(ExtractErrorCodes.ServerError);
+        failed.Failure.HttpStatusCode.Should().Be(500);
+        results.Single(r => r.Url == "https://ok.example").Content.Should().NotBeNull();
     }
 
     [Fact]
@@ -318,7 +336,7 @@ public class ExtractContentTests : IDisposable
         var urls = new List<string>();
 
         // Act
-        var results = new List<ProcessingResult<ExtractedContent>>();
+        var results = new List<ExtractStreamItem>();
         await foreach (var result in _processor.ExtractBatchStreamAsync(urls, cancellationToken: TestContext.Current.CancellationToken))
         {
             results.Add(result);
@@ -341,7 +359,7 @@ public class ExtractContentTests : IDisposable
         }
 
         // Act
-        var results = new List<ProcessingResult<ExtractedContent>>();
+        var results = new List<ExtractStreamItem>();
         var count = 0;
 
         try

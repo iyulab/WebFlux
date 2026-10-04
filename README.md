@@ -158,7 +158,8 @@ For consumers that only need extraction or chunking:
 ```csharp
 // Extraction only (single URL, batch, or streamed batch: ExtractBatchAsync / ExtractBatchStreamAsync)
 var extractor = provider.GetRequiredService<IContentExtractService>();
-var result = await extractor.ExtractContentAsync("https://example.com");
+var page = await extractor.ExtractContentAsync("https://example.com");   // ExtractedContent; a failure throws
+                                                                          // WebExtractionException (ErrorCode, Url, HttpStatusCode)
 
 // Chunking only
 var chunker = provider.GetRequiredService<IContentChunkService>();

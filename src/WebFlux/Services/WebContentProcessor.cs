@@ -930,7 +930,7 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
     /// <summary>
     /// 단일 URL에서 콘텐츠를 추출합니다 (청킹 없음)
     /// </summary>
-    public async Task<ProcessingResult<ExtractedContent>> ExtractContentAsync(
+    public async Task<ExtractedContent> ExtractContentAsync(
         string url,
         ExtractOptions? options = null,
         CancellationToken cancellationToken = default)
@@ -945,24 +945,14 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
 
         try
         {
-            // 조기 취소 확인
-            if (cancellationToken.IsCancellationRequested)
-            {
-                return ProcessingResult.FromError<ExtractedContent>(
-                    "Operation cancelled",
-                    ExtractErrorCodes.Timeout,
-                    sw.ElapsedMilliseconds);
-            }
+            cancellationToken.ThrowIfCancellationRequested();
 
             LogExtractingContent(_logger, url);
 
             // URL 유효성 검사
             if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
             {
-                return ProcessingResult.FromError<ExtractedContent>(
-                    "Invalid URL format",
-                    ExtractErrorCodes.InvalidUrl,
-                    sw.ElapsedMilliseconds);
+                throw new WebExtractionException(url, ExtractErrorCodes.InvalidUrl, "Invalid URL format");
             }
 
             // 캐시 확인 (UseCache && !ForceRefresh)
@@ -976,10 +966,7 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
                 {
                     LogCacheHit(_logger, url);
                     cached.FromCache = true;
-                    return ProcessingResult.Success<ExtractedContent>(
-                        cached,
-                        processingTimeMs: sw.ElapsedMilliseconds,
-                        metadata: new Dictionary<string, object> { ["cacheHit"] = true });
+                    return cached;
                 }
             }
 
@@ -1068,18 +1055,16 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
                         ? ExtractErrorCodes.FromHttpStatusCode(crawlResult.StatusCode)
                         : ExtractErrorCodes.NetworkError;
 
-                return ProcessingResult.FromError<ExtractedContent>(
-                    crawlResult?.ErrorMessage ?? "Failed to crawl URL",
+                throw new WebExtractionException(
+                    url,
                     errorCode,
-                    sw.ElapsedMilliseconds);
+                    crawlResult?.ErrorMessage ?? "Failed to crawl URL",
+                    crawlResult?.StatusCode);
             }
 
             if (string.IsNullOrWhiteSpace(crawlResult.Content))
             {
-                return ProcessingResult.FromError<ExtractedContent>(
-                    "Empty content received",
-                    ExtractErrorCodes.EmptyContent,
-                    sw.ElapsedMilliseconds);
+                throw new WebExtractionException(url, ExtractErrorCodes.EmptyContent, "Empty content received", crawlResult.StatusCode);
             }
 
             // 콘텐츠 추출
@@ -1147,21 +1132,17 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
 
             LogExtractedContentFromUrl(_logger, url, extracted.MainContent?.Length ?? 0, sw.ElapsedMilliseconds);
 
-            return ProcessingResult.Success<ExtractedContent>(
-                extracted,
-                processingTimeMs: sw.ElapsedMilliseconds);
+            return extracted;
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
-            return ProcessingResult.FromError<ExtractedContent>(
-                "Operation cancelled",
-                ExtractErrorCodes.Timeout,
-                sw.ElapsedMilliseconds);
+            // Not the caller's cancellation: a timeout inside the request (HttpClient reports one this way).
+            throw new WebExtractionException(url, ExtractErrorCodes.Timeout, "The request timed out");
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not WebExtractionException and not OperationCanceledException)
         {
             LogFailedToExtractContentFromUrl(_logger, ex, url);
-            return ProcessingResult.FromException<ExtractedContent>(ex, sw.ElapsedMilliseconds);
+            throw new WebExtractionException(url, ExtractErrorCodes.Unknown, ex.Message, innerException: ex);
         }
     }
 
@@ -1206,54 +1187,22 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
                 var domain = GetDomain(url);
                 domainCounts.AddOrUpdate(domain, 1, (_, count) => count + 1);
 
-                ProcessingResult<ExtractedContent> result;
+                var itemTimer = System.Diagnostics.Stopwatch.StartNew();
+                var item = await ExtractOneForBatchAsync(url, domain, options, rateLimiter, cancellationToken).ConfigureAwait(false);
+                processingTimes.Add(itemTimer.ElapsedMilliseconds);
 
-                if (rateLimiter != null && options.EnableDomainRateLimiting)
+                if (item.Content is { } content)
                 {
-                    result = await rateLimiter.ExecuteAsync(
-                        domain,
-                        TimeSpan.FromMilliseconds(options.DomainMinIntervalMs),
-                        () => ExtractContentAsync(url, options, cancellationToken),
-                        cancellationToken).ConfigureAwait(false);
-                }
-                else
-                {
-                    result = await ExtractContentAsync(url, options, cancellationToken).ConfigureAwait(false);
-                }
-
-                processingTimes.Add(result.ProcessingTimeMs);
-
-                if (result.IsSuccess && result.Data != null)
-                {
-                    succeeded.Add(result.Data);
-
-                    if (result.Metadata.TryGetValue("cacheHit", out var hit) && (bool)hit)
+                    succeeded.Add(content);
+                    if (content.FromCache)
                     {
                         Interlocked.Increment(ref cacheHits);
                     }
                 }
                 else
                 {
-                    failed.Add(new FailedExtraction
-                    {
-                        Url = url,
-                        ErrorCode = result.Error?.Code ?? ExtractErrorCodes.Unknown,
-                        ErrorMessage = result.Error?.Message ?? "Unknown error",
-                        RetryCount = options.MaxRetries,
-                        ProcessingTimeMs = result.ProcessingTimeMs,
-                        Exception = result.Error?.InnerException
-                    });
+                    failed.Add(item.Failure!);
                 }
-            }
-            catch (Exception ex)
-            {
-                failed.Add(new FailedExtraction
-                {
-                    Url = url,
-                    ErrorCode = ExtractErrorCodes.Unknown,
-                    ErrorMessage = ex.Message,
-                    Exception = ex
-                });
             }
             finally
             {
@@ -1302,10 +1251,69 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
         return result;
     }
 
+    // One URL of a batch: the content, or the failure as a FailedExtraction. The caller's cancellation propagates;
+    // every other failure belongs to this URL and must not end the batch.
+    private async Task<ExtractStreamItem> ExtractOneForBatchAsync(
+        string url,
+        string domain,
+        ExtractOptions options,
+        IDomainRateLimiter? rateLimiter,
+        CancellationToken cancellationToken)
+    {
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        try
+        {
+            var content = rateLimiter != null && options.EnableDomainRateLimiting
+                ? await rateLimiter.ExecuteAsync(
+                    domain,
+                    TimeSpan.FromMilliseconds(options.DomainMinIntervalMs),
+                    () => ExtractContentAsync(url, options, cancellationToken),
+                    cancellationToken).ConfigureAwait(false)
+                : await ExtractContentAsync(url, options, cancellationToken).ConfigureAwait(false);
+            return new ExtractStreamItem { Url = url, Content = content };
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (WebExtractionException ex)
+        {
+            return new ExtractStreamItem
+            {
+                Url = url,
+                Failure = new FailedExtraction
+                {
+                    Url = url,
+                    ErrorCode = ex.ErrorCode,
+                    ErrorMessage = ex.Message,
+                    HttpStatusCode = ex.HttpStatusCode,
+                    RetryCount = options.MaxRetries,
+                    ProcessingTimeMs = sw.ElapsedMilliseconds,
+                    Exception = ex.InnerException ?? ex
+                }
+            };
+        }
+        catch (Exception ex)
+        {
+            return new ExtractStreamItem
+            {
+                Url = url,
+                Failure = new FailedExtraction
+                {
+                    Url = url,
+                    ErrorCode = ExtractErrorCodes.Unknown,
+                    ErrorMessage = ex.Message,
+                    ProcessingTimeMs = sw.ElapsedMilliseconds,
+                    Exception = ex
+                }
+            };
+        }
+    }
+
     /// <summary>
     /// 여러 URL에서 콘텐츠를 스트리밍으로 배치 추출합니다
     /// </summary>
-    public async IAsyncEnumerable<ProcessingResult<ExtractedContent>> ExtractBatchStreamAsync(
+    public async IAsyncEnumerable<ExtractStreamItem> ExtractBatchStreamAsync(
         IEnumerable<string> urls,
         ExtractOptions? options = null,
         [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
@@ -1321,7 +1329,7 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
             : null;
 
         // 채널 기반 스트리밍
-        var channel = Channel.CreateUnbounded<ProcessingResult<ExtractedContent>>();
+        var channel = Channel.CreateUnbounded<ExtractStreamItem>();
         var writer = channel.Writer;
         var reader = channel.Reader;
 
@@ -1335,28 +1343,8 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
 
                 try
                 {
-                    ProcessingResult<ExtractedContent> result;
-
-                    if (rateLimiter != null && options.EnableDomainRateLimiting)
-                    {
-                        var domain = GetDomain(url);
-                        result = await rateLimiter.ExecuteAsync(
-                            domain,
-                            TimeSpan.FromMilliseconds(options.DomainMinIntervalMs),
-                            () => ExtractContentAsync(url, options, cancellationToken),
-                            cancellationToken).ConfigureAwait(false);
-                    }
-                    else
-                    {
-                        result = await ExtractContentAsync(url, options, cancellationToken).ConfigureAwait(false);
-                    }
-
-                    await writer.WriteAsync(result, cancellationToken).ConfigureAwait(false);
-                }
-                catch (Exception ex)
-                {
-                    var failedResult = ProcessingResult.FromException<ExtractedContent>(ex);
-                    await writer.WriteAsync(failedResult, cancellationToken).ConfigureAwait(false);
+                    var item = await ExtractOneForBatchAsync(url, GetDomain(url), options, rateLimiter, cancellationToken).ConfigureAwait(false);
+                    await writer.WriteAsync(item, cancellationToken).ConfigureAwait(false);
                 }
                 finally
                 {

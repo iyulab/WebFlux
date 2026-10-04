@@ -436,12 +436,9 @@ Console.WriteLine($"사용 가능한 전략: {string.Join(", ", strategies)}");
 **커스텀 전략 구현 및 사용 예제:**
 ```csharp
 // 사용: 추출한 콘텐츠에 커스텀 전략을 직접 적용한다
-var extracted = await processor.ExtractContentAsync(url);
-if (extracted.IsSuccess && extracted.Data is { } content)
-{
-    var chunks = await new SentenceBasedChunkingStrategy().ChunkAsync(content, new ChunkingOptions { MaxChunkSize = 512 });
-    Console.WriteLine($"생성된 청크 수: {chunks.Count}");
-}
+var content = await processor.ExtractContentAsync(url);   // 실패하면 WebExtractionException
+var chunks = await new SentenceBasedChunkingStrategy().ChunkAsync(content, new ChunkingOptions { MaxChunkSize = 512 });
+Console.WriteLine($"생성된 청크 수: {chunks.Count}");
 
 public class SentenceBasedChunkingStrategy : IChunkingStrategy
 {
@@ -643,11 +640,8 @@ services.AddWebFlux(config =>
 
 ```csharp
 // 사용
-var extracted = await processor.ExtractContentAsync(url);
-if (extracted.Data is { } content)
-{
-    var chunks = await new CustomChunkingStrategy().ChunkAsync(content, new ChunkingOptions());
-}
+var content = await processor.ExtractContentAsync(url);
+var chunks = await new CustomChunkingStrategy().ChunkAsync(content, new ChunkingOptions());
 
 public class CustomChunkingStrategy : IChunkingStrategy
 {

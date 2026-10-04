@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.20.0] - Unreleased
+
+### Changed
+- **Breaking: `IContentExtractService.ExtractContentAsync` returns the `ExtractedContent` and throws
+  `WebExtractionException` on failure** (`ErrorCode` — an `ExtractErrorCodes` constant such as `DisallowedByRobotsTxt`,
+  `Timeout`, `NotFound`, `EmptyContent` — plus `Url` and `HttpStatusCode`). It returned a result object whose success
+  flag every caller had to check besides catching exceptions.
+  Migration: replace `if (!result.IsSuccess) … result.Error.Code … result.Data` with
+  `try { var page = await ExtractContentAsync(url); } catch (WebExtractionException ex) { … ex.ErrorCode … }`.
+- **Breaking: `ExtractBatchStreamAsync` yields `ExtractStreamItem`** — `Url` plus `Content` on success or `Failure`
+  (`FailedExtraction`, the same type `ExtractBatchAsync` reports) on failure. A failed URL used to arrive without the URL
+  it belonged to. Migration: `item.Content` for `result.Data`, `item.Failure` for `result.Error`.
+- **Cancelling the caller's token now throws `OperationCanceledException`** from `ExtractContentAsync`,
+  `ExtractBatchAsync` and `ExtractBatchStreamAsync`; it used to come back as a failed result with the `Timeout` code.
+  A timeout inside the request is still `WebExtractionException` with `ExtractErrorCodes.Timeout`.
+
+### Removed
+- **Breaking: `ProcessingResult<T>`, `ProcessingResult` and `ProcessingError`** — nothing else returned them.
+
 ## [0.19.6] - 2026-10-05
 
 ### Changed

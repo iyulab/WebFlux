@@ -44,10 +44,10 @@ public sealed class RetryOwnershipTests : IDisposable
     {
         _server.Status("/missing", 404);
 
-        var result = await _processor.ExtractContentAsync(
-            _server.Url("/missing"), Extract(maxRetries: 2), TestContext.Current.CancellationToken);
+        var ex = await Assert.ThrowsAsync<WebExtractionException>(() => _processor.ExtractContentAsync(
+            _server.Url("/missing"), Extract(maxRetries: 2), TestContext.Current.CancellationToken));
 
-        result.Error!.Code.Should().Be(ExtractErrorCodes.NotFound);
+        ex.ErrorCode.Should().Be(ExtractErrorCodes.NotFound);
         _server.Hits("/missing").Should().Be(1);
     }
 
@@ -57,8 +57,8 @@ public sealed class RetryOwnershipTests : IDisposable
         // The positive control: the rule is "do not retry what cannot change", not "never retry".
         _server.Status("/flaky", 503);
 
-        await _processor.ExtractContentAsync(
-            _server.Url("/flaky"), Extract(maxRetries: 1), TestContext.Current.CancellationToken);
+        await Assert.ThrowsAsync<WebExtractionException>(() => _processor.ExtractContentAsync(
+            _server.Url("/flaky"), Extract(maxRetries: 1), TestContext.Current.CancellationToken));
 
         _server.Hits("/flaky").Should().Be(2);
     }
@@ -68,8 +68,8 @@ public sealed class RetryOwnershipTests : IDisposable
     {
         _server.Abort("/reset");
 
-        await _processor.ExtractContentAsync(
-            _server.Url("/reset"), Extract(maxRetries: 1), TestContext.Current.CancellationToken);
+        await Assert.ThrowsAsync<WebExtractionException>(() => _processor.ExtractContentAsync(
+            _server.Url("/reset"), Extract(maxRetries: 1), TestContext.Current.CancellationToken));
 
         // Two layers each retrying would make this (1 + 1) x (1 + 3) = 8.
         _server.Hits("/reset").Should().Be(2);

@@ -168,14 +168,13 @@ public sealed class RequestTimeoutTests : IDisposable
             factory, Substitute.For<IEventPublisher>(), Substitute.For<ILogger<WebContentProcessor>>());
         var sw = Stopwatch.StartNew();
 
-        var result = await processor.ExtractContentAsync(
+        var ex = await Assert.ThrowsAsync<WebExtractionException>(() => processor.ExtractContentAsync(
             _server.Url("/slow"),
             new ExtractOptions { TimeoutSeconds = 1, MaxRetries = 2, RespectRobotsTxt = false, EvaluateQuality = false },
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken));
 
         sw.Stop();
-        result.IsSuccess.Should().BeFalse();
-        result.Error!.Code.Should().Be(ExtractErrorCodes.Timeout);
+        ex.ErrorCode.Should().Be(ExtractErrorCodes.Timeout);
         sw.Elapsed.Should().BeLessThan(SlowPage);
         _server.Hits("/slow").Should().Be(1, "neither retry layer should repeat a request that timed out");
     }

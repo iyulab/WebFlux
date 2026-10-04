@@ -66,6 +66,22 @@ public class BatchExtractResult
 }
 
 /// <summary>
+/// 스트리밍 배치 추출(<c>ExtractBatchStreamAsync</c>)이 URL마다 내보내는 항목 — 성공이면 <see cref="Content"/>,
+/// 실패면 <see cref="Failure"/>가 채워집니다(정확히 하나).
+/// </summary>
+public sealed class ExtractStreamItem
+{
+    /// <summary>이 항목의 URL.</summary>
+    public required string Url { get; init; }
+
+    /// <summary>추출된 콘텐츠(성공했을 때).</summary>
+    public ExtractedContent? Content { get; init; }
+
+    /// <summary>실패 정보(실패했을 때).</summary>
+    public FailedExtraction? Failure { get; init; }
+}
+
+/// <summary>
 /// 실패한 추출 정보
 /// </summary>
 public class FailedExtraction

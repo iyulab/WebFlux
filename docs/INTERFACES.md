@@ -200,7 +200,9 @@ public interface IContentChunkService
 // IContentExtractService — 청킹 없는 경량 추출
 public interface IContentExtractService
 {
-    Task<ProcessingResult<ExtractedContent>> ExtractContentAsync(
+    // 실패하면 WebExtractionException(ErrorCode = ExtractErrorCodes 상수, Url, HttpStatusCode).
+    // 호출자 취소는 OperationCanceledException.
+    Task<ExtractedContent> ExtractContentAsync(
         string url,
         ExtractOptions? options = null,
         CancellationToken cancellationToken = default);
@@ -210,7 +212,8 @@ public interface IContentExtractService
         ExtractOptions? options = null,
         CancellationToken cancellationToken = default);
 
-    IAsyncEnumerable<ProcessingResult<ExtractedContent>> ExtractBatchStreamAsync(
+    // URL마다 항목 하나 — 성공이면 Content, 실패면 Failure(FailedExtraction: Url · ErrorCode · ErrorMessage).
+    IAsyncEnumerable<ExtractStreamItem> ExtractBatchStreamAsync(
         IEnumerable<string> urls,
         ExtractOptions? options = null,
         CancellationToken cancellationToken = default);
@@ -493,16 +496,16 @@ await foreach (var chunk in processor.ProcessWebsiteAsync(url, options))
 
 ```csharp
 // One result per URL, as each finishes; a failed page does not stop the others.
-await foreach (var result in processor.ExtractBatchStreamAsync(urls))
+await foreach (var item in processor.ExtractBatchStreamAsync(urls))
 {
-    if (result.IsSuccess)
+    if (item.Content is { } content)
     {
-        Console.WriteLine($"✓ Processed: {result.Data!.Url}");
-        await StoreContentAsync(result.Data);
+        Console.WriteLine($"✓ Processed: {content.Url}");
+        await StoreContentAsync(content);
     }
     else
     {
-        Console.WriteLine($"✗ Failed: {result.Error?.Code} - {result.Error?.Message}");
+        Console.WriteLine($"✗ Failed: {item.Url} {item.Failure!.ErrorCode} - {item.Failure.ErrorMessage}");
     }
 }
 ```

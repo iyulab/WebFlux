@@ -55,12 +55,10 @@ public class RobotsRefusalOnExtractPathTests : IDisposable
         const string url = "https://example.com/private/x.html";
         CrawlerRefusesByRobots(url);
 
-        var result = await _processor.ExtractContentAsync(
-            url, cancellationToken: TestContext.Current.CancellationToken);
-
-        result.IsSuccess.Should().BeFalse();
-        result.Error!.Code.Should().Be(ExtractErrorCodes.DisallowedByRobotsTxt);
-        result.Error.Code.Should().NotBe(ExtractErrorCodes.Unknown);
+        var ex = await Assert.ThrowsAsync<WebExtractionException>(() => _processor.ExtractContentAsync(
+            url, cancellationToken: TestContext.Current.CancellationToken));
+        ex.ErrorCode.Should().Be(ExtractErrorCodes.DisallowedByRobotsTxt);
+        ex.ErrorCode.Should().NotBe(ExtractErrorCodes.Unknown);
     }
 
     [Fact]
@@ -70,10 +68,10 @@ public class RobotsRefusalOnExtractPathTests : IDisposable
         CrawlerRefusesByRobots(url);
 
         // MaxRetries = 3 would mean four attempts if the refusal were treated as a failed request.
-        await _processor.ExtractContentAsync(
+        await Assert.ThrowsAsync<WebExtractionException>(() => _processor.ExtractContentAsync(
             url,
             new ExtractOptions { MaxRetries = 3, EvaluateQuality = false },
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken));
 
         await _crawler.Received(1).CrawlAsync(
             Arg.Is<string>(u => u == url), Arg.Any<CrawlOptions>(), Arg.Any<CancellationToken>());
@@ -95,10 +93,10 @@ public class RobotsRefusalOnExtractPathTests : IDisposable
                 ErrorMessage = "Service Unavailable"
             });
 
-        await _processor.ExtractContentAsync(
+        await Assert.ThrowsAsync<WebExtractionException>(() => _processor.ExtractContentAsync(
             url,
             new ExtractOptions { MaxRetries = 2, EvaluateQuality = false },
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken));
 
         await _crawler.Received(3).CrawlAsync(
             Arg.Is<string>(u => u == url), Arg.Any<CrawlOptions>(), Arg.Any<CancellationToken>());
@@ -110,8 +108,8 @@ public class RobotsRefusalOnExtractPathTests : IDisposable
         const string url = "https://example.com/page";
         CrawlerRefusesByRobots(url);
 
-        await _processor.ExtractContentAsync(
-            url, cancellationToken: TestContext.Current.CancellationToken);
+        await Assert.ThrowsAsync<WebExtractionException>(() => _processor.ExtractContentAsync(
+            url, cancellationToken: TestContext.Current.CancellationToken));
 
         await _crawler.Received().CrawlAsync(
             Arg.Any<string>(),
@@ -125,10 +123,10 @@ public class RobotsRefusalOnExtractPathTests : IDisposable
         const string url = "https://example.com/page";
         CrawlerRefusesByRobots(url);
 
-        await _processor.ExtractContentAsync(
+        await Assert.ThrowsAsync<WebExtractionException>(() => _processor.ExtractContentAsync(
             url,
             new ExtractOptions { RespectRobotsTxt = false, EvaluateQuality = false },
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken));
 
         await _crawler.Received().CrawlAsync(
             Arg.Any<string>(),

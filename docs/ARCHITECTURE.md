@@ -243,18 +243,27 @@ WebFlux.Core.Models.Events
 ## Error Handling
 
 ```csharp
-await foreach (var result in processor.ExtractBatchStreamAsync(urls))
+// 단일 URL: 실패는 예외 하나로 — 종류는 ErrorCode(ExtractErrorCodes 상수)
+try
 {
-    if (!result.IsSuccess)
+    await StoreContentAsync(await processor.ExtractContentAsync(url));
+}
+catch (WebExtractionException ex) when (ex.ErrorCode == ExtractErrorCodes.DisallowedByRobotsTxt)
+{
+    _logger.LogInformation("Skipped by robots.txt: {Url}", ex.Url);
+}
+
+// 배치 스트림: 개별 페이지 실패는 전체 처리를 중단하지 않고 그 URL의 항목으로 온다
+await foreach (var item in processor.ExtractBatchStreamAsync(urls))
+{
+    if (item.Failure is { } failure)
     {
-        // 개별 페이지 실패는 전체 처리를 중단하지 않음
-        _logger.LogWarning("Failed: {Code}, Error: {Error}",
-            result.Error?.Code, result.Error?.Message);
+        _logger.LogWarning("Failed: {Url} {Code}, Error: {Error}",
+            failure.Url, failure.ErrorCode, failure.ErrorMessage);
         continue;
     }
 
-    // 성공한 페이지만 처리
-    await StoreContentAsync(result.Data!);
+    await StoreContentAsync(item.Content!);
 }
 ```
 

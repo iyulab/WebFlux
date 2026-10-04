@@ -68,9 +68,7 @@ public class RealWorldRobotsTxtTests : IAsyncLifetime
             "https://www.iana.org/help/example-domains",
             new ExtractOptions { EvaluateQuality = false, UseCache = false },
             TestContext.Current.CancellationToken);
-
-        result.IsSuccess.Should().BeTrue();
-        result.Data!.MainContent.Should().NotBeNullOrWhiteSpace();
+        result.MainContent.Should().NotBeNullOrWhiteSpace();
     }
 
     [Fact]
@@ -87,25 +85,23 @@ public class RealWorldRobotsTxtTests : IAsyncLifetime
     [Fact]
     public async Task ARefusalArrivesAsItsOwnErrorCodeOnTheExtractPath()
     {
-        var result = await _processor.ExtractContentAsync(
+        var ex = await Assert.ThrowsAsync<WebExtractionException>(() => _processor.ExtractContentAsync(
             "https://httpbin.org/deny",
             new ExtractOptions { EvaluateQuality = false, UseCache = false },
-            TestContext.Current.CancellationToken);
-
-        result.IsSuccess.Should().BeFalse();
-        result.Error!.Code.Should().Be(ExtractErrorCodes.DisallowedByRobotsTxt);
+            TestContext.Current.CancellationToken));
+        ex.ErrorCode.Should().Be(ExtractErrorCodes.DisallowedByRobotsTxt);
     }
 
     [Fact]
     public async Task TheOptOutReachesTheExtractApi()
     {
-        var result = await _processor.ExtractContentAsync(
+        var failure = await Record.ExceptionAsync(() => _processor.ExtractContentAsync(
             "https://httpbin.org/deny",
             new ExtractOptions { RespectRobotsTxt = false, EvaluateQuality = false, UseCache = false },
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken));
 
         // Whatever the page answers, the refusal is no longer the reason we stopped.
-        (result.Error?.Code).Should().NotBe(ExtractErrorCodes.DisallowedByRobotsTxt);
+        ((failure as WebExtractionException)?.ErrorCode).Should().NotBe(ExtractErrorCodes.DisallowedByRobotsTxt);
     }
 
     [Fact]
