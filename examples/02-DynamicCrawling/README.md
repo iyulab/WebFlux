@@ -217,5 +217,4 @@ WaitForNetworkIdle = true;
 
 ## 참고 자료
 - [Playwright 공식 문서](https://playwright.dev/dotnet/)
-- [WebFlux 동적 크롤링 가이드](../../docs/PIPELINE_DESIGN.md#dynamic-crawling)
-- [성능 최적화 가이드](../../docs/PERFORMANCE_DESIGN.md)
+- [WebFlux 아키텍처](../../docs/ARCHITECTURE.md)

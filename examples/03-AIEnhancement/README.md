@@ -270,5 +270,4 @@ A: 다음을 시도하세요:
 
 ## 참고 자료
 - [OpenAI API 문서](https://platform.openai.com/docs)
-- [WebFlux AI 통합 가이드](../../docs/MULTIMODAL_DESIGN.md)
-- [토큰 최적화 가이드](../../docs/PERFORMANCE_DESIGN.md#token-optimization)
+- [WebFlux AI 서비스](../../README.md#services-you-can-provide)

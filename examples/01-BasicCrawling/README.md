@@ -131,6 +131,6 @@ A: `RespectRobotsTxt = false`로 설정하거나 (테스트 목적으로만), �
 A: `MaxChunkSize`, `MinChunkSize` 값을 조정하거나 다른 청킹 전략을 사용하세요.
 
 ## 참고 자료
-- [WebFlux 공식 문서](../../docs/REFERENCE_GUIDE.md)
+- [WebFlux README](../../README.md)
 - [청킹 전략 가이드](../../docs/CHUNKING_STRATEGIES.md)
 - [API 레퍼런스](../../docs/INTERFACES.md)

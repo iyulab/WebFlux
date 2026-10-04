@@ -342,7 +342,7 @@ public async Task SentenceBasedStrategy_ShouldNotSplitSentences()
 ```
 
 ## 다음 단계
-- [WebFlux 공식 문서](../../docs/REFERENCE_GUIDE.md)
+- [WebFlux README](../../README.md)
 - [인터페이스 가이드](../../docs/INTERFACES.md)
 - [아키텍처 설계](../../docs/ARCHITECTURE.md)
 

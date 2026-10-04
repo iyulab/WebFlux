@@ -278,5 +278,4 @@ ChunkOverlap = 128
 
 ## 참고 자료
 - [청킹 전략 가이드](../../docs/CHUNKING_STRATEGIES.md)
-- [성능 최적화 가이드](../../docs/PERFORMANCE_DESIGN.md)
 - [품질 평가 기준](../../docs/CHUNKING_STRATEGIES.md#quality-metrics)
