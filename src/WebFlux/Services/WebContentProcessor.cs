@@ -254,7 +254,7 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
                     await writer.WriteAsync(webContent, cancellationToken);
                 }
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
             {
                 LogFailedToCrawlUrl(_logger, ex, url);
             }
@@ -316,7 +316,7 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
                 await Task.WhenAll(tasks);
                 writer.Complete();
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
             {
                 LogContentExtractionFailed(_logger, ex);
                 writer.Complete(ex);
@@ -394,7 +394,7 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
 
             await writer.WriteAsync(extracted, cancellationToken);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             LogFailedToExtractContent(_logger, ex, webContent.Url);
             // 에러가 발생해도 파이프라인 계속 진행
@@ -455,7 +455,7 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
                 await Task.WhenAll(tasks);
                 writer.Complete();
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
             {
                 LogAiEnhancementPipelineFailed(_logger, ex);
                 writer.Complete(ex);
@@ -520,7 +520,7 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
 
             await writer.WriteAsync(extracted, cancellationToken);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             LogAiEnhancementFailed(_logger, ex, extracted.Url);
             // 실패해도 원본 콘텐츠는 반환
@@ -576,7 +576,7 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
                 await Task.WhenAll(tasks);
                 writer.Complete();
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
             {
                 LogChunkingPipelineFailed(_logger, ex);
                 writer.Complete(ex);
@@ -638,7 +638,7 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
                 await writer.WriteAsync(chunk, cancellationToken);
             }
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             LogFailedToChunkDocument(_logger, ex, documentNumber);
             // 에러가 발생해도 파이프라인 계속 진행
@@ -743,7 +743,7 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
                 var chunks = await ProcessUrlAsync(url, chunkingOptions, cancellationToken).ConfigureAwait(false);
                 results[url] = chunks;
             }
-            catch (Exception ex) when (ex is not (InvalidOperationException or NotSupportedException))
+            catch (Exception ex) when ((ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested) && (ex is not (InvalidOperationException or NotSupportedException)))
             {
                 // A page that cannot be fetched or chunked yields no chunks. A pipeline that cannot run at all (a
                 // missing package, a strategy that does not exist) is not a per-URL outcome: it throws, instead of

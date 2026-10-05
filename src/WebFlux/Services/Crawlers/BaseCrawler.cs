@@ -152,7 +152,7 @@ public abstract class BaseCrawler : ICrawler
                 timedOut = true;
                 break;
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
             {
                 lastException = ex;
                 break;
@@ -591,7 +591,7 @@ public abstract class BaseCrawler : ICrawler
             var content = await response.Content.ReadAsStringAsync(cancellationToken);
             return ParseRobotsTxt(content);
         }
-        catch
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             // A transport failure (DNS, TLS, timeout) is treated as unavailable rather than
             // unreachable. Section 2.3.1.4 lets a crawler that has been unable to reach the file
@@ -616,7 +616,7 @@ public abstract class BaseCrawler : ICrawler
             var baseUrl = new Uri(url).GetLeftPart(UriPartial.Authority);
             return IsPathAllowed(await GetRobotsTxtAsync(baseUrl, userAgent, cancellationToken), url, userAgent);
         }
-        catch
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             return true; // robots.txt 파싱 실패 시 허용
         }
@@ -668,7 +668,7 @@ public abstract class BaseCrawler : ICrawler
 
             return IsPathAllowed(robotsInfo, url, userAgent);
         }
-        catch
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             return true; // robots.txt 를 읽을 수 없으면 허용 (IsUrlAllowedAsync 와 같은 정책)
         }
@@ -771,7 +771,7 @@ public abstract class BaseCrawler : ICrawler
             var content = await response.Content.ReadAsStringAsync(cancellationToken);
             return ParseSitemapXml(content);
         }
-        catch
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             return Array.Empty<string>();
         }

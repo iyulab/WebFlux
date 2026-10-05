@@ -202,7 +202,7 @@ public partial class PlaywrightCrawler : BaseCrawler, IAsyncDisposable
             UpdateStatistics(errorResult);
             return errorResult;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             LogCrawlError(_logger, ex, url);
 
@@ -259,7 +259,7 @@ public partial class PlaywrightCrawler : BaseCrawler, IAsyncDisposable
 
             LogAutoScrollCompleted(_logger);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             LogAutoScrollFailed(_logger, ex);
         }

@@ -90,7 +90,7 @@ public partial class AutoChunkingStrategy : BaseChunkingStrategy
 
             return chunks;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             if (_logger != null) LogAutoChunkingError(_logger, ex, sourceUrl);
             operationScope?.RecordError(ex);
@@ -122,7 +122,7 @@ public partial class AutoChunkingStrategy : BaseChunkingStrategy
         {
             return await _cacheService.GetAsync<List<WebContentChunk>>(cacheKey, cancellationToken);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             if (_logger != null) LogCacheGetFailed(_logger, ex, cacheKey);
             return null;
@@ -318,7 +318,7 @@ public partial class AutoChunkingStrategy : BaseChunkingStrategy
 
             if (_logger != null) LogCachedChunkingResult(_logger, qualityScore);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             if (_logger != null) LogCacheSetFailed(_logger, ex);
         }
@@ -483,7 +483,7 @@ public partial class AutoChunkingStrategy : BaseChunkingStrategy
             score.AddScore("performance_history", performanceScore * 0.1,
                 $"Historical performance: {performanceScore:F3}");
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             if (_logger != null) LogPerformanceHistoryFailed(_logger, ex, strategy);
             score.AddScore("performance_history", 0.5, "Performance history unavailable");
@@ -553,7 +553,7 @@ public partial class AutoChunkingStrategy : BaseChunkingStrategy
 
             return idealTokenRange.Item2 / avgTokensPerChunk;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             if (_logger != null) LogTokenEfficiencyFailed(_logger, ex);
             return 0.8;

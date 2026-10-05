@@ -65,7 +65,7 @@ public partial class HtmlToMarkdownExtractor : IContentExtractor
             return await ExecutePipelineAsync(htmlContent, sourceUrl, enableMetadataExtraction, cancellationToken)
                 .ConfigureAwait(false);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             if (_logger != null) LogConversionFallback(_logger, ex, sourceUrl);
             return await _fallbackExtractor.ExtractFromHtmlAsync(htmlContent, sourceUrl, enableMetadataExtraction, cancellationToken)
@@ -107,7 +107,7 @@ public partial class HtmlToMarkdownExtractor : IContentExtractor
                 fitMarkdown = ConvertToMarkdown(filteredHtml);
             }
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             if (_logger != null) LogDensityFilterFailed(_logger, ex);
         }

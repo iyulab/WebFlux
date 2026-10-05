@@ -230,7 +230,7 @@ public partial class BasicAiEnhancementService : IAiEnhancementService
             var summary = await SummarizeAsync(testContent, new SummaryOptions { MaxLength = 200 }, cancellationToken);
             return !string.IsNullOrWhiteSpace(summary);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             LogAvailabilityCheckFailed(_logger, ex);
             return false;

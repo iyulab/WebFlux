@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.21.1] - Unreleased
+
+### Fixed
+- **Cancelling a call now cancels it.** 23 method(s) that take a `CancellationToken` caught every exception to
+  return a fallback (`null`, an empty result, a failure value) or to log and continue, and treated the caller's own
+  cancellation the same way. They now let the caller's `OperationCanceledException` through; other failures behave
+  as before. Affected: the crawlers (HTTP and Playwright), content extraction, chunking strategy selection and the web content processor.
+
 ## [0.21.0] - 2026-10-05
 
 ### Removed
