@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.21.1] - Unreleased
+## [0.21.1] - 2026-10-06
 
 ### Fixed
 - **Cancelling a call now cancels it.** 23 method(s) that take a `CancellationToken` caught every exception to
