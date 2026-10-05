@@ -62,8 +62,9 @@ public interface ICrawler
     /// </summary>
     /// <param name="url">확인할 URL</param>
     /// <param name="userAgent">User-Agent</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>크롤링 가능 여부</returns>
-    Task<bool> IsUrlAllowedAsync(string url, string userAgent);
+    Task<bool> IsUrlAllowedAsync(string url, string userAgent, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// 링크를 추출합니다.

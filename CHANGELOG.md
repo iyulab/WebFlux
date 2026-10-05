@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.21.0] - Unreleased
+
+### Removed
+- **Breaking:** four interfaces that nothing implemented or called — `IContentRelationshipMapper`,
+  `IPackageEcosystemAnalyzer`, `IProcessingOptimizationService`, `IRobotsTxtParser` — and the models only they used
+  (the content-relationship, package-ecosystem, optimization and robots result types). They described features
+  WebFlux does not have; robots.txt is honoured by the crawlers themselves (`CrawlOptions.RespectRobotsTxt`). Kept
+  from those model files: `BreadcrumbItem`, `LinkType`, `RelationshipType`, `ChunkingStrategy`, `ContentAnalysis`,
+  `SystemMetrics`, which the rest of WebFlux uses.
+
+### Changed
+- **Breaking:** `IChunkingStrategyFactory.CreateStrategyAsync` / `GetStrategyInfoAsync`, `ICrawler.IsUrlAllowedAsync`,
+  `IPerformanceMonitor.GetStatisticsAsync` and `IResilienceService.SetCircuitBreakerStateAsync` take an optional
+  `CancellationToken` and pass it on. An implementation of these interfaces adds the parameter; callers compile
+  unchanged.
+
 ## [0.20.0] - 2026-10-05
 
 ### Changed

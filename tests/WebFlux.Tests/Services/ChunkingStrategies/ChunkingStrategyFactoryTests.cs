@@ -76,7 +76,7 @@ public class ChunkingStrategyFactoryTests
     public async Task CreateStrategyAsync_WithValidStrategyName_ShouldReturnStrategy(string strategyName)
     {
         // Act
-        var strategy = await _factory.CreateStrategyAsync(strategyName);
+        var strategy = await _factory.CreateStrategyAsync(strategyName, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         strategy.Should().NotBeNull();
@@ -90,7 +90,7 @@ public class ChunkingStrategyFactoryTests
     public async Task CreateStrategyAsync_ShouldBeCaseInsensitive(string strategyName)
     {
         // Act
-        var strategy = await _factory.CreateStrategyAsync(strategyName);
+        var strategy = await _factory.CreateStrategyAsync(strategyName, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         strategy.Should().NotBeNull();
@@ -100,7 +100,7 @@ public class ChunkingStrategyFactoryTests
     public async Task CreateStrategyAsync_WithUnknownStrategyName_ThrowsAndNamesTheAvailableOnes()
     {
         // A caller that asks for a strategy with no implementation must not silently get a different one.
-        var ex = await Assert.ThrowsAsync<ArgumentException>(() => _factory.CreateStrategyAsync("InvalidStrategy"));
+        var ex = await Assert.ThrowsAsync<ArgumentException>(() => _factory.CreateStrategyAsync("InvalidStrategy", cancellationToken: TestContext.Current.CancellationToken));
 
         ex.Message.Should().Contain("InvalidStrategy").And.Contain("Paragraph");
     }
@@ -112,7 +112,7 @@ public class ChunkingStrategyFactoryTests
         // with no registered strategy is a promise nothing keeps — Intelligent was one until 0.14.0.
         foreach (var member in Enum.GetValues<WebFlux.Core.Options.ChunkingStrategyType>())
         {
-            var strategy = await _factory.CreateStrategyAsync(member.ToString());
+            var strategy = await _factory.CreateStrategyAsync(member.ToString(), cancellationToken: TestContext.Current.CancellationToken);
             strategy.Should().NotBeNull(because: $"{member} must map to a registered strategy");
         }
     }
@@ -134,7 +134,7 @@ public class ChunkingStrategyFactoryTests
     {
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentException>(async () =>
-            await _factory.CreateStrategyAsync(strategyName!));
+            await _factory.CreateStrategyAsync(strategyName!, cancellationToken: TestContext.Current.CancellationToken));
     }
 
     #endregion
@@ -179,7 +179,7 @@ public class ChunkingStrategyFactoryTests
     public async Task GetStrategyInfoAsync_WithValidStrategy_ShouldReturnInfo(string strategyName)
     {
         // Act
-        var info = await _factory.GetStrategyInfoAsync(strategyName);
+        var info = await _factory.GetStrategyInfoAsync(strategyName, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         info.Should().NotBeNull();
@@ -195,14 +195,14 @@ public class ChunkingStrategyFactoryTests
     {
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentException>(async () =>
-            await _factory.GetStrategyInfoAsync("InvalidStrategy"));
+            await _factory.GetStrategyInfoAsync("InvalidStrategy", cancellationToken: TestContext.Current.CancellationToken));
     }
 
     [Fact]
     public async Task GetStrategyInfoAsync_ForFixedSize_ShouldHaveCorrectMetadata()
     {
         // Act
-        var info = await _factory.GetStrategyInfoAsync("FixedSize");
+        var info = await _factory.GetStrategyInfoAsync("FixedSize", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         info.Name.Should().Be("FixedSize");
@@ -225,7 +225,7 @@ public class ChunkingStrategyFactoryTests
         };
 
         // Act
-        var strategy = await _factory.CreateStrategyAsync("Auto");
+        var strategy = await _factory.CreateStrategyAsync("Auto", cancellationToken: TestContext.Current.CancellationToken);
         var chunks = await strategy.ChunkAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
@@ -242,7 +242,7 @@ public class ChunkingStrategyFactoryTests
         // Act & Assert
         foreach (var strategyName in strategies)
         {
-            var strategy = await _factory.CreateStrategyAsync(strategyName);
+            var strategy = await _factory.CreateStrategyAsync(strategyName, cancellationToken: TestContext.Current.CancellationToken);
             strategy.Should().NotBeNull();
             strategy.Name.Should().Be(strategyName);
         }

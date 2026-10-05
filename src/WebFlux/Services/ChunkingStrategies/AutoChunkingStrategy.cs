@@ -476,7 +476,7 @@ public partial class AutoChunkingStrategy : BaseChunkingStrategy
 
         try
         {
-            var stats = await _performanceMonitor.GetStatisticsAsync();
+            var stats = await _performanceMonitor.GetStatisticsAsync(cancellationToken);
 
             // 성능 통계가 있다면 해당 전략의 과거 성과를 고려
             var performanceScore = stats.AverageChunkQuality * 0.7 + (1.0 - stats.ErrorRate) * 0.3;

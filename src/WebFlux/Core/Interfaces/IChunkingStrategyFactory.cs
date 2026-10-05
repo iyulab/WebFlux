@@ -13,9 +13,10 @@ public interface IChunkingStrategyFactory
     /// 지정된 이름의 청킹 전략을 생성합니다.
     /// </summary>
     /// <param name="strategyName">전략 이름</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>청킹 전략 인스턴스</returns>
     /// <exception cref="ArgumentException">이름이 비었거나 <see cref="GetAvailableStrategies"/> 에 없는 이름일 때.</exception>
-    Task<IChunkingStrategy> CreateStrategyAsync(string strategyName);
+    Task<IChunkingStrategy> CreateStrategyAsync(string strategyName, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// 사용 가능한 모든 청킹 전략 목록을 반환합니다.
@@ -27,8 +28,9 @@ public interface IChunkingStrategyFactory
     /// 특정 전략의 정보를 반환합니다.
     /// </summary>
     /// <param name="strategyName">전략 이름</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>전략 정보</returns>
-    Task<StrategyInfo> GetStrategyInfoAsync(string strategyName);
+    Task<StrategyInfo> GetStrategyInfoAsync(string strategyName, CancellationToken cancellationToken = default);
 }
 
 /// <summary>

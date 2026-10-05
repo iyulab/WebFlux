@@ -525,7 +525,7 @@ Disallow: /
         SetupSuccessfulHttpResponse("https://example.com/robots.txt", robotsTxtContent);
 
         // Act
-        var result = await _crawler.IsUrlAllowedAsync(url, "*");
+        var result = await _crawler.IsUrlAllowedAsync(url, "*", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().BeTrue();
@@ -544,7 +544,7 @@ Disallow: /admin/
         SetupSuccessfulHttpResponse("https://example.com/robots.txt", robotsTxtContent);
 
         // Act
-        var result = await _crawler.IsUrlAllowedAsync(url, "*");
+        var result = await _crawler.IsUrlAllowedAsync(url, "*", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().BeFalse();
@@ -566,7 +566,7 @@ Disallow: /admin/
             .Returns(response);
 
         // Act
-        var result = await _crawler.IsUrlAllowedAsync(url, "*");
+        var result = await _crawler.IsUrlAllowedAsync(url, "*", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().BeTrue(); // Default to allow when robots.txt not found

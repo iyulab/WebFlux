@@ -100,7 +100,7 @@ public interface IPerformanceMonitor : IDisposable
     /// 현재 측정 통계 조회
     /// </summary>
     /// <returns>성능 통계</returns>
-    Task<PerformanceStatistics> GetStatisticsAsync();
+    Task<PerformanceStatistics> GetStatisticsAsync(CancellationToken cancellationToken = default);
 }
 
 /// <summary>

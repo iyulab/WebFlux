@@ -29,7 +29,7 @@ public partial class ChunkingStrategyFactory : IChunkingStrategyFactory
         InitializeStrategies();
     }
 
-    public async Task<IChunkingStrategy> CreateStrategyAsync(string strategyName)
+    public async Task<IChunkingStrategy> CreateStrategyAsync(string strategyName, CancellationToken cancellationToken = default)
     {
         await Task.CompletedTask;
 
@@ -68,7 +68,7 @@ public partial class ChunkingStrategyFactory : IChunkingStrategyFactory
     }
 
 
-    public async Task<StrategyInfo> GetStrategyInfoAsync(string strategyName)
+    public async Task<StrategyInfo> GetStrategyInfoAsync(string strategyName, CancellationToken cancellationToken = default)
     {
         await Task.CompletedTask;
 

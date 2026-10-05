@@ -17,31 +17,13 @@ public class PublicApiConventionTests
 {
     private static readonly string[] KnownUncancellable =
     [
-        "WebFlux.Core.Interfaces.IChunkingStrategyFactory.CreateStrategyAsync(String)",
-        "WebFlux.Core.Interfaces.IChunkingStrategyFactory.GetStrategyInfoAsync(String)",
-        "WebFlux.Core.Interfaces.IContentRelationshipMapper.AnalyzeNavigationStructureAsync(ContentRelationshipAnalysisResult)",
-        "WebFlux.Core.Interfaces.IContentRelationshipMapper.BuildContentHierarchyAsync(ContentRelationshipAnalysisResult)",
-        "WebFlux.Core.Interfaces.IContentRelationshipMapper.GenerateRelatedContentAsync(String, ContentRelationshipAnalysisResult)",
-        "WebFlux.Core.Interfaces.IContentRelationshipMapper.PerformContentClusteringAsync(ContentRelationshipAnalysisResult)",
-        "WebFlux.Core.Interfaces.ICrawler.IsUrlAllowedAsync(String, String)",
-        "WebFlux.Core.Interfaces.IPackageEcosystemAnalyzer.AnalyzeSecurityRisksAsync(PackageMetadata)",
-        "WebFlux.Core.Interfaces.IPackageEcosystemAnalyzer.AnalyzeTechStackAsync(PackageMetadata)",
-        "WebFlux.Core.Interfaces.IPackageEcosystemAnalyzer.EvaluateProjectComplexityAsync(PackageMetadata)",
-        "WebFlux.Core.Interfaces.IPerformanceMonitor.GetStatisticsAsync()",
-        "WebFlux.Core.Interfaces.IProcessingOptimizationService.AnalyzeResourceUsageAsync()",
-        "WebFlux.Core.Interfaces.IProcessingOptimizationService.GetOptimizationStatisticsAsync()",
-        "WebFlux.Core.Interfaces.IProcessingOptimizationService.OptimizeBottlenecksAsync(PipelineMetrics)",
-        "WebFlux.Core.Interfaces.IProcessingOptimizationService.OptimizeCacheUsageAsync(String, String, Nullable<TimeSpan>)",
-        "WebFlux.Core.Interfaces.IProcessingOptimizationService.OptimizeStrategyAsync(String, PerformanceStatistics)",
-        "WebFlux.Core.Interfaces.IProcessingOptimizationService.OptimizeTokenUsageAsync(String, Int32)",
-        "WebFlux.Core.Interfaces.IResilienceService.SetCircuitBreakerStateAsync(String, Boolean)",
-        "WebFlux.Core.Interfaces.IRobotsTxtParser.ParseContentAsync(String, String)",
     ];
 
     private static readonly string[] KnownResultReturns =
     [
+        // One page's outcome inside a crawl that goes on: a status, a robots refusal, a timeout or a transport error
+        // is recorded per page (CrawlResult.Exception carries the cause) so one dead link does not end the crawl.
         "WebFlux.Core.Interfaces.ICrawler.CrawlAsync(String, CrawlOptions, CancellationToken)",
-        "WebFlux.Core.Interfaces.IRobotsTxtParser.ParseFromWebsiteAsync(String, CancellationToken)",
         "WebFlux.Services.Crawlers.BaseCrawler.CreateDisallowedByRobotsResult(String)",
     ];
 

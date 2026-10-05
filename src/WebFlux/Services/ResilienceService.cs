@@ -234,7 +234,7 @@ public partial class ResilienceService : IResilienceService
             : CircuitBreakerState.Closed;
     }
 
-    public async Task SetCircuitBreakerStateAsync(string circuitBreakerName, bool open)
+    public async Task SetCircuitBreakerStateAsync(string circuitBreakerName, bool open, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(circuitBreakerName);
 

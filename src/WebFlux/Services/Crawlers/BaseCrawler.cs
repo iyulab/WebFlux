@@ -607,13 +607,14 @@ public abstract class BaseCrawler : ICrawler
     /// </summary>
     /// <param name="url">확인할 URL</param>
     /// <param name="userAgent">User-Agent</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>크롤링 가능 여부</returns>
-    public virtual async Task<bool> IsUrlAllowedAsync(string url, string userAgent)
+    public virtual async Task<bool> IsUrlAllowedAsync(string url, string userAgent, CancellationToken cancellationToken = default)
     {
         try
         {
             var baseUrl = new Uri(url).GetLeftPart(UriPartial.Authority);
-            return IsPathAllowed(await GetRobotsTxtAsync(baseUrl, userAgent), url, userAgent);
+            return IsPathAllowed(await GetRobotsTxtAsync(baseUrl, userAgent, cancellationToken), url, userAgent);
         }
         catch
         {

@@ -665,7 +665,7 @@ public class ResilienceServiceTests
         var circuitBreakerName = "manual-control-breaker";
 
         // Act
-        await _resilienceService.SetCircuitBreakerStateAsync(circuitBreakerName, true);
+        await _resilienceService.SetCircuitBreakerStateAsync(circuitBreakerName, true, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert - 메서드가 정상적으로 완료되어야 함
         Assert.True(true);
@@ -678,7 +678,7 @@ public class ResilienceServiceTests
         var circuitBreakerName = "manual-control-breaker";
 
         // Act
-        await _resilienceService.SetCircuitBreakerStateAsync(circuitBreakerName, false);
+        await _resilienceService.SetCircuitBreakerStateAsync(circuitBreakerName, false, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert - 메서드가 정상적으로 완료되어야 함
         Assert.True(true);
@@ -689,7 +689,7 @@ public class ResilienceServiceTests
     {
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentException>(
-            () => _resilienceService.SetCircuitBreakerStateAsync("", true));
+            () => _resilienceService.SetCircuitBreakerStateAsync("", true, cancellationToken: TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -697,7 +697,7 @@ public class ResilienceServiceTests
     {
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _resilienceService.SetCircuitBreakerStateAsync(null!, true));
+            () => _resilienceService.SetCircuitBreakerStateAsync(null!, true, cancellationToken: TestContext.Current.CancellationToken));
     }
 
     #endregion

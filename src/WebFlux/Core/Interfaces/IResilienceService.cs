@@ -105,7 +105,8 @@ public interface IResilienceService
     /// </summary>
     /// <param name="circuitBreakerName">회로차단기 이름</param>
     /// <param name="open">열기 여부</param>
-    Task SetCircuitBreakerStateAsync(string circuitBreakerName, bool open);
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task SetCircuitBreakerStateAsync(string circuitBreakerName, bool open, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// 벌크헤드 사용률을 가져옵니다
