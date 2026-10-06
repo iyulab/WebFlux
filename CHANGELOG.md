@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.22.0] - Unreleased
+
+### Removed
+- **Breaking: public types that nothing used are removed.** No code path in this library constructed, returned or accepted them, and no implementation existed where they were interfaces. Code that never named them is unaffected; code that did can delete the reference - there was no behaviour behind it.
+  Removed: `AnalyzedContent` (with `ContentSection`, `TableData`, `ImageData`, `StructureInfo`, `AnalysisMetrics`), the site metadata models `ReadmeMetadata`, `ConfigMetadata`, `HumansMetadata`, `SecurityMetadata`, `AdsMetadata`, `BingSiteAuthMetadata`, `OpenApiMetadata`, `SchemaMetadata`, `WellKnownMetadata` (with `TeamMember`, `SiteInfo`, `BingUser`, `OpenApiServer`), and `CrawlStatus`, `LinkInfo`, `ContentFormat`.
+
 ## [0.21.1] - 2026-10-06
 
 ### Fixed

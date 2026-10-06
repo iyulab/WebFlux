@@ -153,39 +153,6 @@ public class ExtractionConfiguration
 }
 
 /// <summary>
-/// 크롤 상태
-/// </summary>
-public class CrawlStatus
-{
-    /// <summary>실행 중 여부</summary>
-    public bool IsRunning { get; set; }
-
-    /// <summary>처리된 수</summary>
-    public int ProcessedCount { get; set; }
-
-    /// <summary>성공 수</summary>
-    public int SuccessCount { get; set; }
-
-    /// <summary>오류 수</summary>
-    public int ErrorCount { get; set; }
-
-    /// <summary>대기 중인 수</summary>
-    public int QueuedCount { get; set; }
-
-    /// <summary>방문한 URL 수</summary>
-    public int VisitedUrlCount { get; set; }
-
-    /// <summary>실패한 URL 수</summary>
-    public int FailedUrlCount { get; set; }
-
-    /// <summary>마지막 활동 시간</summary>
-    public DateTimeOffset LastActivity { get; set; } = DateTimeOffset.UtcNow;
-
-    /// <summary>추가 정보</summary>
-    public Dictionary<string, object> AdditionalInfo { get; set; } = new();
-}
-
-/// <summary>
 /// 구조화된 요소
 /// </summary>
 public class StructuredElement
@@ -245,27 +212,6 @@ public class ImageInfo
 }
 
 /// <summary>
-/// 링크 정보
-/// </summary>
-public class LinkInfo
-{
-    /// <summary>링크 URL</summary>
-    public required string Url { get; init; }
-
-    /// <summary>링크 텍스트</summary>
-    public string? Text { get; init; }
-
-    /// <summary>링크 제목</summary>
-    public string? Title { get; init; }
-
-    /// <summary>링크 유형 (내부/외부)</summary>
-    public LinkType Type { get; init; }
-
-    /// <summary>문서 내 위치</summary>
-    public int Position { get; init; }
-}
-
-/// <summary>
 /// 요소 유형 열거형
 /// </summary>
 public enum ElementType
@@ -292,25 +238,6 @@ public enum ElementType
     Divider,
     /// <summary>기타</summary>
     Other
-}
-
-/// <summary>
-/// 콘텐츠 포맷 열거형
-/// </summary>
-public enum ContentFormat
-{
-    /// <summary>HTML</summary>
-    Html,
-    /// <summary>마크다운</summary>
-    Markdown,
-    /// <summary>JSON</summary>
-    Json,
-    /// <summary>XML</summary>
-    Xml,
-    /// <summary>일반 텍스트</summary>
-    PlainText,
-    /// <summary>알 수 없음</summary>
-    Unknown
 }
 
 
