@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.22.1] - 2026-10-06
+
+### Changed
+- Re-pinned sibling package(s) `FluxCurator` 0.10.4 -> 0.11.0, `FluxCurator.Core` 0.10.4 -> 0.11.0. No source changes.
+
 ## [0.22.0] - 2026-10-06
 
 ### Removed
