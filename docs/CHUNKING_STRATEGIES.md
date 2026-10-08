@@ -4,7 +4,7 @@ WebFlux가 제공하는 청킹 전략과 선택 가이드입니다. 이 문서�
 
 ## Overview
 
-청킹 전략은 추출된 웹 콘텐츠를 RAG 시스템에 맞는 작은 단위로 나눕니다. 전략은 `ChunkingOptions.Strategy`(열거형 `ChunkingStrategyType`)로 고르거나, `IChunkingStrategyFactory.CreateStrategyAsync(name)`에 이름으로 요청합니다. **등록되지 않은 이름은 예외를 던집니다**(0.14.0 — 이전에는 조용히 Paragraph 로 대체했다). 사용 가능한 이름은 `GetAvailableStrategies()`가 돌려줍니다.
+청킹 전략은 추출된 웹 콘텐츠를 RAG 시스템에 맞는 작은 단위로 나눕니다. 전략은 `ChunkingOptions.Strategy`(열거형 `ChunkingStrategyType`)로 고릅니다. 열거형 멤버마다 같은 이름의 keyed `IChunkingStrategy` 가 `AddWebFlux()` 에 등록돼 있고(`provider.GetRequiredKeyedService<IChunkingStrategy>("Semantic")` 처럼 직접 꺼낼 수도 있다), 사용 가능한 이름은 `IWebContentProcessor.GetAvailableChunkingStrategies()` 가 돌려줍니다. (0.23.0 전의 `IChunkingStrategyFactory` 는 같은 목록을 손으로 한 벌 더 들고 있던 중복이라 제거됐습니다.)
 
 ## Available Strategies
 

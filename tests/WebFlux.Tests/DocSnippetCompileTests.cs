@@ -47,6 +47,7 @@ public class DocSnippetCompileTests
         using System.Threading;
         using System.Threading.Tasks;
         using Microsoft.Extensions.DependencyInjection;
+        using FluxCurator.Core.Core;
         using Microsoft.Extensions.Logging;
         using WebFlux.Core.Interfaces;
         using WebFlux.Core.Models;
@@ -77,11 +78,12 @@ public class DocSnippetCompileTests
             "public Task<string> CompleteAsync(string prompt, Flux.Abstractions.TextCompletionOptions? options = null, " +
             "CancellationToken cancellationToken = default) => Task.FromResult(\"\"); }"),
         ("OpenAIEmbeddingService",
-            "sealed class OpenAIEmbeddingService(string apiKey) : ITextEmbeddingService { " +
-            "public Task<float[]> GetEmbeddingAsync(string text, CancellationToken cancellationToken = default) => Task.FromResult(Array.Empty<float>()); " +
-            "public Task<IReadOnlyList<float[]>> GetEmbeddingsAsync(IReadOnlyList<string> texts, CancellationToken cancellationToken = default) => " +
+            "sealed class OpenAIEmbeddingService(string apiKey) : IEmbedder { " +
+            "public int EmbeddingDimension => 0; " +
+            "public Task<float[]> GenerateEmbeddingAsync(string text, CancellationToken cancellationToken = default) => Task.FromResult(Array.Empty<float>()); " +
+            "public Task<IReadOnlyList<float[]>> GenerateEmbeddingsAsync(IEnumerable<string> texts, CancellationToken cancellationToken = default) => " +
             "Task.FromResult<IReadOnlyList<float[]>>([]); " +
-            "public int MaxTokens => 0; public int EmbeddingDimension => 0; }"),
+            "public float CalculateSimilarity(float[] a, float[] b) => 0; }"),
         ("OpenAICompletionService",
             "sealed class OpenAICompletionService(string apiKey, string model) : Flux.Abstractions.ITextCompletionService { " +
             "public Task<string> CompleteAsync(string prompt, Flux.Abstractions.TextCompletionOptions? options = null, " +
@@ -90,7 +92,7 @@ public class DocSnippetCompileTests
 
     private static readonly string[] AssembliesToLoad =
     [
-        "WebFlux", "Flux.Abstractions", "OpenAI",
+        "WebFlux", "Flux.Abstractions", "FluxCurator.Core", "OpenAI",
         "Microsoft.Extensions.DependencyInjection", "Microsoft.Extensions.DependencyInjection.Abstractions",
         "Microsoft.Extensions.Logging.Abstractions",
     ];

@@ -76,14 +76,7 @@ CrawlResult   ExtractedContent  Metadata    WebContentChunk
 ### Consumer-Provided (AI Services)
 
 ```csharp
-// 필수: 임베딩 생성
-public interface ITextEmbeddingService
-{
-    Task<float[]> GetEmbeddingAsync(string text, CancellationToken cancellationToken = default);
-    Task<IReadOnlyList<float[]>> GetEmbeddingsAsync(IReadOnlyList<string> texts, CancellationToken cancellationToken = default);
-    int MaxTokens { get; }
-    int EmbeddingDimension { get; }
-}
+// 선택: Semantic 청킹의 임베더 — FluxCurator 계약(FluxCurator.Core.Core.IEmbedder)을 싱글턴으로 등록
 
 // 선택: LLM 텍스트 생성 (AI 증강 — 요약·재작성·메타데이터)
 // WebFlux.Core.Interfaces.ITextCompletionService extends Flux.Abstractions.ITextCompletionService

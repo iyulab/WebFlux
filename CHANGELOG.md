@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Removed
+- **Breaking** — **`ITextEmbeddingService` is gone; semantic chunking uses FluxCurator's `IEmbedder`.** Nothing in WebFlux read
+  `ITextEmbeddingService`: chunking runs on FluxCurator, whose chunker factory reads `FluxCurator.Core.Core.IEmbedder` from the
+  container, so an embedder registered under the WebFlux interface never reached semantic chunking. The two-argument
+  `AddWebFluxAIServices<TTextCompletion, TTextEmbedding>()` is removed with it. Migration: implement `IEmbedder` and register it
+  as a singleton (`services.AddSingleton<IEmbedder, MyEmbedder>()`); `AddWebFluxAIServices<TTextCompletion>()` is unchanged.
+- **Breaking** — **`IChunkingStrategyFactory` and `ChunkingStrategyFactory` are gone** (with `StrategyInfo`, `PerformanceInfo` and
+  `ConfigurationOption`). The processor resolves strategies from the keyed `IChunkingStrategy` registrations `AddWebFlux()`
+  makes; the factory kept a second, hand-written list. Migration: resolve `provider.GetRequiredKeyedService<IChunkingStrategy>(name)`;
+  the names are `IWebContentProcessor.GetAvailableChunkingStrategies()`.
+
 ## [0.22.4] - 2026-10-07
 
 ### Changed

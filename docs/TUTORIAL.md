@@ -8,7 +8,7 @@
 2. [첫 번째 프로젝트](#첫-번째-프로젝트)
 3. [기본 사용법](#기본-사용법)
 4. [핵심 인터페이스](#핵심-인터페이스)
-   - [ITextEmbeddingService](#itextembeddingservice-선택적)
+   - [임베더 — FluxCurator IEmbedder](#임베더--fluxcurator-iembedder-선택적)
    - [ITextCompletionService](#itextcompletionservice-선택적)
    - [IWebContentProcessor](#iwebcontentprocessor)
    - [IChunkingStrategy](#ichunkingstrategy)
@@ -63,10 +63,10 @@ dotnet add package OpenAI  # 또는 선호하는 AI SDK
 서비스가 필요합니다. OpenAI를 사용하는 경우:
 
 ```csharp
+using FluxCurator.Core.Core;
 using OpenAI.Embeddings;
-using WebFlux.Core.Interfaces;
 
-public class OpenAIEmbeddingService : ITextEmbeddingService
+public class OpenAIEmbeddingService : IEmbedder
 {
     private readonly EmbeddingClient _client;
 
@@ -75,7 +75,7 @@ public class OpenAIEmbeddingService : ITextEmbeddingService
         _client = new EmbeddingClient("text-embedding-3-small", apiKey);
     }
 
-    public async Task<float[]> GetEmbeddingAsync(
+    public async Task<float[]> GenerateEmbeddingAsync(
         string text,
         CancellationToken cancellationToken = default)
     {
@@ -83,16 +83,18 @@ public class OpenAIEmbeddingService : ITextEmbeddingService
         return response.Value.ToFloats().ToArray();
     }
 
-    public async Task<IReadOnlyList<float[]>> GetEmbeddingsAsync(
-        IReadOnlyList<string> texts,
+    public async Task<IReadOnlyList<float[]>> GenerateEmbeddingsAsync(
+        IEnumerable<string> texts,
         CancellationToken cancellationToken = default)
     {
         var response = await _client.GenerateEmbeddingsAsync(texts, cancellationToken: cancellationToken);
         return response.Value.Select(e => e.ToFloats().ToArray()).ToList();
     }
 
-    public int MaxTokens => 8191;
     public int EmbeddingDimension => 1536;
+
+    public float CalculateSimilarity(float[] a, float[] b) =>
+        a.Zip(b, (x, y) => x * y).Sum() / MathF.Sqrt(a.Sum(x => x * x) * b.Sum(y => y * y));
 }
 ```
 
@@ -198,20 +200,19 @@ WebFlux는 **Interface Provider** 패턴을 사용합니다. 라이브러리는 
 
 ### AI 서비스 인터페이스
 
-#### ITextEmbeddingService (선택적)
+#### 임베더 — FluxCurator `IEmbedder` (선택적)
 
-텍스트를 벡터 임베딩으로 변환하는 서비스 계약입니다. WebFlux 파이프라인은 이 서비스를 호출하지 않습니다 — 청크를
-벡터 DB 에 넣을 때 여러분의 코드가 씁니다. Semantic 청킹은 이 인터페이스가 아니라 FluxCurator
-`IEmbedder`(`FluxCurator.Core.Core.IEmbedder`)를 `AddWebFlux()` 전에 등록해야 켜집니다.
+텍스트를 벡터 임베딩으로 변환하는 계약은 FluxCurator 의 `IEmbedder`(`FluxCurator.Core.Core.IEmbedder`) 하나입니다. 싱글턴으로
+등록하면 Semantic 청킹이 그것을 쓰고, 청크를 벡터 DB 에 넣을 때 여러분의 코드도 같은 서비스를 씁니다. 등록하지 않으면
+Semantic 을 뺀 전략은 그대로 동작합니다(Semantic 은 «임베더가 필요하다» 는 예외를 냅니다).
 
-멤버(`GetEmbeddingAsync`, `GetEmbeddingsAsync`, `MaxTokens`, `EmbeddingDimension`)는
-[소스](../src/WebFlux/Core/Interfaces/ITextEmbeddingService.cs)의 XML 문서를 참고하세요.
+멤버: `EmbeddingDimension`, `GenerateEmbeddingAsync`, `GenerateEmbeddingsAsync`, `CalculateSimilarity`(네임스페이스 `FluxCurator.Core.Core`).
 
 **OpenAI 구현 예제:**
 ```csharp
 using OpenAI.Embeddings;
 
-public class OpenAIEmbeddingService : ITextEmbeddingService
+public class OpenAIEmbeddingService : IEmbedder
 {
     private readonly EmbeddingClient _client;
 
@@ -220,28 +221,30 @@ public class OpenAIEmbeddingService : ITextEmbeddingService
         _client = new EmbeddingClient("text-embedding-3-small", apiKey);
     }
 
-    public async Task<float[]> GetEmbeddingAsync(string text, CancellationToken cancellationToken = default)
+    public async Task<float[]> GenerateEmbeddingAsync(string text, CancellationToken cancellationToken = default)
     {
         var response = await _client.GenerateEmbeddingAsync(text, cancellationToken: cancellationToken);
         return response.Value.ToFloats().ToArray();
     }
 
-    public async Task<IReadOnlyList<float[]>> GetEmbeddingsAsync(
-        IReadOnlyList<string> texts,
+    public async Task<IReadOnlyList<float[]>> GenerateEmbeddingsAsync(
+        IEnumerable<string> texts,
         CancellationToken cancellationToken = default)
     {
         var response = await _client.GenerateEmbeddingsAsync(texts, cancellationToken: cancellationToken);
         return response.Value.Select(e => e.ToFloats().ToArray()).ToList();
     }
 
-    public int MaxTokens => 8191;
     public int EmbeddingDimension => 1536;
+
+    public float CalculateSimilarity(float[] a, float[] b) =>
+        a.Zip(b, (x, y) => x * y).Sum() / MathF.Sqrt(a.Sum(x => x * x) * b.Sum(y => y * y));
 }
 ```
 
 **서비스 등록:**
 ```csharp
-services.AddScoped<ITextEmbeddingService>(sp =>
+services.AddSingleton<IEmbedder>(sp =>
     new OpenAIEmbeddingService(Environment.GetEnvironmentVariable("OPENAI_API_KEY")
         ?? throw new InvalidOperationException("OPENAI_API_KEY is not set")));
 ```
@@ -562,7 +565,7 @@ static Task LogToDatabase(UrlProcessedEvent evt) => Task.CompletedTask;
 ```csharp
 public class StreamingIndexer(
     IWebContentProcessor processor,
-    ITextEmbeddingService embeddingService,
+    IEmbedder embeddingService,
     IVectorDatabase vectorDb)
 {
     public async Task IndexAsync(CancellationToken cancellationToken = default)
@@ -581,7 +584,7 @@ public class StreamingIndexer(
             {
                 Id = chunk.Id,
                 Content = chunk.Content,
-                Embedding = await embeddingService.GetEmbeddingAsync(chunk.Content, cancellationToken),
+                Embedding = await embeddingService.GenerateEmbeddingAsync(chunk.Content, cancellationToken),
                 Metadata = chunk.AdditionalMetadata
             }, cancellationToken);
 
@@ -708,13 +711,13 @@ public class TechnicalDocumentationRAG
 {
     private readonly IWebContentProcessor _processor;
     private readonly IVectorDatabase _vectorDb;
-    private readonly ITextEmbeddingService _embedding;
+    private readonly IEmbedder _embedding;
     private readonly ITextCompletionService _completion;
 
     public TechnicalDocumentationRAG(
         IWebContentProcessor processor,
         IVectorDatabase vectorDb,
-        ITextEmbeddingService embedding,
+        IEmbedder embedding,
         ITextCompletionService completion)
     {
         _processor = processor;
@@ -742,7 +745,7 @@ public class TechnicalDocumentationRAG
         await foreach (var chunk in _processor.ProcessWebsiteAsync(
             docsUrl, crawlOptions, chunkOptions))
         {
-            var embedding = await _embedding.GetEmbeddingAsync(chunk.Content);
+            var embedding = await _embedding.GenerateEmbeddingAsync(chunk.Content);
 
             await _vectorDb.UpsertAsync(new DocumentChunk
             {
@@ -757,7 +760,7 @@ public class TechnicalDocumentationRAG
 
     public async Task<string> QueryAsync(string question)
     {
-        var questionEmbedding = await _embedding.GetEmbeddingAsync(question);
+        var questionEmbedding = await _embedding.GenerateEmbeddingAsync(question);
         var relevantChunks = await _vectorDb.SearchAsync(questionEmbedding, topK: 5);
 
         var context = string.Join("\n\n", relevantChunks.Select(c => c.Content));
@@ -874,7 +877,7 @@ public class LargeDocumentProcessor(IWebContentProcessor processor)
 ```csharp
 public class MultilingualContentProcessor(
     IWebContentProcessor processor,
-    ITextEmbeddingService embedding,
+    IEmbedder embedding,
     IVectorDatabase vectorDb)
 {
     public async Task ProcessMultilingualSiteAsync(string baseUrl)
@@ -903,7 +906,7 @@ public class MultilingualContentProcessor(
                         Id = chunk.Id,
                         Content = chunk.Content,
                         Language = lang,
-                        Embedding = await embedding.GetEmbeddingAsync(chunk.Content)
+                        Embedding = await embedding.GenerateEmbeddingAsync(chunk.Content)
                     });
             }
         }
@@ -995,18 +998,20 @@ var crawlOptions = new CrawlOptions
 **해결책**:
 ```csharp
 // 기존 임베딩 서비스를 감싸 재시도를 더하는 데코레이터
-public class ResilientEmbeddingService(ITextEmbeddingService innerService) : ITextEmbeddingService
+public class ResilientEmbeddingService(IEmbedder innerService) : IEmbedder
 {
-    public Task<float[]> GetEmbeddingAsync(string text, CancellationToken cancellationToken = default) =>
-        RetryAsync(ct => innerService.GetEmbeddingAsync(text, ct), cancellationToken);
+    public Task<float[]> GenerateEmbeddingAsync(string text, CancellationToken cancellationToken = default) =>
+        RetryAsync(ct => innerService.GenerateEmbeddingAsync(text, ct), cancellationToken);
 
-    public Task<IReadOnlyList<float[]>> GetEmbeddingsAsync(
-        IReadOnlyList<string> texts,
+    public Task<IReadOnlyList<float[]>> GenerateEmbeddingsAsync(
+        IEnumerable<string> texts,
         CancellationToken cancellationToken = default) =>
-        RetryAsync(ct => innerService.GetEmbeddingsAsync(texts, ct), cancellationToken);
+        RetryAsync(ct => innerService.GenerateEmbeddingsAsync(texts, ct), cancellationToken);
 
-    public int MaxTokens => innerService.MaxTokens;
     public int EmbeddingDimension => innerService.EmbeddingDimension;
+
+    public float CalculateSimilarity(float[] embedding1, float[] embedding2) =>
+        innerService.CalculateSimilarity(embedding1, embedding2);
 
     private static async Task<T> RetryAsync<T>(Func<CancellationToken, Task<T>> call, CancellationToken ct)
     {

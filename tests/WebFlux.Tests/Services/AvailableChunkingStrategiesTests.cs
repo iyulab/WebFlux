@@ -29,4 +29,13 @@ public class AvailableChunkingStrategiesTests
         foreach (var name in names)
             scope.ServiceProvider.GetRequiredKeyedService<IChunkingStrategy>(name).Should().NotBeNull(name);
     }
+
+    [Fact]
+    public void ChunkingStrategyType_Ordinals_AreFixed()
+    {
+        // Numeric configuration binds by ordinal; removing Intelligent (5) must not shift MemoryOptimized.
+        ((int)ChunkingStrategyType.Semantic).Should().Be(4);
+        ((int)ChunkingStrategyType.MemoryOptimized).Should().Be(6);
+        Enum.IsDefined(typeof(ChunkingStrategyType), 5).Should().BeFalse();
+    }
 }

@@ -252,9 +252,6 @@ public static class ServiceCollectionExtensions
                 sp.GetRequiredService<FluxCurator.Core.Core.IChunkerFactory>(),
                 sp.GetService<IEventPublisher>()));
 
-        // 청킹 전략 팩토리 등록
-        services.TryAddSingleton<IChunkingStrategyFactory, ChunkingStrategyFactory>();
-
         // Interface Provider 패턴: 토큰 계산 서비스는 소비자가 구현
         // services.TryAddSingleton<ITokenCountService, 구현체>();
 
@@ -266,31 +263,12 @@ public static class ServiceCollectionExtensions
     }
 
     /// <summary>
-    /// AI 서비스 구현체를 등록합니다. (소비자가 호출)
+    /// AI 서비스 구현체(텍스트 완성)를 등록합니다.
     /// </summary>
-    /// <typeparam name="TTextCompletion">텍스트 완성 서비스 구현체</typeparam>
-    /// <typeparam name="TTextEmbedding">텍스트 임베딩 서비스 구현체</typeparam>
-    /// <param name="services">서비스 컬렉션</param>
-    /// <returns>서비스 컬렉션</returns>
-    /// <remarks>0.14.0 에서 이미지-텍스트 타입 인자를 뺐다 — 라이브러리 어디도 그 서비스를 호출하지 않았다.</remarks>
-    public static IServiceCollection AddWebFluxAIServices<TTextCompletion, TTextEmbedding>(
-        this IServiceCollection services)
-        where TTextCompletion : class, IWebLlmService
-        where TTextEmbedding : class, ITextEmbeddingService
-    {
-        services.TryAddScoped<IWebLlmService, TTextCompletion>();
-        services.TryAddScoped<ITextCompletionService>(sp => sp.GetRequiredService<IWebLlmService>());
-        services.TryAddScoped<ITextEmbeddingService, TTextEmbedding>();
-
-        // Phase 1: AI 증강 서비스 자동 등록
-        services.AddWebFluxAIEnhancement();
-
-        return services;
-    }
-
-    /// <summary>
-    /// AI 서비스 구현체를 등록합니다. (임베딩 없는 버전, 하위 호환성)
-    /// </summary>
+    /// <remarks>
+    /// Semantic 청킹의 임베더는 여기서 받지 않는다 — 청킹을 맡는 FluxCurator 가 DI 의 <c>FluxCurator.Core.Core.IEmbedder</c> 를
+    /// 읽으므로 그것을 싱글턴으로 등록한다(0.23.0 에서 읽는 곳이 없던 <c>ITextEmbeddingService</c> 를 지웠다).
+    /// </remarks>
     /// <typeparam name="TTextCompletion">텍스트 완성 서비스 구현체</typeparam>
     /// <param name="services">서비스 컬렉션</param>
     /// <returns>서비스 컬렉션</returns>

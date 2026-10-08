@@ -13,49 +13,24 @@ WebFlux는 **Interface Provider 패턴**을 사용합니다:
 
 소비자가 구현해야 하는 AI 서비스 인터페이스입니다.
 
-### ITextEmbeddingService (필수)
+### 임베더 — FluxCurator `IEmbedder` (선택)
+
+Semantic 청킹에만 필요합니다. 청킹은 FluxCurator 가 맡고, FluxCurator 는 DI 의 `FluxCurator.Core.Core.IEmbedder` 를 읽습니다 —
+싱글턴으로 등록하세요. (0.23.0 전의 `WebFlux.Core.Interfaces.ITextEmbeddingService` 는 아무 데서도 읽히지 않아 제거됐습니다.)
 
 ```csharp
-public interface ITextEmbeddingService
+public interface IEmbedder
 {
-    Task<float[]> GetEmbeddingAsync(
-        string text,
-        CancellationToken cancellationToken = default);
-
-    Task<IReadOnlyList<float[]>> GetEmbeddingsAsync(
-        IReadOnlyList<string> texts,
-        CancellationToken cancellationToken = default);
-
-    int MaxTokens { get; }
     int EmbeddingDimension { get; }
+    Task<float[]> GenerateEmbeddingAsync(string text, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<float[]>> GenerateEmbeddingsAsync(IEnumerable<string> texts, CancellationToken cancellationToken = default);
+    float CalculateSimilarity(float[] embedding1, float[] embedding2);
 }
 ```
 
-**구현 예제**:
 ```csharp
-public class OpenAiEmbeddingService : ITextEmbeddingService
-{
-    private readonly HttpClient _httpClient;
-    private readonly string _apiKey;
-
-    public async Task<float[]> GetEmbeddingAsync(string text, CancellationToken ct = default)
-    {
-        // OpenAI API 호출
-        var response = await _httpClient.PostAsync(...);
-        return ParseEmbedding(response);
-    }
-
-    public async Task<IReadOnlyList<float[]>> GetEmbeddingsAsync(
-        IReadOnlyList<string> texts,
-        CancellationToken ct = default)
-    {
-        var tasks = texts.Select(t => GetEmbeddingAsync(t, ct));
-        return await Task.WhenAll(tasks);
-    }
-
-    public int MaxTokens => 8191;
-    public int EmbeddingDimension => 1536;
-}
+services.AddSingleton<FluxCurator.Core.Core.IEmbedder, MyEmbedder>();
+services.AddWebFlux();
 ```
 
 ### ITextCompletionService (선택)

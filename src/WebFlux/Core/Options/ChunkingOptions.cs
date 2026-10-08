@@ -77,7 +77,7 @@ public class ChunkingOptions : IValidatable
 }
 
 /// <summary>
-/// 청킹 전략 유형 열거형 — 멤버마다 등록된 전략이 하나씩 있다(<see cref="Interfaces.IChunkingStrategyFactory.GetAvailableStrategies"/>).
+/// 청킹 전략 유형 열거형 — 멤버마다 같은 이름의 keyed <see cref="Interfaces.IChunkingStrategy"/> 가 하나씩 등록된다(<see cref="Interfaces.IWebContentProcessor.GetAvailableChunkingStrategies"/>).
 /// </summary>
 /// <remarks>
 /// 서수는 명시한다. 0.14.0 에서 구현이 없던 <c>Intelligent</c>(5)를 지웠고 그 자리는 비워 둔다 — 숫자로 바인딩된
