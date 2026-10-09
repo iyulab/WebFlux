@@ -106,9 +106,11 @@ public class WebContentChunk : IEnrichedChunk
     public double ContextDependency { get; init; }
 
     /// <summary>
-    /// 소스 문서 메타데이터
+    /// The page this chunk was cut from. The processor sets it for every chunk it returns (title, language, word count, the
+    /// page's chunk count); a chunk built some other way reads its own <see cref="SourceUrl"/> and <see cref="Metadata"/>
+    /// through <see cref="IEnrichedChunk.Source"/>.
     /// </summary>
-    public ISourceMetadata? Source { get; init; }
+    public ISourceMetadata? Source { get; set; }
 
     // ===================================================================
     // IEnrichedChunk 명시적 구현 (속성 이름 매핑)
@@ -133,7 +135,7 @@ public class WebContentChunk : IEnrichedChunk
     int? IEnrichedChunk.TokenCount => null;
 
     /// <inheritdoc />
-    ISourceMetadata IEnrichedChunk.Source => Source ?? throw new InvalidOperationException("Source metadata is not set");
+    ISourceMetadata IEnrichedChunk.Source => Source ?? SourceMetadata.FromChunk(this);
 }
 
 /// <summary>

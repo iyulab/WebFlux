@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+- **A WebFlux chunk now says which page it came from.** `IEnrichedChunk.Source` threw `InvalidOperationException` on every
+  chunk, because no chunking path set it, so a consumer of the `IEnrichedChunk` contract (a contextual-header generator, a
+  chunk classifier) failed on WebFlux chunks. The processor now sets `Source` on every chunk it returns: the page URL as id,
+  the title, language, author, keywords, word count and the page's chunk count. A chunk made by running a strategy directly
+  reads its own `SourceUrl` and `Metadata` instead of throwing. `WebContentChunk.Source` is settable.
+
 ### Removed
 - **Breaking** — **`WebFlux.Core.Models.LinkType`, `WebFlux.Core.Models.RelationshipType` and `WebFlux.Core.Models.SystemMetrics`
   are gone.** Nothing used them: no WebFlux API returned, accepted or set a value of these types. Migration: delete the

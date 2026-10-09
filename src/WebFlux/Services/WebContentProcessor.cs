@@ -628,6 +628,7 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
                 extracted,
                 chunkingOptions,
                 cancellationToken);
+            AttachSource(chunks, extracted);
 
             LogChunkedDocument(_logger, documentNumber, chunks.Count);
 
@@ -859,6 +860,7 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
                 extracted,
                 effectiveChunkingOptions,
                 cancellationToken);
+            AttachSource(chunks, extracted);
 
             LogGeneratedChunksFromUrl(_logger, chunks.Count, crawlResult.Url);
 
@@ -915,10 +917,21 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
             extracted,
             effectiveOptions,
             cancellationToken).ConfigureAwait(false);
+        AttachSource(chunks, extracted);
 
         LogGeneratedChunksFromHtml(_logger, chunks.Count, sourceUrl);
 
         return chunks;
+    }
+
+    // Every chunk the processor returns names the page it came from (IEnrichedChunk.Source); one source per page, shared.
+    private static void AttachSource(IReadOnlyList<WebContentChunk> chunks, ExtractedContent extracted)
+    {
+        var source = SourceMetadata.FromExtractedContent(extracted, chunks.Count);
+        foreach (var chunk in chunks)
+        {
+            chunk.Source ??= source;
+        }
     }
 
     // Every ChunkingStrategyType member has a keyed IChunkingStrategy registration (AddWebFlux), and the processor resolves

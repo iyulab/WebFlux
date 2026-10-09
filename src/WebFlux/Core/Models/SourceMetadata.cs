@@ -51,6 +51,46 @@ public class SourceMetadata : ISourceMetadata
     public IReadOnlyList<string>? Keywords { get; init; } = Array.Empty<string>();
 
     /// <summary>
+    /// The page <paramref name="content"/> was extracted from, as the source of the <paramref name="chunkCount"/> chunks cut
+    /// from it. The page URL is the source id.
+    /// </summary>
+    internal static SourceMetadata FromExtractedContent(ExtractedContent content, int chunkCount)
+    {
+        var url = string.IsNullOrEmpty(content.Url) ? content.OriginalUrl : content.Url;
+        var metadata = content.Metadata;
+        return new SourceMetadata
+        {
+            SourceId = url,
+            SourceType = "url",
+            Title = !string.IsNullOrEmpty(metadata?.Title) ? metadata.Title : content.Title ?? string.Empty,
+            Url = url,
+            CreatedAt = (metadata?.ExtractedAt ?? content.ExtractionTimestamp).UtcDateTime,
+            Language = metadata?.Language ?? "unknown",
+            WordCount = content.WordCount,
+            ChunkCount = chunkCount,
+            PublishedAt = metadata?.PublishedDate?.UtcDateTime,
+            Author = metadata?.Author,
+            Keywords = metadata?.Keywords.ToList() ?? (IReadOnlyList<string>)Array.Empty<string>(),
+        };
+    }
+
+    /// <summary>
+    /// What a chunk no processor touched knows of its page: its URL and the metadata it carries. Counts are unknown (0).
+    /// </summary>
+    internal static SourceMetadata FromChunk(WebContentChunk chunk) => new()
+    {
+        SourceId = chunk.SourceUrl,
+        SourceType = "url",
+        Title = chunk.Title ?? chunk.Metadata.Title ?? string.Empty,
+        Url = chunk.SourceUrl,
+        CreatedAt = chunk.CreatedAt.UtcDateTime,
+        Language = chunk.Metadata.Language ?? "unknown",
+        PublishedAt = chunk.Metadata.PublishedDate?.UtcDateTime,
+        Author = chunk.Metadata.Author,
+        Keywords = chunk.Metadata.Keywords,
+    };
+
+    /// <summary>
     /// WebContentMetadata에서 SourceMetadata 생성
     /// </summary>
     public static SourceMetadata FromWebContentMetadata(
