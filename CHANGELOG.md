@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Removed
+- **Breaking** — **`WebFlux.Core.Models.LinkType`, `WebFlux.Core.Models.RelationshipType` and `WebFlux.Core.Models.SystemMetrics`
+  are gone.** Nothing used them: no WebFlux API returned, accepted or set a value of these types. Migration: delete the
+  reference. `WebFlux.Core.Interfaces.SystemMetrics`, the one `PerformanceStatistics.SystemMetrics` returns, is unchanged.
+
 ## [0.23.0] - 2026-10-08
 
 ### Removed
