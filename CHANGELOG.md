@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [0.24.0] - Unreleased
 
 ### Fixed
 - **A WebFlux chunk now says which page it came from.** `IEnrichedChunk.Source` threw `InvalidOperationException` on every
