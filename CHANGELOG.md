@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [0.25.0] - 2026-10-11
 
 ### Changed
 - **The packages from this repository depend on each other at exactly the same version** (`[x.y.z]`), not a floor.
