@@ -12,7 +12,7 @@ public sealed class LocalHttpServer : IDisposable
 {
     private const string DefaultBody = "<html><head><title>t</title></head><body><p>hello</p></body></html>";
 
-    private readonly HttpListener _listener = new();
+    private readonly HttpListener _listener;
     private readonly TcpListener _resetListener = new(IPAddress.Loopback, 0);
     private readonly CancellationTokenSource _stop = new();
     private readonly Dictionary<string, (TimeSpan Delay, string Body, string ContentType)> _routes = new();
@@ -25,16 +25,31 @@ public sealed class LocalHttpServer : IDisposable
 
     public LocalHttpServer()
     {
-        int port;
-        using (var probe = new TcpListener(IPAddress.Loopback, 0))
+        // HttpListener cannot bind port 0, so a free port is probed and then bound — and between the two another test's
+        // listener can take it (seen on a CI runner: «Failed to listen on prefix»). Probe again when the bind loses that race.
+        for (var attempt = 1; ; attempt++)
         {
-            probe.Start();
-            port = ((IPEndPoint)probe.LocalEndpoint).Port;
-        }
+            int port;
+            using (var probe = new TcpListener(IPAddress.Loopback, 0))
+            {
+                probe.Start();
+                port = ((IPEndPoint)probe.LocalEndpoint).Port;
+            }
 
-        _base = $"http://localhost:{port}";
-        _listener.Prefixes.Add(_base + "/");
-        _listener.Start();
+            _base = $"http://localhost:{port}";
+            var listener = new HttpListener();
+            listener.Prefixes.Add(_base + "/");
+            try
+            {
+                listener.Start();
+                _listener = listener;
+                break;
+            }
+            catch (HttpListenerException) when (attempt < 10)
+            {
+                listener.Close();
+            }
+        }
         _ = Task.Run(AcceptLoopAsync);
 
         _resetListener.Start();
