@@ -83,8 +83,10 @@ public class OptionsReachabilityRosterTests
         // reads the registered WebFluxConfiguration: the crawler settings of CrawlingConfiguration and the size/overlap/min of
         // ChunkingConfiguration left this list, and the three ChunkingConfiguration twins were removed.
         // 0.16.0: the unread rest (T/A) was removed; CrawlConfiguration was folded into CrawlingConfiguration (MaxDepth/MaxPages,
-        // a typed Strategy). What remains here is literal-behaviour (D) the library fixes internally.
-        ["WebFlux.Core.Models.AutoChunkingConfiguration"] = ["HighComplexityThreshold", "MediumComplexityThreshold"],
+        // a typed Strategy). What remained was literal-behaviour (D) the library fixes internally.
+        // 2026-10-11: AutoChunkingConfiguration was created inside AutoChunkingStrategy and could not be set by anyone; it and
+        // the scoring types around it are internal, and its two complexity thresholds (a 0-1 scale on a score banded at 2.0/0.5)
+        // are removed. Nothing is left unread.
     };
 
     [Fact]

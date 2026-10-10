@@ -135,24 +135,6 @@ public class ExtractedContent
 }
 
 /// <summary>
-/// 추출 구성 — <see cref="WebFlux.Services.ContentExtractors.BaseContentExtractor"/> 를 상속하는 추출기가 받는다.
-/// </summary>
-public class ExtractionConfiguration
-{
-    /// <summary>공백 정규화 여부</summary>
-    public bool NormalizeWhitespace { get; set; } = true;
-
-    /// <summary>줄바꿈 정규화 여부</summary>
-    public bool NormalizeLineBreaks { get; set; } = true;
-
-    /// <summary>최소 텍스트 길이</summary>
-    public int MinTextLength { get; set; } = 50;
-
-    /// <summary>최대 텍스트 길이 (0은 제한 없음)</summary>
-    public int MaxTextLength { get; set; }
-}
-
-/// <summary>
 /// 구조화된 요소
 /// </summary>
 public class StructuredElement

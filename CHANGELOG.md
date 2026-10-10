@@ -14,6 +14,16 @@ All notable changes to this project will be documented in this file.
   depth-first crawlers) ended the enumeration quietly when the caller cancelled, so `await foreach` completed as if the site
   had been crawled. Migration: catch `OperationCanceledException` where you cancel a crawl.
 
+### Removed
+- **Breaking — `BaseContentExtractor` and `ExtractionConfiguration`.** The base class declared every `IContentExtractor` method
+  abstract and added its own `ExtractAsync(WebContent, ExtractionConfiguration)` pipeline that WebFlux never calls, so a
+  subclass's preprocessing, postprocessing and configuration never ran. Nothing derived from it. Migration: implement
+  `IContentExtractor` directly and register it keyed by content type, as the built-in extractors are.
+- **Breaking — `AutoChunkingConfiguration` and the scoring types around it (`StrategyScore`, `ScoreComponent`, `ScoreWeights`,
+  `ContentAnalysisMetadata`, `ContentQualityMetrics`, `StructuralComplexity`) are internal.** `AutoChunkingStrategy` created its
+  own configuration, so no caller could set any of it; its `HighComplexityThreshold` / `MediumComplexityThreshold` were never
+  read and are removed. Migration: delete the reference.
+
 ## [0.24.0] - 2026-10-10
 
 ### Fixed

@@ -4,7 +4,7 @@ namespace WebFlux.Core.Models;
 /// 청킹 전략 점수 및 선택 이유 추적
 /// Phase 5B.2: 향상된 자동 전략 선택을 위한 점수 시스템
 /// </summary>
-public class StrategyScore
+internal class StrategyScore
 {
     private readonly List<ScoreComponent> _components = new();
 
@@ -78,7 +78,7 @@ public class StrategyScore
 /// <summary>
 /// 점수 구성 요소
 /// </summary>
-public class ScoreComponent
+internal class ScoreComponent
 {
     /// <summary>
     /// 점수 범주 (content_type, structure, size, etc.)
@@ -100,7 +100,7 @@ public class ScoreComponent
 /// 자동 전략 선택 구성
 /// Phase 5B.2: 향상된 알고리즘 설정값들
 /// </summary>
-public class AutoChunkingConfiguration
+internal class AutoChunkingConfiguration
 {
     /// <summary>
     /// 높은 이미지 밀도 임계값
@@ -121,16 +121,6 @@ public class AutoChunkingConfiguration
     /// 짧은 문서 임계값 (바이트)
     /// </summary>
     public int ShortDocumentThreshold { get; set; } = 5000; // 5KB
-
-    /// <summary>
-    /// 높은 복잡도 임계값
-    /// </summary>
-    public double HighComplexityThreshold { get; set; } = 0.7;
-
-    /// <summary>
-    /// 중간 복잡도 임계값
-    /// </summary>
-    public double MediumComplexityThreshold { get; set; } = 0.4;
 
     /// <summary>
     /// 기술 콘텐츠 키워드들
@@ -172,7 +162,7 @@ public class AutoChunkingConfiguration
 /// <summary>
 /// 점수 가중치 설정
 /// </summary>
-public class ScoreWeights
+internal class ScoreWeights
 {
     /// <summary>
     /// 콘텐츠 타입 가중치
@@ -204,7 +194,7 @@ public class ScoreWeights
 /// 콘텐츠 분석 메타데이터 확장
 /// Phase 5B.2: 더 정교한 콘텐츠 분석을 위한 메타데이터
 /// </summary>
-public class ContentAnalysisMetadata
+internal class ContentAnalysisMetadata
 {
     /// <summary>
     /// 콘텐츠 타입
@@ -270,7 +260,7 @@ public class ContentAnalysisMetadata
 /// <summary>
 /// 콘텐츠 품질 지표
 /// </summary>
-public class ContentQualityMetrics
+internal class ContentQualityMetrics
 {
     /// <summary>
     /// 텍스트 밀도 (유의미한 텍스트 비율)
@@ -296,7 +286,7 @@ public class ContentQualityMetrics
 /// <summary>
 /// 구조적 복잡도 수준
 /// </summary>
-public enum StructuralComplexity
+internal enum StructuralComplexity
 {
     /// <summary>단순한 구조</summary>
     Low,
