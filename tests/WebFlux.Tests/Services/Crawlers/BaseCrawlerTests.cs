@@ -216,6 +216,27 @@ public class BaseCrawlerTests : IDisposable
     }
 
     [Fact]
+    public async Task CrawlWebsiteAsync_CancelledMidCrawl_Throws_InsteadOfEndingAsIfComplete()
+    {
+        var startUrl = "https://example.com";
+        SetupSuccessfulHttpResponse(startUrl, "<html><body><a href='https://example.com/page1'>1</a></body></html>");
+        SetupSuccessfulHttpResponse("https://example.com/page1", "<html><body>Page 1</body></html>");
+        using var cts = new CancellationTokenSource();
+        var results = new List<CrawlResult>();
+
+        // Before: the loop tested the token in its condition, so the enumeration simply ended after the first page.
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(async () =>
+        {
+            await foreach (var result in _crawler.CrawlWebsiteAsync(startUrl, new CrawlOptions { MaxPages = 5, MaxDepth = 2, DelayMs = 0 }, cts.Token))
+            {
+                results.Add(result);
+                await cts.CancelAsync();
+            }
+        });
+        results.Should().HaveCount(1);
+    }
+
+    [Fact]
     public async Task CrawlWebsiteAsync_WithNullOrEmptyUrl_ShouldThrowArgumentException()
     {
         // Act & Assert

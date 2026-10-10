@@ -38,8 +38,9 @@ public class DepthFirstCrawler : BaseCrawler
 
         stack.Push((startUrl, 0));
 
-        while (stack.Count > 0 && visited.Count < maxPages && !cancellationToken.IsCancellationRequested)
+        while (stack.Count > 0 && visited.Count < maxPages)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var (currentUrl, depth) = stack.Pop();
 
             if (visited.Contains(UrlNormalizer.Normalize(currentUrl)) || depth > maxDepth)

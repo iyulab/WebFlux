@@ -310,8 +310,9 @@ public abstract class BaseCrawler : ICrawler
 
         queue.Enqueue((startUrl, 0));
 
-        while (queue.Count > 0 && visited.Count < maxPages && !cancellationToken.IsCancellationRequested)
+        while (queue.Count > 0 && visited.Count < maxPages)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var (currentUrl, depth) = queue.Dequeue();
 
             if (visited.Contains(UrlNormalizer.Normalize(currentUrl)) || depth > maxDepth)

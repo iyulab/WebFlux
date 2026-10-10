@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Fixed
+- **Breaking: a cancelled site crawl throws `OperationCanceledException`.** `CrawlWebsiteAsync` (breadth-first and
+  depth-first crawlers) ended the enumeration quietly when the caller cancelled, so `await foreach` completed as if the site
+  had been crawled. Migration: catch `OperationCanceledException` where you cancel a crawl.
+
 ## [0.24.0] - 2026-10-10
 
 ### Fixed
