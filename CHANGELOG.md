@@ -7,7 +7,7 @@ All notable changes to this project will be documented in this file.
 ### Removed
 - **Breaking: the unregistered document-metadata extractor and the resilience presets are gone** —
   `IWebDocumentMetadataExtractor`, `WebDocumentMetadataExtractor`, `WebDocumentMetadata`, `LanguageDetectionMethod`,
-  `SiteContext` (crawl metadata comes from the registered `IMetadataExtractor`), and `PredefinedResiliencePolicies` (presets
+  `SiteContext`, `ContentAnalysis` (crawl metadata comes from the registered `IMetadataExtractor`), and `PredefinedResiliencePolicies` (presets
   for calls nothing makes). Migration: use `IMetadataExtractor`; build a `ResiliencePolicy`/`HttpResiliencePolicy` yourself.
 
 ### Changed
