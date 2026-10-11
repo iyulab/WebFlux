@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [0.26.0] - 2026-10-11
 
 ### Removed
 - **Breaking: the unregistered document-metadata extractor and the resilience presets are gone** —
