@@ -116,20 +116,6 @@ public interface ISourceMetadata
 }
 ```
 
-### IWebDocumentMetadataExtractor (v0.1.7)
-
-웹 문서 메타데이터 추출 인터페이스입니다.
-
-```csharp
-public interface IWebDocumentMetadataExtractor
-{
-    Task<WebDocumentMetadata> ExtractAsync(
-        string html,
-        string url,
-        CancellationToken cancellationToken = default);
-}
-```
-
 ## SDK-Provided Interfaces
 
 WebFlux가 제공하는 핵심 인터페이스입니다.

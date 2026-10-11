@@ -337,7 +337,7 @@ public class ResilienceServiceTests
     public async Task ExecuteHttpWithResilienceAsync_HttpPolicy_ShouldWork()
     {
         // Arrange
-        var httpPolicy = PredefinedResiliencePolicies.DefaultHttp;
+        var httpPolicy = TestResiliencePolicies.DefaultHttp;
         var expectedResult = "http result";
 
         Func<CancellationToken, Task<string>> operation = _ => Task.FromResult(expectedResult);
@@ -382,59 +382,10 @@ public class ResilienceServiceTests
     #region 사전 정의된 정책 테스트
 
     [Fact]
-    public void PredefinedResiliencePolicies_DefaultHttp_ShouldHaveCorrectConfiguration()
-    {
-        // Act
-        var policy = PredefinedResiliencePolicies.DefaultHttp;
-
-        // Assert
-        policy.Should().NotBeNull();
-        policy.Name.Should().Be("DefaultHttp");
-        policy.Retry.Should().NotBeNull();
-        policy.CircuitBreaker.Should().NotBeNull();
-        policy.Timeout.Should().NotBeNull();
-        policy.HttpTimeout.Should().Be(TimeSpan.FromSeconds(30));
-        policy.ConnectionTimeout.Should().Be(TimeSpan.FromSeconds(10));
-    }
-
-    [Fact]
-    public void PredefinedResiliencePolicies_DefaultFileIO_ShouldHaveCorrectConfiguration()
-    {
-        // Act
-        var policy = PredefinedResiliencePolicies.DefaultFileIO;
-
-        // Assert
-        policy.Should().NotBeNull();
-        policy.Name.Should().Be("DefaultFileIO");
-        policy.Retry.Should().NotBeNull();
-        policy.Timeout.Should().NotBeNull();
-        policy.CircuitBreaker.Should().BeNull(); // 파일 I/O에는 회로차단기 불필요
-        policy.ExecutionOrder.Should().Contain(PolicyType.Retry);
-        policy.ExecutionOrder.Should().Contain(PolicyType.Timeout);
-    }
-
-    [Fact]
-    public void PredefinedResiliencePolicies_DefaultDatabase_ShouldHaveCorrectConfiguration()
-    {
-        // Act
-        var policy = PredefinedResiliencePolicies.DefaultDatabase;
-
-        // Assert
-        policy.Should().NotBeNull();
-        policy.Name.Should().Be("DefaultDatabase");
-        policy.Retry.Should().NotBeNull();
-        policy.CircuitBreaker.Should().NotBeNull();
-        policy.Timeout.Should().NotBeNull();
-        policy.Bulkhead.Should().NotBeNull();
-        policy.Bulkhead.MaxParallelization.Should().Be(20);
-        policy.Bulkhead.MaxQueuingActions.Should().Be(50);
-    }
-
-    [Fact]
     public async Task ExecuteWithResilienceAsync_WithDefaultDatabase_ShouldApplyBulkhead()
     {
         // Arrange - DefaultDatabase 정책은 Bulkhead를 포함
-        var databasePolicy = PredefinedResiliencePolicies.DefaultDatabase;
+        var databasePolicy = TestResiliencePolicies.DefaultDatabase;
         var expectedResult = "database operation result";
 
         // ExecutionOrder와 Bulkhead 검증
@@ -452,24 +403,6 @@ public class ResilienceServiceTests
 
         // Assert
         result.Should().Be(expectedResult);
-    }
-
-    [Fact]
-    public void PredefinedResiliencePolicies_DefaultExternalApi_ShouldHaveCorrectConfiguration()
-    {
-        // Act
-        var policy = PredefinedResiliencePolicies.DefaultExternalApi;
-
-        // Assert
-        policy.Should().NotBeNull();
-        policy.Name.Should().Be("DefaultExternalApi");
-        policy.Retry.Should().NotBeNull();
-        policy.CircuitBreaker.Should().NotBeNull();
-        policy.Timeout.Should().NotBeNull();
-        policy.Bulkhead.Should().NotBeNull();
-        policy.Retry.MaxRetryAttempts.Should().Be(5);
-        policy.CircuitBreaker.FailureThreshold.Should().Be(3);
-        policy.Timeout.Timeout.Should().Be(TimeSpan.FromMinutes(2));
     }
 
     #endregion
@@ -1192,7 +1125,7 @@ public class ResilienceServiceTests
     public async Task ExecuteHttpWithResilienceAsync_NullOperation_ShouldThrowArgumentNullException()
     {
         // Arrange
-        var policy = PredefinedResiliencePolicies.DefaultHttp;
+        var policy = TestResiliencePolicies.DefaultHttp;
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(

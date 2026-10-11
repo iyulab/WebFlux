@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Removed
+- **Breaking: the unregistered document-metadata extractor and the resilience presets are gone** —
+  `IWebDocumentMetadataExtractor`, `WebDocumentMetadataExtractor`, `WebDocumentMetadata`, `LanguageDetectionMethod`,
+  `SiteContext` (crawl metadata comes from the registered `IMetadataExtractor`), and `PredefinedResiliencePolicies` (presets
+  for calls nothing makes). Migration: use `IMetadataExtractor`; build a `ResiliencePolicy`/`HttpResiliencePolicy` yourself.
+
 ### Changed
 - **The nuget.org «Release Notes» of every package link to the GitHub release of its version**, whose notes are this CHANGELOG's section for that version.
 
