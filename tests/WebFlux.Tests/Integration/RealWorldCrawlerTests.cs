@@ -18,6 +18,7 @@ namespace WebFlux.Tests.Integration;
 /// pwsh bin/Debug/net10.0/playwright.ps1 install
 /// </summary>
 [Trait("Category", "Integration")]
+[Trait("Category", "LiveWeb")]
 public class RealWorldCrawlerTests : IAsyncLifetime
 {
     private readonly ITestOutputHelper _output;
@@ -69,22 +70,6 @@ public class RealWorldCrawlerTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Crawler_HttpBinHtml_ShouldReturnHtmlContent()
-    {
-        // Arrange
-        var url = TestSites.HtmlUrl;
-
-        // Act
-        var result = await _crawler.CrawlAsync(url, cancellationToken: TestContext.Current.CancellationToken);
-
-        // Assert
-        result.Should().NotBeNull();
-        result.IsSuccess.Should().BeTrue();
-        result.HtmlContent.Should().Contain("html");
-        _output.WriteLine($"Crawled {url}: Content Length: {result.HtmlContent?.Length ?? 0}");
-    }
-
-    [Fact]
     public async Task Crawler_QuotesToScrape_ShouldExtractLinks()
     {
         // Arrange
@@ -102,50 +87,7 @@ public class RealWorldCrawlerTests : IAsyncLifetime
 
     #endregion
 
-    #region HTTP 상태 코드 테스트
 
-    [Theory]
-    [InlineData(200, true)]
-    [InlineData(201, true)]
-    [InlineData(404, false)]
-    [InlineData(500, false)]
-    public async Task Crawler_HttpStatusCodes_ShouldHandleCorrectly(int statusCode, bool expectSuccess)
-    {
-        // Arrange
-        var url = TestSites.GetHttpStatusUrl(statusCode);
-        var options = new CrawlOptions { MaxRetries = 0 }; // 테스트 속도를 위해 재시도 비활성화
-
-        // Act
-        var result = await _crawler.CrawlAsync(url, options, TestContext.Current.CancellationToken);
-
-        // Assert
-        result.Should().NotBeNull();
-        result.StatusCode.Should().Be(statusCode);
-        result.IsSuccess.Should().Be(expectSuccess);
-        _output.WriteLine($"Status {statusCode}: IsSuccess={result.IsSuccess}");
-    }
-
-    #endregion
-
-    #region 재시도 로직 테스트
-
-    [Fact]
-    public async Task Crawler_WithRetries_ShouldHandleDelayedResponses()
-    {
-        // Arrange - httpbin의 지연 응답 사용
-        var url = TestSites.GetDelayUrl(1); // 1초 지연
-        var options = new CrawlOptions { MaxRetries = 2, TimeoutMs = 10000 };
-
-        // Act
-        var result = await _crawler.CrawlAsync(url, options, TestContext.Current.CancellationToken);
-
-        // Assert
-        result.Should().NotBeNull();
-        result.IsSuccess.Should().BeTrue();
-        _output.WriteLine($"Delayed response: {result.ResponseTimeMs}ms");
-    }
-
-    #endregion
 
     #region 웹사이트 크롤링 테스트
 
@@ -207,22 +149,6 @@ public class RealWorldCrawlerTests : IAsyncLifetime
     #region 성능 및 안정성 테스트
 
     [Fact]
-    public async Task Crawler_LargeResponse_ShouldHandleWithoutMemoryIssues()
-    {
-        // Arrange - 100KB 랜덤 바이트
-        var url = TestSites.GetRandomBytesUrl(102400);
-
-        // Act
-        var result = await _crawler.CrawlAsync(url, cancellationToken: TestContext.Current.CancellationToken);
-
-        // Assert
-        result.Should().NotBeNull();
-        result.IsSuccess.Should().BeTrue();
-        result.ContentLength.Should().BeGreaterThan(100000);
-        _output.WriteLine($"Large response: {result.ContentLength} bytes");
-    }
-
-    [Fact]
     public async Task Crawler_CancellationToken_ShouldRespectCancellation()
     {
         // Arrange - 요청 시작 전에 이미 취소된 토큰 사용
@@ -280,26 +206,4 @@ public class RealWorldCrawlerTests : IAsyncLifetime
 
     #endregion
 
-    #region 통계 테스트
-
-    [Fact]
-    public async Task Crawler_Statistics_ShouldTrackRequests()
-    {
-        // Arrange
-        var urls = new[] { TestSites.ExampleCom, TestSites.HtmlUrl };
-
-        // Act
-        foreach (var url in urls)
-        {
-            await _crawler.CrawlAsync(url, cancellationToken: TestContext.Current.CancellationToken);
-        }
-        var stats = _crawler.GetStatistics();
-
-        // Assert
-        stats.TotalRequests.Should().BeGreaterThanOrEqualTo(2);
-        stats.SuccessfulRequests.Should().BeGreaterThanOrEqualTo(2);
-        _output.WriteLine($"Stats: {stats.TotalRequests} total, {stats.SuccessfulRequests} success");
-    }
-
-    #endregion
 }

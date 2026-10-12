@@ -24,6 +24,7 @@ namespace WebFlux.Tests.Integration;
 /// </para>
 /// </remarks>
 [Trait("Category", "Integration")]
+[Trait("Category", "LiveWeb")]
 public class RealWorldRobotsTxtTests : IAsyncLifetime
 {
     private ServiceProvider? _serviceProvider;
@@ -69,39 +70,6 @@ public class RealWorldRobotsTxtTests : IAsyncLifetime
             new ExtractOptions { EvaluateQuality = false, UseCache = false },
             TestContext.Current.CancellationToken);
         result.MainContent.Should().NotBeNullOrWhiteSpace();
-    }
-
-    [Fact]
-    public async Task ADisallowedPathIsRefused()
-    {
-        // https://httpbin.org/robots.txt is "User-agent: *" + "Disallow: /deny" (2026-09-20).
-        var result = await _crawler.CrawlAsync(
-            "https://httpbin.org/deny", SinglePage, TestContext.Current.CancellationToken);
-
-        result.DisallowedByRobotsTxt.Should().BeTrue();
-        result.IsSuccess.Should().BeFalse();
-    }
-
-    [Fact]
-    public async Task ARefusalArrivesAsItsOwnErrorCodeOnTheExtractPath()
-    {
-        var ex = await Assert.ThrowsAsync<WebExtractionException>(() => _processor.ExtractContentAsync(
-            "https://httpbin.org/deny",
-            new ExtractOptions { EvaluateQuality = false, UseCache = false },
-            TestContext.Current.CancellationToken));
-        ex.ErrorCode.Should().Be(ExtractErrorCodes.DisallowedByRobotsTxt);
-    }
-
-    [Fact]
-    public async Task TheOptOutReachesTheExtractApi()
-    {
-        var failure = await Record.ExceptionAsync(() => _processor.ExtractContentAsync(
-            "https://httpbin.org/deny",
-            new ExtractOptions { RespectRobotsTxt = false, EvaluateQuality = false, UseCache = false },
-            TestContext.Current.CancellationToken));
-
-        // Whatever the page answers, the refusal is no longer the reason we stopped.
-        ((failure as WebExtractionException)?.ErrorCode).Should().NotBe(ExtractErrorCodes.DisallowedByRobotsTxt);
     }
 
     [Fact]

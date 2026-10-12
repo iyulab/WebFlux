@@ -16,6 +16,7 @@ namespace WebFlux.Tests.Integration;
 /// Category=Integration 필터로 실행: dotnet test --filter "Category=Integration"
 /// </summary>
 [Trait("Category", "Integration")]
+[Trait("Category", "LiveWeb")]
 public class QualityEvaluationTests : IAsyncLifetime
 {
     private readonly ITestOutputHelper _output;
