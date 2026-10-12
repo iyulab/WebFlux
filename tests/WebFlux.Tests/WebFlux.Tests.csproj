@@ -21,7 +21,7 @@
     </PackageReference>
     <!-- Hang dumps for stuck tests: the Microsoft.Testing.Platform equivalent of VSTest's blame-hang -->
     <PackageReference Include="Microsoft.Testing.Extensions.HangDump" />
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
+    <PackageReference Include="Iyu.Conventions.Testing.Snippets" />
     <!-- The tutorial's provider examples are written against the OpenAI SDK; DocSnippetCompileTests compiles them. -->
     <PackageReference Include="OpenAI" />
   </ItemGroup>
