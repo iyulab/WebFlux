@@ -229,7 +229,7 @@ public interface ICrawler
         string userAgent,
         CancellationToken cancellationToken = default);
 
-    Task<bool> IsUrlAllowedAsync(string url, string userAgent);
+    Task<bool> IsUrlAllowedAsync(string url, string userAgent, CancellationToken cancellationToken = default);
 
     IReadOnlyList<string> ExtractLinks(string htmlContent, string baseUrl);
 
@@ -421,10 +421,13 @@ public class CrawlOptions
 ```csharp
 public class ChunkingOptions
 {
-    public string Strategy { get; set; } = "Auto";
+    public ChunkingStrategyType Strategy { get; set; } = ChunkingStrategyType.Auto;
     public int MaxChunkSize { get; set; } = 512;
-    public int MinChunkSize { get; set; } = 100;
-    public int OverlapSize { get; set; } = 64;
+    public int ChunkOverlap { get; set; } = 50;
+    public int MinChunkSize { get; set; } = 50;
+    public double SemanticThreshold { get; set; } = 0.5;
+    public bool PreserveHeaders { get; set; } = true;
+    public string Language { get; set; } = "ko";
 }
 ```
 

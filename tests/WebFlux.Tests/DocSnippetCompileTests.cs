@@ -39,9 +39,6 @@ public class DocSnippetCompileTests
     private static readonly SnippetRoster Fragments = new(new Dictionary<string, string>(StringComparer.Ordinal)
     {
         ["Parallel Processing"] = "a generic sketch of the bounded-channel pattern (type parameter T, capacity, source) — not a program",
-        // A listing, not a program: compiled alone it cannot implement IEnrichedChunk without repeating the interface. Comes
-        // off this roster when listings are checked member by member against the real type.
-        ["WebContentChunk"] = "a partial listing of the class — the members a consumer reads, not the interface it implements",
     });
 
     // Flux.Abstractions is deliberately not here: it declares TextCompletionOptions, as does WebFlux.Core.Options, so a
@@ -119,6 +116,8 @@ public class DocSnippetCompileTests
     {
         Usings = CommonUsings,
         StandIns = StandIns,
+        // A block that restates a library type (INTERFACES.md lists most of them) is checked member by member against it.
+        CheckListings = true,
     };
 
     private static readonly IReadOnlyList<DocSnippet> Snippets =

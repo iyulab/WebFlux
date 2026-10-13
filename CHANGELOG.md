@@ -12,6 +12,10 @@ All notable changes to this project will be documented in this file.
   - The `IEnrichedChunk` and `ISourceMetadata` listings showed members the `Flux.Abstractions` interfaces do not have.
     They are now copied from the interfaces, with their namespace.
   - The `WebContentChunk` listing now names every member it leaves out.
+  - The `ChunkingOptions` listing showed `Strategy` as a string, an `OverlapSize` the type does not have, and two wrong
+    defaults. It now matches the class (`ChunkingStrategyType Strategy`, `ChunkOverlap`, and the semantic, header and
+    language settings). `ICrawler.IsUrlAllowedAsync` now shows its `CancellationToken`.
+  - The type listings are now checked member by member against the real types.
 
 ## [0.26.0] - 2026-10-11
 
