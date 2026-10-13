@@ -8,6 +8,7 @@ using WebFlux.Core.Options;
 using System.Collections.Concurrent;
 
 using WebFlux.Services.Crawlers;
+using WebFlux.Core.Utilities;
 
 namespace WebFlux.Services;
 
@@ -269,7 +270,7 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
         }, cancellationToken);
 
         // 채널에서 결과를 스트리밍으로 반환
-        await foreach (var webContent in reader.ReadAllAsync(cancellationToken))
+        await foreach (var webContent in reader.ReadUntilCancelledAsync(cancellationToken))
         {
             yield return webContent;
         }
@@ -325,7 +326,7 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
 
         // 결과를 스트리밍으로 반환
         var totalChars = 0;
-        await foreach (var extracted in reader.ReadAllAsync(cancellationToken))
+        await foreach (var extracted in reader.ReadUntilCancelledAsync(cancellationToken))
         {
             extractedCount++;
             totalChars += (extracted.Text?.Length ?? 0);
@@ -463,7 +464,7 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
         }, cancellationToken);
 
         // 결과를 스트리밍으로 반환
-        await foreach (var enhanced in reader.ReadAllAsync(cancellationToken))
+        await foreach (var enhanced in reader.ReadUntilCancelledAsync(cancellationToken))
         {
             enhancedCount++;
             yield return enhanced;
@@ -584,7 +585,7 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
         }, cancellationToken);
 
         // 결과를 스트리밍으로 반환
-        await foreach (var chunk in reader.ReadAllAsync(cancellationToken))
+        await foreach (var chunk in reader.ReadUntilCancelledAsync(cancellationToken))
         {
             documentCount = Math.Max(documentCount, chunk.AdditionalMetadata.TryGetValue("DocumentNumber", out var docNum) ?
                 (int)docNum : documentCount);
@@ -1370,7 +1371,7 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
         }, cancellationToken);
 
         // 결과 스트리밍
-        await foreach (var result in reader.ReadAllAsync(cancellationToken).ConfigureAwait(false))
+        await foreach (var result in reader.ReadUntilCancelledAsync(cancellationToken).ConfigureAwait(false))
         {
             yield return result;
         }

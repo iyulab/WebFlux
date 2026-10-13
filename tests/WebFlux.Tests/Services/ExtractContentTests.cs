@@ -381,7 +381,8 @@ public class ExtractContentTests : IDisposable
         }
 
         // Assert
-        results.Count.Should().BeLessThan(100);
+        // Not one item after the cancellation, however far the producer ran ahead (it used to be up to all 100).
+        results.Count.Should().Be(5);
     }
 
     #endregion

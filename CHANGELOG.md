@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+- **A streaming method stops at the caller's cancellation.** `ExtractBatchStreamAsync`, the crawl and processing streams
+  and the crawler's stream read their results through a channel, and the channel's reader looks at the token only while it
+  waits. When the producer had run ahead, every result it had buffered still came after the caller cancelled (a caller that
+  cancelled at the fifth of 100 extractions received all 100), and the cancellation surfaced only after them. Now no
+  result follows the cancellation.
+
 ### Documentation
 - **`docs/INTERFACES.md` matches the library, and every C# example in `docs/` is compiled by the tests.**
   - The «Error Handling» example caught `CrawlException`, `ExtractionException` and `ChunkingException`, none of which

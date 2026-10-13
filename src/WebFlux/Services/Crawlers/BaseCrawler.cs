@@ -500,7 +500,7 @@ public abstract class BaseCrawler : ICrawler
         }, cancellationToken);
 
         // Consumer: 채널에서 결과 읽기
-        await foreach (var result in channel.Reader.ReadAllAsync(cancellationToken))
+        await foreach (var result in channel.Reader.ReadUntilCancelledAsync(cancellationToken))
         {
             yield return result;
         }
