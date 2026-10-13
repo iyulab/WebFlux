@@ -93,12 +93,21 @@ public enum MetadataSchema
 FluxIndex와의 연동을 위한 청크 인터페이스입니다.
 
 ```csharp
+using Flux.Abstractions;
+
 public interface IEnrichedChunk
 {
-    string Id { get; }
     string Content { get; }
-    IReadOnlyDictionary<string, object>? Metadata { get; }
-    ISourceMetadata? Source { get; }
+    string ChunkId { get; }
+    int ChunkIndex { get; }
+    IReadOnlyList<string> HeadingPath { get; }
+    string? SectionTitle { get; }
+    int? StartPage { get; }
+    int? EndPage { get; }
+    double Quality { get; }
+    double ContextDependency { get; }
+    int? TokenCount { get; }
+    ISourceMetadata Source { get; }
 }
 ```
 
@@ -107,12 +116,24 @@ public interface IEnrichedChunk
 청크의 출처 정보를 제공하는 인터페이스입니다.
 
 ```csharp
+using Flux.Abstractions;
+
 public interface ISourceMetadata
 {
+    string SourceId { get; }
+    string SourceType { get; }
+    string Title { get; }
+    string? FilePath { get; }
     string? Url { get; }
-    string? Title { get; }
-    DateTimeOffset? CreatedAt { get; }
+    DateTime CreatedAt { get; }
+    string Language { get; }
+    double? LanguageConfidence { get; }
+    int WordCount { get; }
+    int ChunkCount { get; }
+    int? PageCount { get; }
+    DateTime? PublishedAt { get; }
     string? Author { get; }
+    IReadOnlyList<string>? Keywords { get; }
 }
 ```
 
@@ -314,6 +335,8 @@ using var sAll = publisher.SubscribeAll(async e =>
 RAG 시스템에서 사용하는 청크 데이터입니다.
 
 ```csharp
+using Flux.Abstractions;
+
 public class WebContentChunk : IEnrichedChunk
 {
     public required string Id { get; init; }
@@ -327,7 +350,7 @@ public class WebContentChunk : IEnrichedChunk
     public WebContentMetadata Metadata { get; set; }
     public Dictionary<string, object> AdditionalMetadata { get; set; }
     public DateTimeOffset CreatedAt { get; init; }
-    // plus ParentChunkId, ChildChunkIds, RelatedImageUrls
+    // plus ParentChunkId, ChildChunkIds, RelatedImageUrls, Tags, HeadingPath, SectionTitle, ContextDependency, Source
 }
 ```
 
@@ -378,6 +401,8 @@ public class EnrichedMetadata
 크롤링 옵션입니다.
 
 ```csharp
+using WebFlux.Core.Utilities;
+
 public class CrawlOptions
 {
     public int MaxDepth { get; set; } = 3;
@@ -499,25 +524,24 @@ services.AddScoped<IChunkingStrategy, CustomChunkingStrategy>();
 
 ## Error Handling
 
+단일 URL 추출이 실패하면 `WebExtractionException`이 던져지고, 실패 종류는 `ErrorCode`(`ExtractErrorCodes`의 상수)로
+구별합니다. 호출자가 취소하면 이 예외가 아니라 `OperationCanceledException`이 전파되고, 배치 추출(`ExtractBatchAsync` ·
+`ExtractBatchStreamAsync`)은 이 예외를 URL별 `FailedExtraction`으로 담습니다.
+
 ```csharp
 try
 {
-    var chunks = await processor.ProcessUrlAsync(url);
+    var content = await processor.ExtractContentAsync(url);
 }
-catch (CrawlException ex)
+catch (WebExtractionException ex) when (ex.ErrorCode == ExtractErrorCodes.DisallowedByRobotsTxt)
 {
-    // 크롤링 실패
-    Console.WriteLine($"Crawl failed: {ex.Message}");
+    // robots.txt가 이 URL을 금지
+    Console.WriteLine($"Skipped by robots.txt: {ex.Url}");
 }
-catch (ExtractionException ex)
+catch (WebExtractionException ex)
 {
-    // 추출 실패
-    Console.WriteLine($"Extraction failed: {ex.Message}");
-}
-catch (ChunkingException ex)
-{
-    // 청킹 실패
-    Console.WriteLine($"Chunking failed: {ex.Message}");
+    // 그 밖의 추출 실패 — HttpStatusCode는 HTTP 응답이 있었을 때만
+    Console.WriteLine($"Extraction failed: {ex.Url} {ex.ErrorCode} {ex.HttpStatusCode}: {ex.Message}");
 }
 ```
 

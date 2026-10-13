@@ -23,16 +23,26 @@ namespace WebFlux.Tests;
 public class DocSnippetCompileTests
 {
     // The documents whose blocks are compiled, with the number of C# blocks each is expected to hold at least — a
-    // parser that silently stops finding blocks would otherwise turn every theory row into "nothing to check".
-    private static readonly (string Path, int MinBlocks)[] Documents =
+    // parser that silently stops finding blocks would otherwise turn every theory row into "nothing to check" — and
+    // whether the document resolves services from the container (checked against AddWebFlux() below).
+    private static readonly (string Path, int MinBlocks, bool ResolvesServices)[] Documents =
     [
-        ("README.md", 6),
-        ("docs/TUTORIAL.md", 28),
+        ("README.md", 6, true),
+        ("docs/TUTORIAL.md", 28, true),
+        ("docs/ARCHITECTURE.md", 6, false),
+        ("docs/CHUNKING_STRATEGIES.md", 1, false),
+        ("docs/INTERFACES.md", 21, false),
     ];
 
     // A block that is deliberately not a program (a signature sketch, pseudocode), by the heading it sits under, with the
     // reason. Shrink this, never grow it silently.
-    private static readonly SnippetRoster Fragments = new(new Dictionary<string, string>(StringComparer.Ordinal));
+    private static readonly SnippetRoster Fragments = new(new Dictionary<string, string>(StringComparer.Ordinal)
+    {
+        ["Parallel Processing"] = "a generic sketch of the bounded-channel pattern (type parameter T, capacity, source) — not a program",
+        // A listing, not a program: compiled alone it cannot implement IEnrichedChunk without repeating the interface. Comes
+        // off this roster when listings are checked member by member against the real type.
+        ["WebContentChunk"] = "a partial listing of the class — the members a consumer reads, not the interface it implements",
+    });
 
     // Flux.Abstractions is deliberately not here: it declares TextCompletionOptions, as does WebFlux.Core.Options, so a
     // block that implements ITextCompletionService names the namespace (and the alias) itself, as a reader must.
@@ -67,6 +77,10 @@ public class DocSnippetCompileTests
         ["crawlOptions"] = "CrawlOptions crawlOptions = new();",
         ["chunkOptions"] = "ChunkingOptions chunkOptions = new();",
         ["logger"] = "ILogger logger = null!;",
+        ["_logger"] = "ILogger _logger = null!;",
+        // What the reader does with a result («store it») — the call is checked, the storage is theirs.
+        ["StoreChunkAsync"] = "static Task StoreChunkAsync<T>(T chunk) => Task.CompletedTask;",
+        ["StoreContentAsync"] = "static Task StoreContentAsync<T>(T content) => Task.CompletedTask;",
 
         // Types a block names as the reader's own (declared after the program's statements): a one-line registration
         // block names the service an earlier block of the same document implemented.
@@ -76,6 +90,13 @@ public class DocSnippetCompileTests
             "CancellationToken cancellationToken = default) => Task.FromResult(\"\"); }",
         ["OpenAIEmbeddingService"] =
             "sealed class OpenAIEmbeddingService(string apiKey) : IEmbedder { " +
+            "public int EmbeddingDimension => 0; " +
+            "public Task<float[]> GenerateEmbeddingAsync(string text, CancellationToken cancellationToken = default) => Task.FromResult(Array.Empty<float>()); " +
+            "public Task<IReadOnlyList<float[]>> GenerateEmbeddingsAsync(IEnumerable<string> texts, CancellationToken cancellationToken = default) => " +
+            "Task.FromResult<IReadOnlyList<float[]>>([]); " +
+            "public float CalculateSimilarity(float[] a, float[] b) => 0; }",
+        ["MyEmbedder"] =
+            "sealed class MyEmbedder : IEmbedder { " +
             "public int EmbeddingDimension => 0; " +
             "public Task<float[]> GenerateEmbeddingAsync(string text, CancellationToken cancellationToken = default) => Task.FromResult(Array.Empty<float>()); " +
             "public Task<IReadOnlyList<float[]>> GenerateEmbeddingsAsync(IEnumerable<string> texts, CancellationToken cancellationToken = default) => " +
@@ -117,7 +138,7 @@ public class DocSnippetCompileTests
     [Fact]
     public void EveryDocBlock_IsFound()
     {
-        foreach (var (path, minBlocks) in Documents)
+        foreach (var (path, minBlocks, _) in Documents)
         {
             var count = Snippets.Count(s => s.File == path);
             Assert.True(count >= minBlocks, $"expected at least {minBlocks} C# blocks in {path}, found {count}");
@@ -151,8 +172,11 @@ public class DocSnippetCompileTests
                 .Select(m => (Doc: d.Path, Name: m.Groups[1].Value)))
             .Distinct()
             .ToList();
-        foreach (var (path, _) in Documents)
-            Assert.Contains(names, n => n.Doc == path);
+        foreach (var (path, _, resolves) in Documents)
+        {
+            if (resolves)
+                Assert.Contains(names, n => n.Doc == path);
+        }
 
         var services = new ServiceCollection();
         services.AddLogging();

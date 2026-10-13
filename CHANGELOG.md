@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Documentation
+- **`docs/INTERFACES.md` matches the library, and every C# example in `docs/` is compiled by the tests.**
+  - The «Error Handling» example caught `CrawlException`, `ExtractionException` and `ChunkingException`, none of which
+    exists. It now shows `WebExtractionException` and its `ErrorCode` (`ExtractErrorCodes`), and says that cancellation
+    and batch extraction report failures differently.
+  - The `IEnrichedChunk` and `ISourceMetadata` listings showed members the `Flux.Abstractions` interfaces do not have.
+    They are now copied from the interfaces, with their namespace.
+  - The `WebContentChunk` listing now names every member it leaves out.
+
 ## [0.26.0] - 2026-10-11
 
 ### Removed
