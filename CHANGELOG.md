@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [0.26.1] - 2026-10-13
 
 ### Fixed
 - **A streaming method stops at the caller's cancellation.** `ExtractBatchStreamAsync`, the crawl and processing streams
