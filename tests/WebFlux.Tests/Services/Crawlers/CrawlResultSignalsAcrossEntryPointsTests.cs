@@ -53,7 +53,9 @@ public sealed class CrawlResultSignalsAcrossEntryPointsTests : IDisposable
         results.Should().ContainSingle();
         results[0].IsSuccess.Should().BeFalse();
         results[0].TimedOut.Should().BeTrue("the request was cut off by TimeoutMs, whichever method returned the result");
-        _server.Hits("/page").Should().Be(1);
+        // At most one: a timed-out request is not retried. Not exactly one - on a loaded machine the 300 ms timeout can fire before
+        // the listener has counted the request.
+        _server.Hits("/page").Should().BeLessThanOrEqualTo(1, "a timed-out request is not retried");
     }
 
     [Theory]
