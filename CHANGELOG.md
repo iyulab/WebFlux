@@ -9,6 +9,7 @@ All notable changes to this project will be documented in this file.
 - Re-pinned sibling package(s) `FluxCurator` 0.15.0 -> 0.16.0, `FluxCurator.Core` 0.15.0 -> 0.16.0.
 - Re-pinned sibling package(s) `FluxCurator` 0.16.0 -> 0.17.0, `FluxCurator.Core` 0.16.0 -> 0.17.0.
 - .NET runtime packages 10.0.12 -> 10.0.13 (the 10.0 servicing band; `Microsoft.Extensions.*` and their siblings move together).
+- Re-pinned sibling package(s) `FluxCurator` 0.17.0 -> 0.18.0, `FluxCurator.Core` 0.17.0 -> 0.18.0.
 
 ## [0.26.1] - 2026-10-13
 
