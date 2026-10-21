@@ -15,7 +15,6 @@ public partial class AutoChunkingStrategy : BaseChunkingStrategy
     private readonly IServiceProvider? _serviceProvider;
     private readonly IPerformanceMonitor? _performanceMonitor;
     private readonly ICacheService? _cacheService;
-    private readonly ITokenCountService? _tokenCountService;
     private readonly ILogger<AutoChunkingStrategy>? _logger;
     private readonly AutoChunkingConfiguration _config;
 
@@ -27,14 +26,12 @@ public partial class AutoChunkingStrategy : BaseChunkingStrategy
         IServiceProvider? serviceProvider = null,
         IPerformanceMonitor? performanceMonitor = null,
         ICacheService? cacheService = null,
-        ITokenCountService? tokenCountService = null,
         ILogger<AutoChunkingStrategy>? logger = null)
         : base(eventPublisher)
     {
         _serviceProvider = serviceProvider;
         _performanceMonitor = performanceMonitor;
         _cacheService = cacheService;
-        _tokenCountService = tokenCountService;
         _logger = logger;
         _config = new AutoChunkingConfiguration();
     }
@@ -272,7 +269,7 @@ public partial class AutoChunkingStrategy : BaseChunkingStrategy
     /// <summary>
     /// Phase 5B.5: 청킹 품질 평가
     /// </summary>
-    private async Task<double> EvaluateChunkQuality(IReadOnlyList<WebContentChunk> chunks,
+    private static async Task<double> EvaluateChunkQuality(IReadOnlyList<WebContentChunk> chunks,
         ContentAnalysisMetadata analysis, CancellationToken cancellationToken)
     {
         if (!chunks.Any()) return 0.0;
@@ -295,8 +292,9 @@ public partial class AutoChunkingStrategy : BaseChunkingStrategy
         qualityScore += structuralConsistencyScore * 0.2;
         totalWeight += 0.2;
 
-        // 토큰 효율성 (가중치: 0.1)
-        var tokenEfficiencyScore = await CalculateTokenEfficiency(chunks, cancellationToken);
+        // 토큰 효율성 (가중치: 0.1) — no token counter is wired into this strategy, so the term is the neutral default it always
+        // had; scoring it from a real estimate changes strategy selection and needs a measurement first.
+        const double tokenEfficiencyScore = 0.8;
         qualityScore += tokenEfficiencyScore * 0.1;
         totalWeight += 0.1;
 
@@ -533,33 +531,6 @@ public partial class AutoChunkingStrategy : BaseChunkingStrategy
         return Math.Max(0.0, consistencyScore);
     }
 
-    private async Task<double> CalculateTokenEfficiency(IReadOnlyList<WebContentChunk> chunks, CancellationToken cancellationToken)
-    {
-        if (_tokenCountService == null) return 0.8; // 기본점수
-
-        try
-        {
-            var tokenCounts = await _tokenCountService.CountTokensBatchAsync(
-                chunks.Select(c => c.Content), cancellationToken);
-
-            var avgTokensPerChunk = tokenCounts.Average();
-            var idealTokenRange = (500, 1500); // 이상적인 토큰 범위
-
-            if (avgTokensPerChunk >= idealTokenRange.Item1 && avgTokensPerChunk <= idealTokenRange.Item2)
-                return 1.0;
-
-            if (avgTokensPerChunk < idealTokenRange.Item1)
-                return avgTokensPerChunk / idealTokenRange.Item1;
-
-            return idealTokenRange.Item2 / avgTokensPerChunk;
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
-        {
-            if (_logger != null) LogTokenEfficiencyFailed(_logger, ex);
-            return 0.8;
-        }
-    }
-
     private static double CalculateTextDensity(string text)
     {
         if (string.IsNullOrWhiteSpace(text)) return 0.0;
@@ -657,7 +628,4 @@ public partial class AutoChunkingStrategy : BaseChunkingStrategy
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to get performance history for strategy: {Strategy}")]
     private static partial void LogPerformanceHistoryFailed(ILogger logger, Exception ex, string Strategy);
-
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to calculate token efficiency")]
-    private static partial void LogTokenEfficiencyFailed(ILogger logger, Exception ex);
 }

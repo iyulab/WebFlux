@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Removed
+- **Breaking: `ITokenCountService` is gone.** WebFlux never implemented or registered it, and the only reader — the Auto chunking
+  strategy's token-efficiency term — used a fixed 0.8 whenever it was absent, which is what every caller got. Auto strategy scores are
+  unchanged. Migration: drop your implementation and its registration; `AutoChunkingStrategy` no longer takes the parameter.
+
 ### Fixed
 - **`MarkdownQuote.Level` reports how deeply a quote is nested** (1 for a top-level quote, 2 for a quote inside a quote …).
   It was always 1.

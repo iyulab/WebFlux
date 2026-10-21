@@ -252,9 +252,6 @@ public static class ServiceCollectionExtensions
                 sp.GetRequiredService<FluxCurator.Core.Core.IChunkerFactory>(),
                 sp.GetService<IEventPublisher>()));
 
-        // Interface Provider 패턴: 토큰 계산 서비스는 소비자가 구현
-        // services.TryAddSingleton<ITokenCountService, 구현체>();
-
         // 청크 품질 평가 서비스 등록 (Phase 5B.2)
         // 청킹 품질 평가는 Interface Provider 패턴으로 소비자가 구현
         // services.TryAddScoped<IChunkQualityEvaluator, 구현체>();
