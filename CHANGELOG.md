@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+- **`MarkdownQuote.Level` reports how deeply a quote is nested** (1 for a top-level quote, 2 for a quote inside a quote …).
+  It was always 1.
+
 ### Dependencies
 - Re-pinned sibling package(s) `FluxCurator` 0.14.0 -> 0.15.0, `FluxCurator.Core` 0.14.0 -> 0.15.0.
 - Re-pinned sibling package(s) `FluxCurator` 0.15.0 -> 0.16.0, `FluxCurator.Core` 0.15.0 -> 0.16.0.

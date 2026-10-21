@@ -223,6 +223,16 @@ For detailed API documentation, visit:
     }
 
     [Fact]
+    public async Task AnalyzeStructure_NestedQuote_ReportsItsDepth()
+    {
+        var markdown = "> outer\n>\n> > inner\n";
+
+        var structure = await _analyzer.AnalyzeStructureAsync(markdown, "https://example.com/quotes", TestContext.Current.CancellationToken);
+
+        structure.Quotes.Select(q => q.Level).Should().BeEquivalentTo([1, 2], o => o.WithStrictOrdering());
+    }
+
+    [Fact]
     public async Task ConvertToHtmlWithStructure_ShouldPreserveStructuralElements()
     {
         // Arrange

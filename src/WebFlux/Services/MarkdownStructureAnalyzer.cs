@@ -601,7 +601,7 @@ public class MarkdownStructureAnalyzer : IMarkdownStructureAnalyzer
             var markdownQuote = new MarkdownQuote
             {
                 Content = content,
-                Level = 1, // TODO: 중첩 레벨 계산
+                Level = QuoteDepth(quote),
                 LineNumber = quote.Line + 1,
                 LineCount = quote.Count
             };
@@ -610,6 +610,19 @@ public class MarkdownStructureAnalyzer : IMarkdownStructureAnalyzer
         }
 
         return quotes;
+    }
+
+    /// <summary>1 for a top-level quote, 2 for a quote inside a quote, and so on.</summary>
+    private static int QuoteDepth(QuoteBlock quote)
+    {
+        var depth = 1;
+        for (var parent = quote.Parent; parent is not null; parent = parent.Parent)
+        {
+            if (parent is QuoteBlock)
+                depth++;
+        }
+
+        return depth;
     }
 
     private static List<MarkdownMath> ExtractMathExpressions(MarkdownDocument document)
