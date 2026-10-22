@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [0.27.0] - 2026-10-23
 
 ### Removed
 - **Breaking: `ITokenCountService` is gone.** WebFlux never implemented or registered it, and the only reader — the Auto chunking
