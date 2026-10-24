@@ -23,21 +23,21 @@
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <!-- 🌐 Web Crawling & HTML Processing -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <PackageVersion Include="Microsoft.Playwright" Version="1.59.0" />
-    <PackageVersion Include="HtmlAgilityPack" Version="1.12.4" />
+    <PackageVersion Include="Microsoft.Playwright" Version="1.64.1" />
+    <PackageVersion Include="HtmlAgilityPack" Version="1.13.1" />
     <!-- 1.5.0 fixes GHSA-pgww-w46g-26qg (mXSS via annotation-xml HTML integration point,
          vulnerable < 1.5.0). NU1902 promotes this to a build error under TreatWarningsAsErrors. -->
-    <PackageVersion Include="AngleSharp" Version="1.5.2" />
+    <PackageVersion Include="AngleSharp" Version="1.8.5" />
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <!-- 📝 Document Processing -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <PackageVersion Include="Markdig" Version="1.2.0" />
-    <PackageVersion Include="ReverseMarkdown" Version="6.2.1" />
+    <PackageVersion Include="Markdig" Version="1.4.2" />
+    <PackageVersion Include="ReverseMarkdown" Version="6.3.0" />
     <PackageVersion Include="YamlDotNet" Version="18.1.0" />
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <!-- 🛡️ Resilience -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <PackageVersion Include="Polly" Version="8.6.6" />
+    <PackageVersion Include="Polly" Version="8.8.0" />
     <PackageVersion Include="Polly.Extensions.Http" Version="3.0.0" />
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <!-- 🧩 Flux Ecosystem -->
@@ -54,13 +54,13 @@
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <!-- 🔗 Source Link -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.401" />
+    <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.402" />
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <!-- 🧪 Testing (xUnit v3 / Microsoft.Testing.Platform) -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <PackageVersion Include="xunit.v3" Version="4.0.0" />
-    <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.0" />
-    <PackageVersion Include="Microsoft.Testing.Extensions.HangDump" Version="2.3.3" />
+    <PackageVersion Include="xunit.v3" Version="4.0.2" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.1" />
+    <PackageVersion Include="Microsoft.Testing.Extensions.HangDump" Version="2.5.1" />
     <PackageVersion Include="AwesomeAssertions" Version="9.6.0" />
     <PackageVersion Include="Iyu.Conventions.Testing" Version="0.13.0" />
     <PackageVersion Include="Iyu.Conventions.Testing.Snippets" Version="0.13.0" />
