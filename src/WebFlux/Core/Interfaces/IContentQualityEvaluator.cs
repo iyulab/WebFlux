@@ -70,7 +70,7 @@ public interface IContentQualityEvaluator
     double CalculateContentRatio(string html, string text);
 
     /// <summary>
-    /// 예상 토큰 수를 계산합니다 (GPT-4 기준)
+    /// 예상 토큰 수를 계산합니다 (FluxCurator 의 문자 종류별 추정 — o200k_base 비율)
     /// </summary>
     /// <param name="text">텍스트 콘텐츠</param>
     /// <returns>예상 토큰 수</returns>

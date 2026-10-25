@@ -411,7 +411,8 @@ public class ContentQualityEvaluatorTests
         var tokens = _evaluator.EstimateTokenCount(text);
 
         // Assert
-        // 한국어 ~1.5자 = 1토큰, 약 15자 -> 약 10 토큰
+        // FluxCurator's estimate, not a local copy of a ratio
+        tokens.Should().Be(FluxCurator.Core.Infrastructure.Languages.LanguageProfileRegistry.Instance.GetProfile(null).EstimateTokenCount(text));
         tokens.Should().BeGreaterThan(5);
     }
 

@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using FluxCurator.Core.Infrastructure.Languages;
 using Microsoft.Extensions.Logging;
 using WebFlux.Core.Interfaces;
 using WebFlux.Core.Models;
@@ -251,17 +252,8 @@ public partial class ContentQualityEvaluator : IContentQualityEvaluator
             return 0;
         }
 
-        // GPT-4 기준 대략적인 토큰 추정
-        // 영어: ~4자 = 1토큰
-        // 한국어/중국어/일본어: ~1.5자 = 1토큰
-        var koreanCount = KoreanCharRegex().Count(text);
-        var cjkCount = CjkCharRegex().Count(text);
-
-        var englishChars = text.Length - cjkCount;
-        var englishTokens = englishChars / 4.0;
-        var cjkTokens = cjkCount / 1.5;
-
-        return (int)Math.Ceiling(englishTokens + cjkTokens);
+        // FluxCurator's per-character-kind estimate (o200k_base ratios) — the same count its chunker uses.
+        return LanguageProfileRegistry.Instance.GetProfile(null).EstimateTokenCount(text);
     }
 
     private static bool DetectLoginRequired(string html, string text)
@@ -425,9 +417,6 @@ public partial class ContentQualityEvaluator : IContentQualityEvaluator
 
     [GeneratedRegex(@"[\u3040-\u309F\u30A0-\u30FF]")]
     private static partial Regex JapaneseCharRegex();
-
-    [GeneratedRegex(@"[\uAC00-\uD7A3\u4E00-\u9FFF\u3040-\u309F\u30A0-\u30FF]")]
-    private static partial Regex CjkCharRegex();
 
     [GeneratedRegex(@"<(ins|iframe)[^>]*(adsense|doubleclick|googlesyndication)[^>]*>", RegexOptions.IgnoreCase)]
     private static partial Regex AdTagRegex();

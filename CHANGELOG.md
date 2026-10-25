@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+- **Breaking** (behaviour): `IContentQualityEvaluator.EstimateTokenCount` come from FluxCurator's per-character-kind estimate (o200k_base ratios) instead of a local
+  rule — Korean text counts about 2.5× more tokens than before (it was read near English), English about the same. No code change;
+  limits compared with these counts are reached sooner on Korean text.
+
 ### Dependencies
 - `AngleSharp` 1.5.2 -> 1.8.5, `HtmlAgilityPack` 1.12.4 -> 1.13.1, `Markdig` 1.2.0 -> 1.4.2, `Microsoft.Playwright` 1.59.0 -> 1.64.1 (`WebFlux.Playwright`: run its `playwright.ps1 install` again after the update), `Polly` 8.6.6 -> 8.8.0, `ReverseMarkdown` 6.2.1 -> 6.3.0.
 
