@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [0.28.0] - 2026-10-26
 
 ### Changed
 - **Breaking** (behaviour): `IContentQualityEvaluator.EstimateTokenCount` comes from FluxCurator's per-character-kind estimate (o200k_base ratios) instead of a local
