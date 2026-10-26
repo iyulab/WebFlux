@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Dependencies
+
+- Re-pinned third-party packages: 12 .NET servicing pins (Microsoft.Extensions) 10.0.13 -> 10.0.14 (the 10.0.14 security servicing release); `Microsoft.SourceLink.GitHub` 10.0.402 -> 10.0.403; `AngleSharp` 1.8.5 -> 1.8.6; `Markdig` 1.4.2 -> 1.5.0.
+
 ## [0.28.0] - 2026-10-26
 
 ### Changed
