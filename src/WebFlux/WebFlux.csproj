@@ -51,7 +51,6 @@
 
     <!-- HTTP 재시도 및 회로차단기 -->
     <PackageReference Include="Polly" />
-    <PackageReference Include="Polly.Extensions.Http" />
   </ItemGroup>
 
   <ItemGroup>
