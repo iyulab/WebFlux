@@ -31,13 +31,13 @@
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <!-- 📝 Document Processing -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <PackageVersion Include="Markdig" Version="1.5.0" />
+    <PackageVersion Include="Markdig" Version="1.5.1" />
     <PackageVersion Include="ReverseMarkdown" Version="6.3.0" />
     <PackageVersion Include="YamlDotNet" Version="18.1.0" />
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <!-- 🛡️ Resilience -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <PackageVersion Include="Polly" Version="8.8.1" />
+    <PackageVersion Include="Polly" Version="8.9.0" />
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <!-- 🧩 Flux Ecosystem -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->

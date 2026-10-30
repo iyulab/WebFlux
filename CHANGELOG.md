@@ -8,6 +8,7 @@ All notable changes to this project will be documented in this file.
 - **`Polly.Extensions.Http` is no longer a dependency**: nothing in WebFlux used it, and the package has been deprecated on nuget.org since 2019 (its replacement is `Microsoft.Extensions.Http.Resilience`). `Polly` itself stays - the resilience service uses it. Consumers that took `Polly.Extensions.Http` transitively through WebFlux and call `HttpPolicyExtensions` must reference it themselves.
 
 ### Dependencies
+- Re-pinned third-party packages: `Markdig` 1.5.0 -> 1.5.1, `Polly` 8.8.1 -> 8.9.0.
 
 - Re-pinned third-party packages: 12 .NET servicing pins (Microsoft.Extensions) 10.0.13 -> 10.0.14 (the 10.0.14 security servicing release); `Microsoft.SourceLink.GitHub` 10.0.402 -> 10.0.403; `AngleSharp` 1.8.5 -> 1.8.6; `Markdig` 1.4.2 -> 1.5.0; `Polly` 8.8.0 -> 8.8.1.
 
