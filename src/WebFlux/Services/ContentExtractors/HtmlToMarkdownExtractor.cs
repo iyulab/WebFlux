@@ -166,8 +166,26 @@ public partial class HtmlToMarkdownExtractor : IContentExtractor
         if (string.IsNullOrWhiteSpace(html))
             return string.Empty;
 
-        return _markdownConverter.Convert(html);
+        return NormalizeText(_markdownConverter.Convert(html));
     }
+
+    /// <summary>
+    /// 줄바꿈은 어느 OS 에서든 <c>\n</c> (ReverseMarkdown 은 <c>Environment.NewLine</c> 을 쓴다), 글자 사이의 보이지 않는 문자
+    /// (제로폭 공백 · 소프트 하이픈 · BOM · 워드 조이너)는 제거한다. ZWNJ/ZWJ 는 페르시아어·인도계 문자·이모지에서 뜻이 있어 남긴다.
+    /// </summary>
+    private static string NormalizeText(string markdown)
+    {
+        var text = markdown.Replace("\r\n", "\n").Replace('\r', '\n');
+        return InvisibleCharacters().Replace(text, string.Empty);
+    }
+
+    [GeneratedRegex("[​­﻿⁠]")]
+    private static partial Regex InvisibleCharacters();
+
+    [GeneratedRegex(@"\s+")]
+    private static partial Regex WhitespaceRuns();
+
+    private static string CollapseWhitespace(string text) => WhitespaceRuns().Replace(text, " ").Trim();
 
     /// <summary>
     /// Markdown 정규화 (연속 빈 줄 제거, 앞뒤 공백 정리)
@@ -199,13 +217,13 @@ public partial class HtmlToMarkdownExtractor : IContentExtractor
         {
             var h1Text = Regex.Replace(articleH1Match.Groups[1].Value, @"<[^>]+>", "").Trim();
             if (!string.IsNullOrWhiteSpace(h1Text))
-                return System.Web.HttpUtility.HtmlDecode(h1Text);
+                return CollapseWhitespace(System.Web.HttpUtility.HtmlDecode(h1Text));
         }
 
         // <title> 태그에서 추출
         var titleMatch = Regex.Match(html, @"<title[^>]*>([^<]+)</title>", RegexOptions.IgnoreCase);
         if (titleMatch.Success)
-            return System.Web.HttpUtility.HtmlDecode(titleMatch.Groups[1].Value.Trim());
+            return CollapseWhitespace(System.Web.HttpUtility.HtmlDecode(titleMatch.Groups[1].Value));
 
         // 일반 <h1> 태그에서 추출 시도
         var h1Match = Regex.Match(html, @"<h1[^>]*>([\s\S]*?)</h1>", RegexOptions.IgnoreCase);
@@ -213,7 +231,7 @@ public partial class HtmlToMarkdownExtractor : IContentExtractor
         {
             var h1Text = Regex.Replace(h1Match.Groups[1].Value, @"<[^>]+>", "").Trim();
             if (!string.IsNullOrWhiteSpace(h1Text))
-                return System.Web.HttpUtility.HtmlDecode(h1Text);
+                return CollapseWhitespace(System.Web.HttpUtility.HtmlDecode(h1Text));
         }
 
         return "Untitled";
@@ -240,8 +258,10 @@ public partial class HtmlToMarkdownExtractor : IContentExtractor
         if (string.IsNullOrWhiteSpace(markdown))
             return new List<string>();
 
-        return Regex.Matches(markdown, @"!\[.*?\]\((.+?)\)")
+        // 이미지마다 따로 읽는다: 대체 텍스트에 ']' 가 없고 주소에 공백·')' 가 없다. 제목("...")은 주소가 아니다.
+        return Regex.Matches(markdown, @"!\[[^\]]*\]\(\s*<?([^)\s>]+)>?(?:\s+""[^""]*"")?\s*\)")
             .Select(m => m.Groups[1].Value)
+            .Where(url => !url.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
             .Distinct()
             .ToList();
     }

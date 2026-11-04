@@ -21,8 +21,21 @@ public partial class HtmlContentCleaner
     private static readonly string[] AlwaysRemoveSelectors =
     [
         "script", "style", "noscript", "iframe", "svg", "template",
-        "link[rel='stylesheet']", "meta", "comment"
+        "link[rel='stylesheet']", "meta", "comment",
+        // 폼 컨트롤의 선택지는 본문이 아니다 — 텍스트로 읽으면 "SmallMediumLarge" 처럼 붙는다
+        "select", "datalist"
     ];
+
+    /// <summary>
+    /// 지연 로딩 이미지가 실제 주소를 두는 속성 (src 가 비었거나 data: 자리표시자일 때 사용)
+    /// </summary>
+    private static readonly string[] LazyImageAttributes =
+        ["data-src", "data-original", "data-lazy-src", "data-lazy", "data-url", "data-echo"];
+
+    [System.Text.RegularExpressions.GeneratedRegex(
+        @"(^|;)\s*(display\s*:\s*none|visibility\s*:\s*hidden)\s*(!\s*important\s*)?(;|$)",
+        System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant)]
+    private static partial System.Text.RegularExpressions.Regex HiddenStyleRegex();
 
     /// <summary>
     /// OnlyMainContent 활성화 시 제거할 레이아웃 셀렉터
@@ -127,6 +140,9 @@ public partial class HtmlContentCleaner
         // HTML 주석 제거
         RemoveComments(document);
 
+        // 보이지 않는 요소 (hidden 속성, display:none, visibility:hidden)
+        RemoveHiddenElements(document);
+
         // 2. OnlyMainContent 시 레이아웃 요소 제거
         if (options.OnlyMainContent)
         {
@@ -144,17 +160,24 @@ public partial class HtmlContentCleaner
             RemoveElements(document, options.AdditionalRemoveSelectors.ToArray(), protectContent: false);
         }
 
-        // 5. URL 절대 경로 변환
+        // 5. 주소가 없는 링크는 글자만 남기고, 지연 로딩 이미지는 실제 주소를 src 로
+        UnwrapAnchorsWithoutTarget(document);
+        ResolveLazyImages(document);
+
+        // 6. URL 절대 경로 변환
         if (options.ConvertRelativeUrls && !string.IsNullOrEmpty(sourceUrl))
         {
             ConvertRelativeUrls(document, sourceUrl);
         }
 
-        // 6. srcset 최적화
+        // 7. srcset 최적화
         if (options.OptimizeSrcset)
         {
             OptimizeImageSrcset(document);
         }
+
+        // 8. 끝내 주소를 얻지 못한 이미지는 대체 텍스트로 (빈 링크 `![x]()` 를 만들지 않는다)
+        ReplaceImagesWithoutSource(document);
 
         // body 콘텐츠만 반환 (body가 없으면 전체 HTML)
         var body = document.Body;
@@ -196,6 +219,86 @@ public partial class HtmlContentCleaner
             }
         }
     }
+
+    /// <summary>
+    /// 화면에 보이지 않는 요소(<c>hidden</c>, <c>display:none</c>, <c>visibility:hidden</c>)의 텍스트는 독자가 읽지 못한다.
+    /// </summary>
+    private static void RemoveHiddenElements(IDocument document)
+    {
+        foreach (var element in document.QuerySelectorAll("[hidden],[style]").ToList())
+        {
+            if (element.Parent == null || IsPageOrMainContainer(element))
+                continue;
+
+            var hidden = element.HasAttribute("hidden")
+                || (element.GetAttribute("style") is { Length: > 0 } style && HiddenStyleRegex().IsMatch(style));
+            if (hidden)
+                element.Remove();
+        }
+    }
+
+    /// <summary>
+    /// 이동할 곳이 없는 링크(<c>href</c> 없음, 빈 값, <c>#</c>, <c>javascript:</c>)는 `[글자]()` 가 되므로 글자만 남긴다.
+    /// </summary>
+    private static void UnwrapAnchorsWithoutTarget(IDocument document)
+    {
+        foreach (var anchor in document.QuerySelectorAll("a").ToList())
+        {
+            var href = anchor.GetAttribute("href")?.Trim();
+            var usable = !string.IsNullOrEmpty(href)
+                && href != "#"
+                && !href.StartsWith("javascript:", StringComparison.OrdinalIgnoreCase);
+            if (usable || anchor.Parent == null)
+                continue;
+
+            var parent = anchor.Parent;
+            foreach (var child in anchor.ChildNodes.ToList())
+                parent.InsertBefore(child, anchor);
+            anchor.Remove();
+        }
+    }
+
+    /// <summary>
+    /// 지연 로딩 이미지: <c>src</c> 가 없거나 <c>data:</c> 자리표시자면 <c>data-src</c> 등의 실제 주소를 쓴다.
+    /// </summary>
+    private static void ResolveLazyImages(IDocument document)
+    {
+        foreach (var img in document.QuerySelectorAll("img").ToList())
+        {
+            if (HasUsableSource(img.GetAttribute("src")))
+                continue;
+
+            foreach (var attribute in LazyImageAttributes)
+            {
+                var candidate = img.GetAttribute(attribute)?.Trim();
+                if (HasUsableSource(candidate))
+                {
+                    img.SetAttribute("src", candidate!);
+                    break;
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// 주소를 얻지 못한 <c>img</c> 는 대체 텍스트로 바꾼다 (대체 텍스트도 없으면 지운다).
+    /// </summary>
+    private static void ReplaceImagesWithoutSource(IDocument document)
+    {
+        foreach (var img in document.QuerySelectorAll("img").ToList())
+        {
+            if (img.Parent == null || HasUsableSource(img.GetAttribute("src")) || img.HasAttribute("srcset"))
+                continue;
+
+            var alt = img.GetAttribute("alt")?.Trim();
+            if (!string.IsNullOrEmpty(alt))
+                img.Parent.InsertBefore(document.CreateTextNode(alt), img);
+            img.Remove();
+        }
+    }
+
+    private static bool HasUsableSource(string? src)
+        => !string.IsNullOrWhiteSpace(src) && !src.TrimStart().StartsWith("data:", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// header/footer/aside 중 article·main 안에 있는 것은 본문이므로 남기고, 페이지 수준의 것만 제거한다.
