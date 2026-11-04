@@ -704,17 +704,34 @@ public abstract class BaseCrawler : ICrawler
             return Array.Empty<string>();
 
         var links = new List<string>();
-        var baseUri = new Uri(baseUrl);
+        var pageUri = new Uri(baseUrl);
 
-        // 간단한 링크 추출 (실제 구현에서는 HTML 파서 사용 권장)
-        var linkMatches = System.Text.RegularExpressions.Regex.Matches(
-            htmlContent,
-            @"href\s*=\s*[""']([^""']*)[""']",
-            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        // HTML 파서로 읽는다: 따옴표 없는 속성(`href=/a`, 압축된 HTML 에 흔하다) · `&amp;` 같은 엔티티 · 주석과 스크립트 안의 문자열 ·
+        // `data-href` 나 `xlink:href` 같은 다른 속성을 정규식은 틀리게 읽었다.
+        var document = new HtmlAgilityPack.HtmlDocument();
+        document.LoadHtml(htmlContent);
 
-        foreach (System.Text.RegularExpressions.Match match in linkMatches)
+        // <base href> 는 문서 안의 모든 상대 링크의 기준이다 (그 자신이 상대 주소면 페이지 주소를 기준으로 푼다)
+        var baseUri = pageUri;
+        var baseHref = document.DocumentNode.SelectSingleNode("//base[@href]")?.GetAttributeValue("href", string.Empty);
+        if (!string.IsNullOrWhiteSpace(baseHref)
+            && Uri.TryCreate(pageUri, HtmlAgilityPack.HtmlEntity.DeEntitize(baseHref).Trim(), out var declaredBase)
+            && (declaredBase.Scheme == Uri.UriSchemeHttp || declaredBase.Scheme == Uri.UriSchemeHttps))
         {
-            var href = match.Groups[1].Value;
+            baseUri = declaredBase;
+        }
+
+        // a · area 가 링크다. link 는 쪽 넘김(rel=next/prev)만 - 스타일시트 · 아이콘 · 피드 · manifest 는 페이지가 아니다.
+        var nodes = document.DocumentNode.SelectNodes("//a[@href] | //area[@href] | //link[@href]");
+        if (nodes is null)
+            return Array.Empty<string>();
+
+        foreach (var node in nodes)
+        {
+            if (node.Name == "link" && !IsPaginationRel(node.GetAttributeValue("rel", string.Empty)))
+                continue;
+
+            var href = HtmlAgilityPack.HtmlEntity.DeEntitize(node.GetAttributeValue("href", string.Empty)).Trim();
 
             // javascript:, mailto:, tel: 등의 프로토콜과 anchor만 있는 링크 제외
             if (string.IsNullOrWhiteSpace(href) ||
@@ -738,6 +755,12 @@ public abstract class BaseCrawler : ICrawler
 
         return links.AsReadOnly();
     }
+
+    private static bool IsPaginationRel(string rel)
+        => rel.Split([' ', '\t', '\n', '\r'], StringSplitOptions.RemoveEmptyEntries)
+            .Any(token => token.Equals("next", StringComparison.OrdinalIgnoreCase)
+                          || token.Equals("prev", StringComparison.OrdinalIgnoreCase)
+                          || token.Equals("previous", StringComparison.OrdinalIgnoreCase));
 
     /// <summary>
     /// 크롤링 통계를 반환합니다.
