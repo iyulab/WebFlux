@@ -152,6 +152,10 @@ public partial class TextDensityFilter
         if (totalTextLength == 0)
             return 0;
 
+        // main 은 페이지가 스스로 밝힌 본문 컨테이너다 - 링크가 많은 색인 페이지라도 통째로 지우지 않는다
+        if (element.LocalName == "main")
+            return 0;
+
         // 이미지가 포함된 노드 보호 (figure, img 자식 요소)
         var hasImages = element.QuerySelectorAll("img, figure").Length > 0;
         if (hasImages && totalTextLength < MinTextLength)
@@ -172,6 +176,11 @@ public partial class TextDensityFilter
 
         // id/class 기반 가중치 조정
         var classIdBonus = CalculateClassIdBonus(element);
+
+        // article/main 안의 목록은 링크로만 이루어져 있어도(API 색인, 참고 문헌, 목차) 그 글의 내용이다.
+        // 내비게이션이라는 명시적 신호(class/id)가 있을 때만 링크 밀도로 지운다.
+        if (linkDensity > 0 && classIdBonus >= 0 && element.ParentElement?.Closest("article, main") != null)
+            linkDensity = 0;
 
         // 최종 점수 계산
         var score = 0.0;
