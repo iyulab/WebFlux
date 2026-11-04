@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+- **Breaking by observation: a robots.txt group that names no rule no longer sends its agent to the `*` group.** `User-agent: MyBot` with only an empty `Disallow:` is a real group that allows everything (RFC 9309 section 2.2.1), but the crawler read it as "no group" and applied the `*` rules, so a site that had cleared the crawler by name found it blocked. `RobotsTxtInfo.Rules` now has an entry, with no paths, for every product token a group names.
+- **Breaking by observation: robots.txt patterns and paths are compared percent-encoding normalised** (RFC 9309 section 2.2.2). The pattern `/foo/%62%61%7A` now matches `/foo/baz`, a non-ASCII pattern (`/é`) matches the escaped path the crawler requests, and an escaped reserved character (`%2F`, `%2A`) stays an escape instead of acting as a slash or a wildcard. The most specific rule is picked by the octet length of the normalised pattern. A site that wrote such patterns now blocks (or allows) the paths it meant to.
+
 ### Removed
 - **`Polly.Extensions.Http` is no longer a dependency**: nothing in WebFlux used it, and the package has been deprecated on nuget.org since 2019 (its replacement is `Microsoft.Extensions.Http.Resilience`). `Polly` itself stays - the resilience service uses it. Consumers that took `Polly.Extensions.Http` transitively through WebFlux and call `HttpPolicyExtensions` must reference it themselves.
 
