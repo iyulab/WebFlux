@@ -70,9 +70,8 @@ internal static class FluxCuratorChunkAdapter
             // FluxCurator's own default whatever the caller set.
             SemanticSimilarityThreshold = (float)Math.Clamp(source.SemanticThreshold, 0, 1),
 
-            // WebFlux defaults Language to "ko" rather than leaving it unset, so an English page
-            // chunked with defaults would be sized on Korean token ratios. Blank is FluxCurator's
-            // "detect it", which is the honest reading of a value nobody chose.
+            // Blank is FluxCurator's "detect it" and is what ChunkingOptions.Language defaults to. (It used to default to "ko",
+            // which the chunker took as the caller's choice and applied the Korean sentence-boundary profile to English pages.)
             LanguageCode = string.IsNullOrWhiteSpace(source.Language) ? null : source.Language
         };
     }

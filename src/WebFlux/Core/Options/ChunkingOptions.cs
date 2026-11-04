@@ -41,9 +41,12 @@ public class ChunkingOptions : IValidatable
     public bool PreserveHeaders { get; set; } = true;
 
     /// <summary>
-    /// 언어별 토큰화 설정
+    /// Language code (for example <c>"en"</c>, <c>"ko"</c>) that selects the sentence-boundary rules the chunker applies.
+    /// Empty (the default) lets FluxCurator detect the language from the text; set a code only when the text is known to be in
+    /// that language - a code that does not match the text cuts sentences at the wrong places (an abbreviation such as
+    /// <c>D.C.</c> ends a Korean-profile sentence).
     /// </summary>
-    public string Language { get; set; } = "ko";
+    public string Language { get; set; } = string.Empty;
 
     /// <inheritdoc />
     public ValidationResult Validate()

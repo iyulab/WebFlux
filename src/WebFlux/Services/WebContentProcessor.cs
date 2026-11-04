@@ -241,13 +241,7 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
                         Content = crawlResult.Content ?? string.Empty,
                         ContentType = crawlResult.ContentType ?? "text/html",
                         StatusCode = crawlResult.StatusCode,
-                        Metadata = new WebContentMetadata
-                        {
-                            Title = ExtractTitle(crawlResult.Content),
-                            ContentType = crawlResult.ContentType ?? "text/html",
-                            ContentLength = crawlResult.Content?.Length ?? 0,
-                            Language = "ko"
-                        }
+                        Metadata = BuildCrawledMetadata(crawlResult.Content, crawlResult.ContentType)
                     };
 
                     LogCrawlResultToWebContent(_logger, crawlResult.Url, crawlResult.Content?.Length ?? 0);
@@ -675,6 +669,16 @@ public partial class WebContentProcessor : IWebContentProcessor, IContentExtract
         SummaryOptions = configuration.Summary,
         RewriteOptions = configuration.Rewrite,
         TimeoutMs = configuration.TimeoutMs
+    };
+
+    internal static WebContentMetadata BuildCrawledMetadata(string? content, string? contentType) => new()
+    {
+        Title = ExtractTitle(content),
+        ContentType = contentType ?? "text/html",
+        ContentLength = content?.Length ?? 0,
+
+        // What the page declares (html lang, xml:lang, meta language), or nothing. Every crawled page used to be stamped "ko".
+        Language = MetadataExtractor.ReadDeclaredLanguage(content)
     };
 
     private static string ExtractTitle(string? content)

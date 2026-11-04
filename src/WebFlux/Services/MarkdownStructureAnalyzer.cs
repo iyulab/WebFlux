@@ -739,7 +739,7 @@ public class MarkdownStructureAnalyzer : IMarkdownStructureAnalyzer
 
         var author = frontMatter.GetValueOrDefault("author")?.ToString();
         var description = frontMatter.GetValueOrDefault("description")?.ToString();
-        var language = frontMatter.GetValueOrDefault("language")?.ToString() ?? "ko";
+        var language = frontMatter.GetValueOrDefault("language")?.ToString();
 
         // 태그와 카테고리 추출
         var tags = ExtractListFromFrontMatter(frontMatter, "tags");

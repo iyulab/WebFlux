@@ -143,9 +143,8 @@ public class FluxCuratorChunkingStrategyTests
     [Fact]
     public async Task UnsetLanguage_IsLeftForDetection_RatherThanDefaultingToKorean()
     {
-        // ChunkingOptions.Language defaults to "ko" — a value nobody chose. Token sizes are
-        // estimated per language, so passing that default through would size an English page on
-        // Korean ratios and call it the caller's choice.
+        // A blank language is left for FluxCurator to detect. (The default used to be "ko", a value nobody chose, which
+        // was passed through as the caller's choice - LanguageDefaultsTests covers the default itself.)
         var chunker = new CapturingChunker();
         var strategy = FluxCuratorChunkingStrategy.Paragraph(new StubChunkerFactory(chunker));
 

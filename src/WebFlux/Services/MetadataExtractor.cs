@@ -594,6 +594,16 @@ public class MetadataExtractor : IMetadataExtractor
     /// 문서 언어: 루트 <c>html</c> 의 <c>lang</c>, 없으면 <c>xml:lang</c>, 없으면 <c>meta name="language"</c>.
     /// (HtmlAgilityPack 의 DocumentNode 는 문서 루트라 html 요소의 속성을 갖지 않는다.)
     /// </summary>
+    internal static string? ReadDeclaredLanguage(string? html)
+    {
+        if (string.IsNullOrWhiteSpace(html))
+            return null;
+
+        var doc = new HtmlDocument();
+        doc.LoadHtml(html);
+        return ReadLanguage(doc);
+    }
+
     private static string? ReadLanguage(HtmlDocument doc)
     {
         var html = doc.DocumentNode.SelectSingleNode("//html");
