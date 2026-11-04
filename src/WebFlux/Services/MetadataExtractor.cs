@@ -30,7 +30,7 @@ public class MetadataExtractor : IMetadataExtractor
         {
             SourceUrl = sourceUrl,
             ExtractedAt = DateTimeOffset.UtcNow,
-            Basic = ExtractBasicMetadata(doc),
+            Basic = ExtractBasicMetadata(doc, sourceUrl),
             OpenGraph = ExtractOpenGraphMetadata(doc),
             TwitterCards = ExtractTwitterCardsMetadata(doc),
             SchemaOrg = await ExtractSchemaOrgMetadataAsync(doc, cancellationToken),
@@ -68,19 +68,19 @@ public class MetadataExtractor : IMetadataExtractor
     /// <summary>
     /// 기본 HTML 메타데이터 추출
     /// </summary>
-    private static BasicHtmlMetadata ExtractBasicMetadata(HtmlDocument doc)
+    private static BasicHtmlMetadata ExtractBasicMetadata(HtmlDocument doc, string sourceUrl)
     {
-        var title = doc.DocumentNode.SelectSingleNode("//title")?.InnerText?.Trim();
+        var title = CleanText(doc.DocumentNode.SelectSingleNode("//title")?.InnerText);
         var description = GetMetaContent(doc, "description");
         var keywords = GetMetaContent(doc, "keywords")?.Split(',', StringSplitOptions.RemoveEmptyEntries)
             .Select(k => k.Trim()).ToArray() ?? Array.Empty<string>();
         var author = GetMetaContent(doc, "author");
         var robots = GetMetaContent(doc, "robots");
-        var language = doc.DocumentNode.GetAttributeValue("lang", string.Empty) is { Length: > 0 } langVal ? langVal : GetMetaContent(doc, "language");
+        var language = ReadLanguage(doc);
         var charset = GetMetaContent(doc, "charset") ?? (doc.DocumentNode.SelectSingleNode("//meta[@charset]")?.GetAttributeValue("charset", string.Empty) is { Length: > 0 } charsetVal ? charsetVal : null);
         var viewport = GetMetaContent(doc, "viewport");
         var themeColor = GetMetaContent(doc, "theme-color");
-        var canonical = doc.DocumentNode.SelectSingleNode("//link[@rel='canonical']")?.GetAttributeValue("href", string.Empty) is { Length: > 0 } canonicalVal ? canonicalVal : null;
+        var canonical = ReadCanonical(doc, sourceUrl);
 
         // Extract alternate languages
         var alternateLanguages = doc.DocumentNode.SelectNodes("//link[@rel='alternate' and @hreflang]")
@@ -163,177 +163,160 @@ public class MetadataExtractor : IMetadataExtractor
             .Cast<string>()
             .ToArray() ?? Array.Empty<string>();
 
-        var metadata = new SchemaOrgMetadata
-        {
-            RawJsonLd = jsonLdScripts
-        };
+        string? mainEntityType = null;
+        var mainEntityRank = int.MaxValue;
+        OrganizationInfo? organization = null;
+        PersonInfo? person = null;
+        ArticleInfo? article = null;
+        SoftwareInfo? software = null;
+        ProductInfo? product = null;
+        WebSiteInfo? webSite = null;
 
-        // Parse JSON-LD data
+        // JSON-LD 는 객체 하나, 객체 배열, "@graph" 배열 어느 모양으로도 온다 - 모든 개체를 읽는다.
+        // 같은 종류가 여럿이면 먼저 나온 것이 이기고, 주 개체 종류는 글 > 제품 > 소프트웨어 > 그 밖의 순으로 고른다.
         foreach (var jsonLd in jsonLdScripts)
         {
+            JsonDocument jsonDoc;
             try
             {
-                var jsonDoc = JsonDocument.Parse(jsonLd);
-                var root = jsonDoc.RootElement;
-
-                // Extract main entity type
-                if (root.TryGetProperty("@type", out var typeElement))
-                {
-                    metadata = new SchemaOrgMetadata
-                    {
-                        MainEntityType = typeElement.GetString(),
-                        Organization = metadata.Organization,
-                        Person = metadata.Person,
-                        Article = metadata.Article,
-                        Software = metadata.Software,
-                        Product = metadata.Product,
-                        WebSite = metadata.WebSite,
-                        Breadcrumbs = metadata.Breadcrumbs,
-                        FaqItems = metadata.FaqItems,
-                        RawJsonLd = metadata.RawJsonLd
-                    };
-                }
-
-                // Extract specific entity information based on type
-                var entityType = metadata.MainEntityType?.ToLowerInvariant();
-                switch (entityType)
-                {
-                    case "organization":
-                        metadata = new SchemaOrgMetadata
-                        {
-                            MainEntityType = metadata.MainEntityType,
-                            Organization = ExtractOrganizationInfo(root),
-                            Person = metadata.Person,
-                            Article = metadata.Article,
-                            Software = metadata.Software,
-                            Product = metadata.Product,
-                            WebSite = metadata.WebSite,
-                            Breadcrumbs = metadata.Breadcrumbs,
-                            FaqItems = metadata.FaqItems,
-                            RawJsonLd = metadata.RawJsonLd
-                        };
-                        break;
-                    case "person":
-                        metadata = new SchemaOrgMetadata
-                        {
-                            MainEntityType = metadata.MainEntityType,
-                            Organization = metadata.Organization,
-                            Person = ExtractPersonInfo(root),
-                            Article = metadata.Article,
-                            Software = metadata.Software,
-                            Product = metadata.Product,
-                            WebSite = metadata.WebSite,
-                            Breadcrumbs = metadata.Breadcrumbs,
-                            FaqItems = metadata.FaqItems,
-                            RawJsonLd = metadata.RawJsonLd
-                        };
-                        break;
-                    case "article":
-                    case "blogposting":
-                    case "newsarticle":
-                        metadata = new SchemaOrgMetadata
-                        {
-                            MainEntityType = metadata.MainEntityType,
-                            Organization = metadata.Organization,
-                            Person = metadata.Person,
-                            Article = ExtractArticleInfo(root),
-                            Software = metadata.Software,
-                            Product = metadata.Product,
-                            WebSite = metadata.WebSite,
-                            Breadcrumbs = metadata.Breadcrumbs,
-                            FaqItems = metadata.FaqItems,
-                            RawJsonLd = metadata.RawJsonLd
-                        };
-                        break;
-                    case "softwareapplication":
-                    case "softwarelibrary":
-                        metadata = new SchemaOrgMetadata
-                        {
-                            MainEntityType = metadata.MainEntityType,
-                            Organization = metadata.Organization,
-                            Person = metadata.Person,
-                            Article = metadata.Article,
-                            Software = ExtractSoftwareInfo(root),
-                            Product = metadata.Product,
-                            WebSite = metadata.WebSite,
-                            Breadcrumbs = metadata.Breadcrumbs,
-                            FaqItems = metadata.FaqItems,
-                            RawJsonLd = metadata.RawJsonLd
-                        };
-                        break;
-                    case "product":
-                        metadata = new SchemaOrgMetadata
-                        {
-                            MainEntityType = metadata.MainEntityType,
-                            Organization = metadata.Organization,
-                            Person = metadata.Person,
-                            Article = metadata.Article,
-                            Software = metadata.Software,
-                            Product = ExtractProductInfo(root),
-                            WebSite = metadata.WebSite,
-                            Breadcrumbs = metadata.Breadcrumbs,
-                            FaqItems = metadata.FaqItems,
-                            RawJsonLd = metadata.RawJsonLd
-                        };
-                        break;
-                    case "website":
-                        metadata = new SchemaOrgMetadata
-                        {
-                            MainEntityType = metadata.MainEntityType,
-                            Organization = metadata.Organization,
-                            Person = metadata.Person,
-                            Article = metadata.Article,
-                            Software = metadata.Software,
-                            Product = metadata.Product,
-                            WebSite = ExtractWebSiteInfo(root),
-                            Breadcrumbs = metadata.Breadcrumbs,
-                            FaqItems = metadata.FaqItems,
-                            RawJsonLd = metadata.RawJsonLd
-                        };
-                        break;
-                }
+                jsonDoc = JsonDocument.Parse(jsonLd);
             }
             catch (JsonException)
             {
                 // Skip invalid JSON-LD
                 continue;
             }
+
+            using (jsonDoc)
+            {
+                foreach (var entity in JsonLdEntities(jsonDoc.RootElement))
+                {
+                    try
+                    {
+                        foreach (var typeName in JsonLdTypes(entity))
+                        {
+                            var rank = JsonLdRank(typeName);
+                            if (rank < mainEntityRank)
+                            {
+                                mainEntityType = typeName;
+                                mainEntityRank = rank;
+                            }
+
+                            switch (typeName.ToLowerInvariant())
+                            {
+                                case "organization":
+                                    organization ??= ExtractOrganizationInfo(entity);
+                                    break;
+                                case "person":
+                                    person ??= ExtractPersonInfo(entity);
+                                    break;
+                                case "article":
+                                case "blogposting":
+                                case "newsarticle":
+                                    article ??= ExtractArticleInfo(entity);
+                                    break;
+                                case "softwareapplication":
+                                case "softwarelibrary":
+                                    software ??= ExtractSoftwareInfo(entity);
+                                    break;
+                                case "product":
+                                    product ??= ExtractProductInfo(entity);
+                                    break;
+                                case "website":
+                                    webSite ??= ExtractWebSiteInfo(entity);
+                                    break;
+                            }
+                        }
+                    }
+                    catch (Exception ex) when (ex is InvalidOperationException or FormatException or KeyNotFoundException)
+                    {
+                        // 한 개체의 값 모양이 예상과 달라도(문자열 자리에 배열 등) 다른 개체와 페이지는 읽는다
+                        continue;
+                    }
+                }
+            }
         }
 
-        // Extract breadcrumbs from microdata or JSON-LD
-        var breadcrumbs = ExtractBreadcrumbs(doc);
-        metadata = new SchemaOrgMetadata
+        return Task.FromResult(new SchemaOrgMetadata
         {
-            MainEntityType = metadata.MainEntityType,
-            Organization = metadata.Organization,
-            Person = metadata.Person,
-            Article = metadata.Article,
-            Software = metadata.Software,
-            Product = metadata.Product,
-            WebSite = metadata.WebSite,
-            Breadcrumbs = breadcrumbs,
-            FaqItems = metadata.FaqItems,
-            RawJsonLd = metadata.RawJsonLd
-        };
-
-        // Extract FAQ items
-        var faqItems = ExtractFaqItems(doc);
-        metadata = new SchemaOrgMetadata
-        {
-            MainEntityType = metadata.MainEntityType,
-            Organization = metadata.Organization,
-            Person = metadata.Person,
-            Article = metadata.Article,
-            Software = metadata.Software,
-            Product = metadata.Product,
-            WebSite = metadata.WebSite,
-            Breadcrumbs = metadata.Breadcrumbs,
-            FaqItems = faqItems,
-            RawJsonLd = metadata.RawJsonLd
-        };
-
-        return Task.FromResult(metadata);
+            MainEntityType = mainEntityType,
+            Organization = organization,
+            Person = person,
+            Article = article,
+            Software = software,
+            Product = product,
+            WebSite = webSite,
+            Breadcrumbs = ExtractBreadcrumbs(doc),
+            FaqItems = ExtractFaqItems(doc),
+            RawJsonLd = jsonLdScripts
+        });
     }
+
+    /// <summary>
+    /// JSON-LD 루트에서 <c>@type</c> 을 가진 개체를 모두 꺼낸다 (객체 · 객체 배열 · <c>@graph</c>).
+    /// </summary>
+    private static IEnumerable<JsonElement> JsonLdEntities(JsonElement element)
+    {
+        if (element.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in element.EnumerateArray())
+            {
+                foreach (var entity in JsonLdEntities(item))
+                    yield return entity;
+            }
+
+            yield break;
+        }
+
+        if (element.ValueKind != JsonValueKind.Object)
+            yield break;
+
+        if (element.TryGetProperty("@graph", out var graph) && graph.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in graph.EnumerateArray())
+            {
+                foreach (var entity in JsonLdEntities(item))
+                    yield return entity;
+            }
+        }
+
+        if (element.TryGetProperty("@type", out _))
+            yield return element;
+    }
+
+    /// <summary>
+    /// <c>@type</c> 은 문자열 하나일 수도, 문자열 배열일 수도 있다.
+    /// </summary>
+    private static IEnumerable<string> JsonLdTypes(JsonElement entity)
+    {
+        if (!entity.TryGetProperty("@type", out var type))
+            yield break;
+
+        if (type.ValueKind == JsonValueKind.String)
+        {
+            if (type.GetString() is { Length: > 0 } single)
+                yield return single;
+        }
+        else if (type.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in type.EnumerateArray())
+            {
+                if (item.ValueKind == JsonValueKind.String && item.GetString() is { Length: > 0 } name)
+                    yield return name;
+            }
+        }
+    }
+
+    private static int JsonLdRank(string typeName) => typeName.ToLowerInvariant() switch
+    {
+        "article" or "blogposting" or "newsarticle" => 0,
+        "product" => 1,
+        "softwareapplication" or "softwarelibrary" => 2,
+        "person" => 3,
+        "organization" => 4,
+        "website" => 5,
+        _ => 6
+    };
 
     /// <summary>
     /// Dublin Core 메타데이터 추출
@@ -576,17 +559,69 @@ public class MetadataExtractor : IMetadataExtractor
     // Helper methods
     private static string? GetMetaContent(HtmlDocument doc, string name)
     {
-        return doc.DocumentNode.SelectSingleNode($"//meta[@name='{name}']")?.GetAttributeValue("content", string.Empty) is { Length: > 0 } val ? val : null;
+        return MetaValue(doc.DocumentNode.SelectSingleNode($"//meta[@name='{name}']"));
     }
 
+    // Open Graph 는 property 로 쓰는 것이 규격이지만 name 으로 쓰는 페이지가 흔하다 - property 가 먼저, 없으면 name
     private static string? GetMetaProperty(HtmlDocument doc, string property)
     {
-        return doc.DocumentNode.SelectSingleNode($"//meta[@property='{property}']")?.GetAttributeValue("content", string.Empty) is { Length: > 0 } val ? val : null;
+        return MetaValue(doc.DocumentNode.SelectSingleNode($"//meta[@property='{property}']"))
+               ?? MetaValue(doc.DocumentNode.SelectSingleNode($"//meta[@name='{property}']"));
     }
 
     private static string? GetMetaName(HtmlDocument doc, string name)
     {
-        return doc.DocumentNode.SelectSingleNode($"//meta[@name='{name}']")?.GetAttributeValue("content", string.Empty) is { Length: > 0 } val ? val : null;
+        return MetaValue(doc.DocumentNode.SelectSingleNode($"//meta[@name='{name}']"));
+    }
+
+    /// <summary>meta 의 content 속성 값 - HTML 엔티티는 풀고(HtmlAgilityPack 은 속성 값을 그대로 둔다) 빈 값은 null.</summary>
+    private static string? MetaValue(HtmlNode? meta)
+        => meta?.GetAttributeValue("content", string.Empty) is { Length: > 0 } raw
+            ? HtmlEntity.DeEntitize(raw)
+            : null;
+
+    /// <summary>태그 안 텍스트: 엔티티를 풀고 공백 덩어리를 하나로. 비면 null.</summary>
+    private static string? CleanText(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+            return null;
+
+        var text = System.Text.RegularExpressions.Regex.Replace(HtmlEntity.DeEntitize(raw), @"\s+", " ").Trim();
+        return text.Length > 0 ? text : null;
+    }
+
+    /// <summary>
+    /// 문서 언어: 루트 <c>html</c> 의 <c>lang</c>, 없으면 <c>xml:lang</c>, 없으면 <c>meta name="language"</c>.
+    /// (HtmlAgilityPack 의 DocumentNode 는 문서 루트라 html 요소의 속성을 갖지 않는다.)
+    /// </summary>
+    private static string? ReadLanguage(HtmlDocument doc)
+    {
+        var html = doc.DocumentNode.SelectSingleNode("//html");
+        foreach (var attribute in new[] { "lang", "xml:lang" })
+        {
+            var value = html?.GetAttributeValue(attribute, string.Empty)?.Trim();
+            if (!string.IsNullOrEmpty(value))
+                return value;
+        }
+
+        return GetMetaContent(doc, "language");
+    }
+
+    /// <summary>
+    /// <c>rel="canonical"</c> 링크 (rel 은 대소문자를 가리지 않는다). 상대 주소는 페이지 주소를 기준으로 절대화한다.
+    /// </summary>
+    private static string? ReadCanonical(HtmlDocument doc, string sourceUrl)
+    {
+        var link = doc.DocumentNode.SelectSingleNode(
+            "//link[translate(normalize-space(@rel),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='canonical']");
+        var href = link?.GetAttributeValue("href", string.Empty)?.Trim();
+        if (string.IsNullOrEmpty(href))
+            return null;
+
+        href = HtmlEntity.DeEntitize(href);
+        return Uri.TryCreate(sourceUrl, UriKind.Absolute, out var baseUri) && Uri.TryCreate(baseUri, href, out var absolute)
+            ? absolute.ToString()
+            : href;
     }
 
     private static ImageDimensions? ExtractImageDimensions(HtmlDocument doc, string widthProperty, string heightProperty)
