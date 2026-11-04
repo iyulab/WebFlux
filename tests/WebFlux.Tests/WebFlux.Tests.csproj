@@ -40,6 +40,8 @@
   <ItemGroup>
     <Content Include="Fixtures\HtmlSnapshots\**" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="Fixtures\GoldenFiles\**" CopyToOutputDirectory="PreserveNewest" />
+    <!-- The robots.txt questions shared byte for byte with the other library that reads robots.txt. -->
+    <None Update="Core\Utilities\robots-corpus.tsv" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>
