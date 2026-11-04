@@ -113,7 +113,7 @@ public class BasicContentExtractorTests
         // Assert
         result.Text.Should().Be(markdown);
         result.MainContent.Should().Be(markdown);
-        result.Title.Should().Be("Markdown Content");
+        result.Title.Should().Be("Heading");
         result.Url.Should().Be(url);
     }
 

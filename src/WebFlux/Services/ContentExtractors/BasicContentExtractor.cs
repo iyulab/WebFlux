@@ -1,6 +1,7 @@
 using WebFlux.Core.Interfaces;
 using WebFlux.Core.Models;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace WebFlux.Services.ContentExtractors;
 
@@ -8,7 +9,7 @@ namespace WebFlux.Services.ContentExtractors;
 /// 기본 콘텐츠 추출기 구현체
 /// Interface Provider 패턴의 기본 구현체로 제공
 /// </summary>
-public class BasicContentExtractor : IContentExtractor
+public partial class BasicContentExtractor : IContentExtractor
 {
     private static readonly char[] WordSplitChars = [' ', '\t', '\n', '\r'];
     private readonly IEventPublisher _eventPublisher;
@@ -20,8 +21,7 @@ public class BasicContentExtractor : IContentExtractor
 
     public Task<ExtractedContent> ExtractFromHtmlAsync(string htmlContent, string sourceUrl, bool enableMetadataExtraction = false, CancellationToken cancellationToken = default)
     {
-        var cleanText = System.Text.RegularExpressions.Regex.Replace(htmlContent, "<[^>]*>", "");
-        cleanText = System.Web.HttpUtility.HtmlDecode(cleanText);
+        var cleanText = HtmlToPlainText(htmlContent);
 
         var extracted = new ExtractedContent
         {
@@ -56,12 +56,15 @@ public class BasicContentExtractor : IContentExtractor
 
     public Task<ExtractedContent> ExtractFromMarkdownAsync(string markdownContent, string sourceUrl, CancellationToken cancellationToken = default)
     {
+        var outline = ReadMarkdownOutline(markdownContent);
+
         var extracted = new ExtractedContent
         {
             Text = markdownContent,
             MainContent = markdownContent, // 주요 콘텐츠는 원본 마크다운과 동일
             Url = sourceUrl,
-            Title = "Markdown Content"
+            Title = outline.Title ?? "Markdown Content",
+            Headings = outline.Headings
         };
 
         return Task.FromResult(extracted);
@@ -126,10 +129,13 @@ public class BasicContentExtractor : IContentExtractor
 
     public Task<ExtractedContent> ExtractAutoAsync(string content, string sourceUrl, string? contentType = null, CancellationToken cancellationToken = default)
     {
-        return contentType?.ToLowerInvariant() switch
+        // "text/html; charset=utf-8" 처럼 매개변수가 붙은 값도 같은 형식이다
+        var mediaType = contentType?.Split(';')[0].Trim().ToLowerInvariant();
+
+        return mediaType switch
         {
             "text/html" or "application/xhtml+xml" => ExtractFromHtmlAsync(content, sourceUrl, false, cancellationToken),
-            "text/markdown" => ExtractFromMarkdownAsync(content, sourceUrl, cancellationToken),
+            "text/markdown" or "text/x-markdown" => ExtractFromMarkdownAsync(content, sourceUrl, cancellationToken),
             "application/json" => ExtractFromJsonAsync(content, sourceUrl, cancellationToken),
             "application/xml" or "text/xml" => ExtractFromXmlAsync(content, sourceUrl, cancellationToken),
             _ => ExtractFromTextAsync(content, sourceUrl, cancellationToken)
@@ -170,8 +176,114 @@ public class BasicContentExtractor : IContentExtractor
         var titleMatch = System.Text.RegularExpressions.Regex.Match(content, @"<title[^>]*>([^<]+)</title>",
             System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 
-        return titleMatch.Success ? titleMatch.Groups[1].Value.Trim() : "Untitled";
+        return titleMatch.Success ? Whitespace().Replace(titleMatch.Groups[1].Value, " ").Trim() : "Untitled";
     }
+
+    /// <summary>
+    /// HTML 을 줄 단위 평문으로: script/style/noscript 본문은 글이 아니고, br 과 블록 요소의 경계는 줄바꿈,
+    /// 표의 셀은 한 줄 안의 공백이다. 글자 사이의 인라인 태그는 단어를 가르지 않는다.
+    /// </summary>
+    private static string HtmlToPlainText(string html)
+    {
+        var text = NonTextElements().Replace(html, " ");
+        text = BlockBoundaryTags().Replace(text, "\n");
+        text = CellEndTags().Replace(text, " ");
+        text = AnyTag().Replace(text, string.Empty);
+        text = System.Web.HttpUtility.HtmlDecode(text);
+
+        var lines = text.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n')
+            .Select(line => Whitespace().Replace(line, " ").Trim())
+            .Where(line => line.Length > 0);
+        return string.Join("\n", lines);
+    }
+
+    /// <summary>
+    /// Markdown 의 제목과 헤딩: front matter 의 title 이 먼저, 없으면 첫 "# " 헤딩(그것도 없으면 첫 헤딩).
+    /// 코드 펜스 안의 # 줄과 4칸 이상 들여쓴 줄은 헤딩이 아니다. 원문은 바꾸지 않는다.
+    /// </summary>
+    private static (string? Title, List<string> Headings) ReadMarkdownOutline(string markdown)
+    {
+        var headings = new List<string>();
+        string? frontMatterTitle = null;
+        string? firstH1 = null;
+        string? firstAny = null;
+
+        var lines = markdown.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
+        var start = 0;
+
+        if (lines.Length > 1 && lines[0].TrimEnd() == "---")
+        {
+            var end = Array.FindIndex(lines, 1, l => l.TrimEnd() is "---" or "...");
+            if (end > 0)
+            {
+                for (var i = 1; i < end; i++)
+                {
+                    var m = FrontMatterTitle().Match(lines[i]);
+                    if (m.Success)
+                    {
+                        frontMatterTitle = m.Groups[1].Value.Trim().Trim('"', '\'');
+                        break;
+                    }
+                }
+                start = end + 1;
+            }
+        }
+
+        char? fence = null;
+        for (var i = start; i < lines.Length; i++)
+        {
+            var line = lines[i];
+            var trimmed = line.TrimStart();
+            var indent = line.Length - trimmed.Length;
+
+            if (indent < 4 && (trimmed.StartsWith("```", StringComparison.Ordinal) || trimmed.StartsWith("~~~", StringComparison.Ordinal)))
+            {
+                if (fence is null)
+                    fence = trimmed[0];
+                else if (fence == trimmed[0])
+                    fence = null;
+                continue;
+            }
+
+            if (fence is not null)
+                continue;
+
+            var heading = AtxHeading().Match(line);
+            if (!heading.Success)
+                continue;
+
+            var level = heading.Groups[1].Value.Length;
+            var text = heading.Groups[2].Value.Trim();
+            headings.Add(new string('#', level) + " " + text);
+            firstAny ??= text;
+            if (level == 1)
+                firstH1 ??= text;
+        }
+
+        var title = !string.IsNullOrWhiteSpace(frontMatterTitle) ? frontMatterTitle : firstH1 ?? firstAny;
+        return (title, headings);
+    }
+
+    [GeneratedRegex(@"<(script|style|noscript)\b[^>]*>.*?</\1\s*>", RegexOptions.IgnoreCase | RegexOptions.Singleline | RegexOptions.CultureInvariant)]
+    private static partial Regex NonTextElements();
+
+    [GeneratedRegex(@"<br\s*/?>|</?(?:p|div|li|tr|h[1-6]|ul|ol|table|thead|tbody|section|article|header|footer|nav|aside|main|blockquote|pre|dl|dt|dd|form|figure|figcaption|details|summary|hr)\b[^>]*>", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    private static partial Regex BlockBoundaryTags();
+
+    [GeneratedRegex(@"</t[dh]\s*>", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    private static partial Regex CellEndTags();
+
+    [GeneratedRegex(@"<[^>]*>")]
+    private static partial Regex AnyTag();
+
+    [GeneratedRegex(@"\s+")]
+    private static partial Regex Whitespace();
+
+    [GeneratedRegex(@"^title\s*:\s*(.+?)\s*$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    private static partial Regex FrontMatterTitle();
+
+    [GeneratedRegex(@"^ {0,3}(#{1,6})[ \t]+(.+?)(?:[ \t]+#+)?[ \t]*$")]
+    private static partial Regex AtxHeading();
 }
 
 /// <summary>

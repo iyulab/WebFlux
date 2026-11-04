@@ -60,7 +60,11 @@ await foreach (var chunk in processor.ProcessWebsiteAsync("https://example.com",
   `UseDynamicRendering = true` routes to `Dynamic` whatever the strategy. `MaxDepth` / `MaxPages` bound the crawl.
 - **Chunking strategies** — Auto, Smart, Semantic, Paragraph, FixedSize, MemoryOptimized (`ChunkingOptions.Strategy`, see
   below); an unknown strategy name throws and lists the available ones.
-- **Content formats** — HTML, Markdown, JSON, XML and plain text.
+- **Content formats** — HTML, Markdown, JSON, XML and plain text. HTML is converted to Markdown after the page's
+  boilerplate is removed: navigation, page-level headers, footers and sidebars, ads, cookie and modal banners, hidden
+  elements and form options. A header, footer or callout (`aside`) *inside* an `article`/`main` is part of the page and
+  is kept, as are link lists there; lazy-loaded images are read from `data-src` and friends, and an image without an
+  address becomes its alt text. Markdown input reports its front-matter `title` (or first heading) and its headings.
 - **Web standards** — robots.txt, matched per [RFC 9309](https://www.rfc-editor.org/rfc/rfc9309.html)
   — groups, longest-match with `Allow` winning ties, `*` and `$`. Honoured on every crawl entry
   point and on the extract API; turn it off per call with `CrawlOptions.RespectRobotsTxt` or
