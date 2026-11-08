@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [0.29.0] - 2026-11-09
 
 ### Fixed
 - **Breaking by observation: a robots.txt group that names no rule no longer sends its agent to the `*` group.** `User-agent: MyBot` with only an empty `Disallow:` is a real group that allows everything (RFC 9309 section 2.2.1), but the crawler read it as "no group" and applied the `*` rules, so a site that had cleared the crawler by name found it blocked. `RobotsTxtInfo.Rules` now has an entry, with no paths, for every product token a group names.
