@@ -26,11 +26,19 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 
+# Nothing by default; every job below asks for what it needs.
+permissions: {}
+
+# The push to nuget.org is not made here. This workflow builds, tests and packs, uploads the packages as an artifact and asks the
+# organization's central publisher (iyulab/nuget-publish) to push them; that repository holds the only trusted-publishing policy
+# and checks this repository, this workflow file and the package ids against an allowlist. No NuGet credential lives here.
 jobs:
   detect-version:
     name: 🔍 Detect Version Changes
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    permissions:
+      contents: read
     outputs:
       version: ${{ steps.extract-version.outputs.version }}
     steps:
@@ -60,6 +68,8 @@ jobs:
     name: 🔨 Build & Test Solution
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    permissions:
+      contents: read
     needs: detect-version
     steps:
       - name: 📥 Checkout Code
@@ -85,14 +95,16 @@ jobs:
           echo "⏭️ Performance and LongRunning tests are excluded from CI for efficiency"
           echo "💡 To run all tests locally: ./scripts/full-test.ps1 -IncludePerformance -IncludeLongRunning"
 
-  publish:
-    name: 🚀 Build & Publish to NuGet.org
+  pack:
+    name: 📦 Pack
     runs-on: ubuntu-latest
     permissions:
-      contents: write   # tag + GitHub release
+      contents: read
     timeout-minutes: 20
     needs: [detect-version, build]
     if: github.ref == 'refs/heads/main' || github.event.inputs.force_publish == 'true'
+    outputs:
+      publish: ${{ steps.decide.outputs.publish }}
     steps:
       - name: 📥 Checkout Code
         uses: actions/checkout@v5
@@ -131,41 +143,61 @@ jobs:
           done
           [ "$missing" -eq 0 ]
 
-      - name: 🚀 Publish to NuGet.org
+      # This workflow runs on every push that touches the sources, and the old push skipped a version nuget.org already had.
+      # The central call is not free, so ask nuget.org first: hand the packages over only when one of them is missing there
+      # (or when the run was started by hand with force_publish).
+      - name: 🔍 Decide whether to publish
+        id: decide
         run: |
-          for package in nupkg/*.nupkg; do
-            echo "Publishing $package..."
-            dotnet nuget push "$package" \
-              --api-key ${{ secrets.NUGET_API_KEY }} \
-              --source https://api.nuget.org/v3/index.json \
-              --skip-duplicate \
-              --no-symbols
-          done
-        env:
-          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
-
-      - name: 🏷️ Create Git Tag
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-
-          TAG_NAME="v${{ needs.detect-version.outputs.version }}"
-
-          if ! git tag -l "$TAG_NAME" | grep -q "$TAG_NAME"; then
-            git tag "$TAG_NAME"
-            echo "Created local tag $TAG_NAME"
+          version="${{ needs.detect-version.outputs.version }}"
+          publish=false
+          if [ "${{ github.event.inputs.force_publish }}" == "true" ]; then
+            publish=true
           else
-            echo "Tag $TAG_NAME already exists locally"
+            for id in WebFlux WebFlux.Playwright; do
+              lower="${id,,}"
+              status=$(curl -s -o /dev/null -w "%{http_code}" "https://api.nuget.org/v3-flatcontainer/${lower}/${version,,}/${lower}.${version,,}.nupkg")
+              if [ "$status" != "200" ]; then
+                echo "${id} ${version} is not on nuget.org (HTTP ${status}) - publish"
+                publish=true
+              else
+                echo "${id} ${version} is already on nuget.org"
+              fi
+            done
           fi
+          echo "publish=$publish" >> $GITHUB_OUTPUT
 
-          if git push origin "$TAG_NAME" 2>&1 | grep -q "already exists"; then
-            echo "Tag $TAG_NAME already exists on remote, skipping"
-            exit 0
-          else
-            echo "Pushed tag $TAG_NAME to remote"
-          fi
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # Only .nupkg files, as before (the old push used `--no-symbols`); the central publisher pushes every .snupkg it finds.
+      - name: 📤 Upload packages
+        if: ${{ steps.decide.outputs.publish == 'true' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: nuget-packages
+          path: nupkg/*.nupkg
+          if-no-files-found: error
+          retention-days: 1
+
+  # Asks the central publisher to push the packages and waits for its answer: this job succeeds only when they are on nuget.org.
+  # Until the repository is on the publisher's allowlist the call is refused and the jobs after it do not run.
+  publish:
+    name: 🚀 Publish to NuGet.org
+    needs: pack
+    if: ${{ needs.pack.outputs.publish == 'true' }}
+    uses: iyulab/nuget-publish/.github/workflows/request.yml@2166748abf716fb58855228f65fc6b8f78c2780f # main
+    permissions: {}
+    secrets: inherit
+
+  # The tag and the GitHub release exist only for a version that reached nuget.org (`gh release create` makes the tag).
+  release:
+    name: 🏷️ GitHub release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: publish
+    permissions:
+      contents: write   # tag + GitHub release
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v5
 
       # Release notes = this version's CHANGELOG.md section. Every iyulab publish workflow carries this awk program
       # verbatim; change it in all of them or in none.
@@ -192,8 +224,9 @@ jobs:
           echo "🎉 Successfully published WebFlux v${{ needs.detect-version.outputs.version }} to NuGet.org!"
           echo "📦 Package URL: https://www.nuget.org/packages/WebFlux/${{ needs.detect-version.outputs.version }}"
 
+      # A skipped publish (a branch other than main, or a version nuget.org already has) is not a failure.
       - name: ❌ Failure Notification
-        if: needs.publish.result != 'success'
+        if: needs.publish.result == 'failure' || needs.publish.result == 'cancelled'
         run: |
           echo "❌ Failed to publish WebFlux v${{ needs.detect-version.outputs.version }}"
           echo "Check the workflow logs for detailed error information"
