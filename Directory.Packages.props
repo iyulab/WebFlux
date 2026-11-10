@@ -27,7 +27,7 @@
     <PackageVersion Include="HtmlAgilityPack" Version="1.13.1" />
     <!-- 1.5.0 fixes GHSA-pgww-w46g-26qg (mXSS via annotation-xml HTML integration point,
          vulnerable < 1.5.0). NU1902 promotes this to a build error under TreatWarningsAsErrors. -->
-    <PackageVersion Include="AngleSharp" Version="1.10.0" />
+    <PackageVersion Include="AngleSharp" Version="1.10.1" />
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <!-- 📝 Document Processing -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
@@ -57,7 +57,7 @@
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <!-- 🧪 Testing (xUnit v3 / Microsoft.Testing.Platform) -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <PackageVersion Include="xunit.v3" Version="4.0.2" />
+    <PackageVersion Include="xunit.v3" Version="4.0.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.1" />
     <PackageVersion Include="Microsoft.Testing.Extensions.HangDump" Version="2.5.2" />
     <PackageVersion Include="AwesomeAssertions" Version="9.6.0" />

@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Dependencies
+- Re-pinned third-party packages: `AngleSharp` 1.10.0 -> 1.10.1.
+
 ## [0.29.0] - 2026-11-09
 
 ### Fixed
