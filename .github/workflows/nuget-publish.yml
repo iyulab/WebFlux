@@ -7,6 +7,7 @@ on:
       - 'Directory.Build.props'
       - 'Directory.Packages.props'
       - 'Directory.Build.targets'
+      - 'global.json'
       - 'src/WebFlux/**/*.cs'
       - 'tests/**/*.cs'
       - '.github/workflows/nuget-publish.yml'
