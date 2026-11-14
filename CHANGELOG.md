@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+- **Breaking by observation: a fenced code block is no longer read as headings and no longer cut into sections.** A page with a shell snippet in a `<pre>` block listed every `# comment` line of the snippet in `ExtractedContent.Headings` (`HtmlToMarkdownExtractor`), and the `Smart` chunking strategy treated each short line of a code block, and the fence line itself, as the start of a new section, so a block came out as several chunks, one of them a lone `` ``` ``. Lines of a fenced block (backtick or tilde fence, a longer fence holding a shorter one, an unclosed fence running to the end) are now code: they are neither headings nor section seams. `BasicContentExtractor` reads fences by the same rule, so a fence shown inside a longer fence no longer ends the block early. The HTML extractor's collapse of blank-line runs no longer applies inside a code block: a `<pre>` block keeps its blank lines (three in a row used to become one). Stored headings and chunk boundaries of pages with code blocks change: re-crawl and re-chunk them.
+
 ### Dependencies
 - Re-pinned third-party packages: `AngleSharp` 1.10.0 -> 1.10.1.
 

@@ -195,9 +195,22 @@ public partial class HtmlToMarkdownExtractor : IContentExtractor
         if (string.IsNullOrWhiteSpace(markdown))
             return string.Empty;
 
-        // 연속 빈 줄을 2줄로 제한
-        var normalized = Regex.Replace(markdown, @"\n{3,}", "\n\n");
-        return normalized.Trim();
+        // Runs of blank lines are cut to one - outside code blocks; a code block keeps its blank lines as written.
+        var lines = markdown.Split('\n');
+        var fenced = MarkdownCodeFences.FencedLines(lines);
+
+        var kept = new List<string>(lines.Length);
+        for (var i = 0; i < lines.Length; i++)
+        {
+            var repeatedBlank = !fenced[i] && lines[i].Length == 0
+                && kept.Count > 0 && kept[^1].Length == 0 && !fenced[i - 1];
+            if (!repeatedBlank)
+            {
+                kept.Add(lines[i]);
+            }
+        }
+
+        return string.Join('\n', kept).Trim();
     }
 
     /// <summary>
@@ -245,10 +258,24 @@ public partial class HtmlToMarkdownExtractor : IContentExtractor
         if (string.IsNullOrWhiteSpace(markdown))
             return new List<string>();
 
-        return Regex.Matches(markdown, @"^(#{1,6})\s+(.+)$", RegexOptions.Multiline)
-            .Select(m => m.Value.Trim())
-            .ToList();
+        // A "# comment" line inside a code block is code, not a heading.
+        var lines = markdown.Split('\n');
+        var fenced = MarkdownCodeFences.FencedLines(lines);
+
+        var headings = new List<string>();
+        for (var i = 0; i < lines.Length; i++)
+        {
+            if (!fenced[i] && AtxHeadingLine().IsMatch(lines[i]))
+            {
+                headings.Add(lines[i].Trim());
+            }
+        }
+
+        return headings;
     }
+
+    [GeneratedRegex(@"^(#{1,6})\s+(.+)$")]
+    private static partial Regex AtxHeadingLine();
 
     /// <summary>
     /// Markdown에서 이미지 URL 추출

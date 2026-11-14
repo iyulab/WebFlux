@@ -83,9 +83,15 @@ public class SmartChunkingStrategy : BaseChunkingStrategy
         var sections = new List<string>();
         var current = new System.Text.StringBuilder();
 
-        foreach (var line in text.Split('\n'))
+        // A line of a fenced code block is code: a "# comment", a short statement or the fence itself is no seam,
+        // so a code block stays whole inside the section it belongs to.
+        var lines = text.Split('\n');
+        var fenced = MarkdownCodeFences.FencedLines(lines);
+
+        for (var i = 0; i < lines.Length; i++)
         {
-            if (IsHeading(line) && current.Length > 0)
+            var line = lines[i];
+            if (!fenced[i] && IsHeading(line) && current.Length > 0)
             {
                 var section = current.ToString().Trim();
                 if (!string.IsNullOrWhiteSpace(section))

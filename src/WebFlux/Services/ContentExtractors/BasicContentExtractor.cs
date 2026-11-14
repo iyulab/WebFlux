@@ -229,23 +229,11 @@ public partial class BasicContentExtractor : IContentExtractor
             }
         }
 
-        char? fence = null;
+        var fenced = MarkdownCodeFences.FencedLines(lines);
         for (var i = start; i < lines.Length; i++)
         {
             var line = lines[i];
-            var trimmed = line.TrimStart();
-            var indent = line.Length - trimmed.Length;
-
-            if (indent < 4 && (trimmed.StartsWith("```", StringComparison.Ordinal) || trimmed.StartsWith("~~~", StringComparison.Ordinal)))
-            {
-                if (fence is null)
-                    fence = trimmed[0];
-                else if (fence == trimmed[0])
-                    fence = null;
-                continue;
-            }
-
-            if (fence is not null)
+            if (fenced[i])
                 continue;
 
             var heading = AtxHeading().Match(line);
