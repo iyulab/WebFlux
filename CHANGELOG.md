@@ -9,6 +9,7 @@ All notable changes to this project will be documented in this file.
 
 ### Dependencies
 - Re-pinned third-party packages: `AngleSharp` 1.10.0 -> 1.10.1.
+- Re-pinned sibling package(s) `FluxCurator` 0.19.0 -> 0.20.0, `FluxCurator.Core` 0.19.0 -> 0.20.0.
 
 ## [0.29.0] - 2026-11-09
 
