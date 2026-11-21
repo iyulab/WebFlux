@@ -1,0 +1,55 @@
+name: 🌐 Browser Tests
+
+# The dynamic crawler through a real Chromium (tests/WebFlux.Tests/Services/Crawlers/PlaywrightCrawlerBrowserTests.cs).
+# The fast-test job of nuget-publish.yml has no browser, so those facts skip there; this lane installs one and sets
+# WEBFLUX_REQUIRE_BROWSER=1, which turns a missing or unlaunchable browser into a failure - a lane that skips proves nothing.
+# An empty Category=Browser selection also fails (the test platform exits 8 when a filter matches no test).
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - 'src/WebFlux.Playwright/**'
+      - 'tests/WebFlux.Tests/Services/Crawlers/PlaywrightCrawlerBrowserTests.cs'
+      - '**/*.props'
+      - '.github/workflows/browser-tests.yml'
+
+env:
+  DOTNET_VERSION: '10.0.x'
+  BUILD_CONFIGURATION: 'Release'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  browser-tests:
+    name: 🌐 Browser Tests (Chromium)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      WEBFLUX_REQUIRE_BROWSER: '1'
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v5
+
+      - name: ⚙️ Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: 📦 Restore Dependencies
+        run: dotnet restore WebFlux.slnx
+
+      - name: 🔨 Build Solution
+        run: dotnet build WebFlux.slnx --configuration ${{ env.BUILD_CONFIGURATION }} --no-restore
+
+      # playwright.ps1 is written into the test project's output by the Microsoft.Playwright package; --with-deps also installs the
+      # system libraries Chromium and the bundled Node.js need on Linux.
+      - name: 🌐 Install Chromium
+        shell: pwsh
+        run: ./tests/WebFlux.Tests/bin/${{ env.BUILD_CONFIGURATION }}/net10.0/playwright.ps1 install --with-deps chromium
+
+      - name: 🧪 Run Browser Tests
+        run: dotnet test --project tests/WebFlux.Tests/WebFlux.Tests.csproj --configuration ${{ env.BUILD_CONFIGURATION }} --no-build --verbosity normal --filter-trait "Category=Browser" --hangdump --hangdump-timeout 5m
