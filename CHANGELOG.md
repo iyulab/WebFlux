@@ -11,6 +11,7 @@ All notable changes to this project will be documented in this file.
 - Re-pinned third-party packages: `AngleSharp` 1.10.0 -> 1.10.1.
 - Re-pinned sibling package(s) `FluxCurator` 0.19.0 -> 0.20.0, `FluxCurator.Core` 0.19.0 -> 0.20.0.
 - Re-pinned third-party packages: `AngleSharp` 1.10.1 -> 1.10.5.
+- Re-pinned third-party packages: `Microsoft.Playwright` 1.64.1 -> 1.65.1. Per the vendor's release notes, Playwright for .NET 1.65 bundles Node.js 26 instead of 24, and on Linux Node.js 26 needs the `libatomic1` library - install it where `WebFlux.Playwright` runs on Linux.
 
 ## [0.29.0] - 2026-11-09
 
